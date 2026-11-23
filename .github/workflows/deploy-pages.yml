@@ -17,10 +17,102 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Source-only contracts run concurrently with the build and remain mandatory release gates.
+  contracts:
+    name: Source regression contracts — ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [core, wildlife, inspector, world, release]
+    steps:
+      - name: Checkout exact release candidate
+        uses: actions/checkout@v4
+      - name: Set up Node.js for source contracts
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run the complete assigned source-contract shard
+        env:
+          CONTRACT_SUITE: ${{ matrix.suite }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$CONTRACT_SUITE" in
+            core)
+          echo "Test offline navigation suite and four camera modes"
+          node scripts/test_navigation_suite_contract.cjs
+          echo "Test adaptive graphics quality without sacrificing Performance profile"
+          node scripts/test_graphics_quality_contract.cjs
+          echo "Test mobile runtime stability without reducing visual quality"
+          node scripts/test_mobile_runtime_stability.cjs
+          echo "Test mobile startup telemetry and retry affordance"
+          node scripts/test_mobile_startup_loading.cjs
+          echo "Test civilian NPC specialists and shared-memory contract"
+          node scripts/test_npc_agent_core.cjs
+          echo "Test autonomous civilian dialogue and four-bubble cap"
+          node scripts/test_npc_dialogue_core.cjs
+          echo "Test idle-scheduled session telemetry and long-task capture"
+          node scripts/test_session_recorder_idle_contract.cjs
+          echo "Test actionable post-match performance reports"
+          node scripts/test_session_report_diagnostics.cjs
+          echo "Check NPC specialist and dialogue runtime syntax"
+          node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
+              ;;
+            wildlife)
+          echo "Test per-animal GLB rig, animation and texture requirements"
+          node scripts/test_wildlife_runtime_contract.cjs
+          echo "Test four-view fauna capture and report generation"
+          node scripts/test_fauna_visual_capture_contract.cjs
+              ;;
+            inspector)
+          echo "Test full Inspector trigger routing"
+          node scripts/test_inspector_workflows_contract.cjs
+          echo "Test the existing Inspector dashboard and preserve its controls"
+          node scripts/test_inspector_dashboard_contract.cjs
+          echo "Test the unified horizontal Inspector and session report"
+          node scripts/test_inspector_workbench_contract.cjs
+          echo "Test bounded scene capture and animated frame integrity"
+          node scripts/test_scene_capture_efficiency_contract.cjs
+              ;;
+            world)
+          echo "Test Babylon live-world inspection and anomaly analysis"
+          node scripts/test_phase2_world_inspection.mjs
+          echo "Test dynamic-safe Babylon spatial selection"
+          node scripts/test_quality_spatial_selection.cjs
+          echo "Test rendered-ground structure and outpost bedroll placement"
+          node scripts/test_coastal_structure_grounding_contract.cjs
+          echo "Test BeachState coast and toroidal footprint atlas"
+          node scripts/test_beach_state.cjs
+          echo "Test three-layer coast rendering contract and water film"
+          node scripts/test_water_shore.cjs
+          echo "Test coastal mesh continuity and 5 cm seam limit"
+          node scripts/test_coastal_mesh_continuity.cjs
+          echo "Test separate seabed, transparent water and advancing film geometry"
+          node scripts/test_coastal_interaction.cjs
+          echo "Test 13-island campaign and naval invasion integration"
+          node scripts/test_island_campaign.cjs
+              ;;
+            release)
+          echo "Test release version and packaging contract"
+          node scripts/test_release_contract.cjs
+          echo "Test unified day-night atmosphere clock and APIs"
+          node scripts/test_atmosphere_system.cjs
+          echo "Test runtime and offline Service Worker publication gate"
+          node scripts/test_game_runtime_acceptance_contract.cjs
+          echo "Test cached and offline startup readiness decisions"
+          node scripts/test_startup_readiness_core.cjs
+              ;;
+            *) echo "Unknown contract suite: $CONTRACT_SUITE" >&2; exit 2 ;;
+          esac
+
   build:
     name: Build and validate the complete game
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    outputs:
+      playwright-version: ${{ steps.playwright_version.outputs.version }}
     permissions:
       contents: read
     steps:
@@ -37,6 +129,22 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Resolve the exact Playwright version for browser-cache compatibility
+        id: playwright_version
+        shell: bash
+        run: |
+          version="$(npm view playwright version)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Playwright package and matching Chromium cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}-chromium
+
       - name: Restore verified external game assets
         uses: actions/cache@v4
         with:
@@ -45,61 +153,6 @@ jobs:
           restore-keys: |
             el-sin-nombre-assets-${{ runner.os }}-
 
-
-      - name: Test offline navigation suite and four camera modes
-        run: node scripts/test_navigation_suite_contract.cjs
-      - name: Test adaptive graphics quality without sacrificing Performance profile
-        run: node scripts/test_graphics_quality_contract.cjs
-      - name: Test mobile runtime stability without reducing visual quality
-        run: node scripts/test_mobile_runtime_stability.cjs
-      - name: Test mobile startup telemetry and retry affordance
-        run: node scripts/test_mobile_startup_loading.cjs
-      - name: Test per-animal GLB rig, animation and texture requirements
-        run: node scripts/test_wildlife_runtime_contract.cjs
-      - name: Test Babylon live-world inspection and anomaly analysis
-        run: node scripts/test_phase2_world_inspection.mjs
-      - name: Test four-view fauna capture and report generation
-        run: node scripts/test_fauna_visual_capture_contract.cjs
-      - name: Test full Inspector trigger routing
-        run: node scripts/test_inspector_workflows_contract.cjs
-      - name: Test dynamic-safe Babylon spatial selection
-        run: node scripts/test_quality_spatial_selection.cjs
-      - name: Test civilian NPC specialists and shared-memory contract
-        run: node scripts/test_npc_agent_core.cjs
-      - name: Test autonomous civilian dialogue and four-bubble cap
-        run: node scripts/test_npc_dialogue_core.cjs
-      - name: Test idle-scheduled session telemetry and long-task capture
-        run: node scripts/test_session_recorder_idle_contract.cjs
-      - name: Test actionable post-match performance reports
-        run: node scripts/test_session_report_diagnostics.cjs
-      - name: Check NPC specialist and dialogue runtime syntax
-        run: node --check scripts/npc-agent-core.js && node --check scripts/npc-agent-runtime.js && node --check scripts/npc-dialogue-core.js && node --check scripts/npc-dialogue-runtime.js
-      - name: Test the existing Inspector dashboard and preserve its controls
-        run: node scripts/test_inspector_dashboard_contract.cjs
-      - name: Test the unified horizontal Inspector and session report
-        run: node scripts/test_inspector_workbench_contract.cjs
-      - name: Test release version and packaging contract
-        run: node scripts/test_release_contract.cjs
-      - name: Test unified day-night atmosphere clock and APIs
-        run: node scripts/test_atmosphere_system.cjs
-      - name: Test bounded scene capture and animated frame integrity
-        run: node scripts/test_scene_capture_efficiency_contract.cjs
-      - name: Test rendered-ground structure and outpost bedroll placement
-        run: node scripts/test_coastal_structure_grounding_contract.cjs
-      - name: Test BeachState coast and toroidal footprint atlas
-        run: node scripts/test_beach_state.cjs
-      - name: Test three-layer coast rendering contract and water film
-        run: node scripts/test_water_shore.cjs
-      - name: Test coastal mesh continuity and 5 cm seam limit
-        run: node scripts/test_coastal_mesh_continuity.cjs
-      - name: Test separate seabed, transparent water and advancing film geometry
-        run: node scripts/test_coastal_interaction.cjs
-      - name: Test 13-island campaign and naval invasion integration
-        run: node scripts/test_island_campaign.cjs
-      - name: Test runtime and offline Service Worker publication gate
-        run: node scripts/test_game_runtime_acceptance_contract.cjs
-      - name: Test cached and offline startup readiness decisions
-        run: node scripts/test_startup_readiness_core.cjs
 
       - name: Validate the local HTTPS acceptance server
         run: python -m py_compile scripts/start_https_static_server.py
@@ -133,12 +186,70 @@ jobs:
       - name: Verify Inspector Phase 1 dependencies are published
         run: node scripts/test_inspector_phase1_packaging.cjs
 
-      - name: Install Playwright and Chromium for real startup acceptance
-        id: playwright_install
+      - name: Prepare shared Playwright and Chromium cache for parallel browser gates
         run: |
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock "playwright@${{ steps.playwright_version.outputs.version }}"
           npx playwright install --with-deps chromium
 
+
+
+
+
+
+
+
+      - name: Upload validated site for PR inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-site-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Configure native GitHub Pages deployment
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload complete game website to Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  startup:
+    name: Real gameplay and offline Service Worker acceptance
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact release candidate for runtime acceptance
+        uses: actions/checkout@v4
+      - name: Set up Python for HTTPS acceptance server
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js for runtime acceptance
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore the exact Playwright and Chromium cache warmed by the build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
+      - name: Install the exact cached Playwright version
+        run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
+      - name: Verify cached Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Download the exact site package built and validated above
+        uses: actions/download-artifact@v4
+        with:
+          name: el-sin-nombre-site-${{ github.sha }}
+          path: dist
+      - name: Confirm the downloaded package is complete
+        run: test -s dist/index.html && test -s dist/assets/asset-manifest.json
       - name: Start the built release on local HTTPS for Service Worker acceptance
         shell: bash
         run: |
@@ -161,6 +272,68 @@ jobs:
           PLAYER_TEST_URL: https://localhost:4175/
         run: node scripts/player-startup-smoke.mjs
 
+      - name: Stop runtime acceptance HTTPS server
+        if: always()
+        run: |
+          if [ -f artifacts/player-startup/https-server.pid ]; then
+            kill "$(cat artifacts/player-startup/https-server.pid)" 2>/dev/null || true
+          fi
+      - name: Preserve runtime acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-runtime-release-${{ github.sha }}
+          path: artifacts/player-startup/
+          if-no-files-found: warn
+          retention-days: 30
+
+  fauna:
+    name: Required fauna rigs, animation, textures and four-view visual acceptance
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact release candidate for fauna acceptance
+        uses: actions/checkout@v4
+      - name: Set up Python for fauna HTTPS server
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js for fauna acceptance
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore the exact Playwright and Chromium cache warmed by the build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
+      - name: Install the exact cached Playwright version
+        run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
+      - name: Verify cached Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+      - name: Download the exact site package built and validated above
+        uses: actions/download-artifact@v4
+        with:
+          name: el-sin-nombre-site-${{ github.sha }}
+          path: dist
+      - name: Confirm the downloaded package is complete
+        run: test -s dist/index.html && test -s dist/assets/asset-manifest.json
+      - name: Start the same built release for isolated CPU fauna acceptance
+        shell: bash
+        run: |
+          mkdir -p artifacts/fauna-visual-captures
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/fauna-test.key" -out "$RUNNER_TEMP/fauna-test.crt" -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+          python scripts/start_https_static_server.py --directory dist --bind 127.0.0.1 --port 4175 --cert "$RUNNER_TEMP/fauna-test.crt" --key "$RUNNER_TEMP/fauna-test.key" > artifacts/fauna-visual-captures/https-server.log 2>&1 &
+          echo $! > artifacts/fauna-visual-captures/https-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --insecure https://localhost:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat artifacts/fauna-visual-captures/https-server.log
+          exit 1
       - name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish
         timeout-minutes: 18
         env:
@@ -168,6 +341,71 @@ jobs:
           FAUNA_SKINNING_MODE: cpu
         run: node scripts/fauna-visual-capture.mjs
 
+      - name: Stop CPU fauna acceptance HTTPS server
+        if: always()
+        run: |
+          if [ -f artifacts/fauna-visual-captures/https-server.pid ]; then
+            kill "$(cat artifacts/fauna-visual-captures/https-server.pid)" 2>/dev/null || true
+          fi
+      - name: Preserve fauna visual acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: el-sin-nombre-fauna-release-${{ github.sha }}
+          path: artifacts/fauna-visual-captures/
+          if-no-files-found: warn
+          retention-days: 30
+
+
+  fauna-gpu-diagnostic:
+    name: Optional GPU skinning comparison captures
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - name: Checkout exact release candidate for GPU diagnostics
+        uses: actions/checkout@v4
+      - name: Set up Python for GPU diagnostic server
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js for GPU diagnostics
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Restore the exact Playwright and Chromium cache warmed by the build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+          key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
+      - name: Install the exact cached Playwright version
+        run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
+      - name: Verify cached Chromium and system dependencies
+        id: playwright_install
+        run: npx playwright install --with-deps chromium
+      - name: Download the exact site package built and validated above
+        uses: actions/download-artifact@v4
+        with:
+          name: el-sin-nombre-site-${{ github.sha }}
+          path: dist
+      - name: Confirm the downloaded package is complete
+        run: test -s dist/index.html && test -s dist/assets/asset-manifest.json
+      - name: Start the same built release for GPU diagnostic captures
+        shell: bash
+        run: |
+          mkdir -p artifacts/fauna-visual-captures-gpu
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout "$RUNNER_TEMP/fauna-gpu-test.key" -out "$RUNNER_TEMP/fauna-gpu-test.crt" -days 1 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+          python scripts/start_https_static_server.py --directory dist --bind 127.0.0.1 --port 4175 --cert "$RUNNER_TEMP/fauna-gpu-test.crt" --key "$RUNNER_TEMP/fauna-gpu-test.key" > artifacts/fauna-visual-captures-gpu/https-server.log 2>&1 &
+          echo $! > artifacts/fauna-visual-captures-gpu/https-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --insecure https://localhost:4175/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat artifacts/fauna-visual-captures-gpu/https-server.log
+          exit 1
       - name: Diagnostic A/B capture with GPU skinning fallback (non-release acceptance)
         if: always() && steps.playwright_install.outcome == 'success'
         continue-on-error: true
@@ -178,6 +416,12 @@ jobs:
           FAUNA_CAPTURE_OUTPUT: artifacts/fauna-visual-captures-gpu
         run: node scripts/fauna-visual-capture.mjs
 
+      - name: Stop GPU diagnostic HTTPS server
+        if: always()
+        run: |
+          if [ -f artifacts/fauna-visual-captures-gpu/https-server.pid ]; then
+            kill "$(cat artifacts/fauna-visual-captures-gpu/https-server.pid)" 2>/dev/null || true
+          fi
       - name: Preserve GPU skinning fallback diagnostic evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -187,40 +431,6 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Preserve fauna visual acceptance evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: el-sin-nombre-fauna-release-${{ github.sha }}
-          path: artifacts/fauna-visual-captures/
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Preserve runtime acceptance evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: el-sin-nombre-runtime-release-${{ github.sha }}
-          path: artifacts/player-startup/
-          if-no-files-found: warn
-          retention-days: 30
-      - name: Upload validated site for PR inspection
-        uses: actions/upload-artifact@v4
-        with:
-          name: el-sin-nombre-site-${{ github.sha }}
-          path: dist/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Configure native GitHub Pages deployment
-        if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
-
-      - name: Upload complete game website to Pages
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./dist
 
   deploy:
     name: Publish the exact validated build on GitHub Pages
@@ -230,7 +440,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [build]
+    needs: [build, contracts, startup, fauna]
     permissions:
       contents: read
       pages: write
