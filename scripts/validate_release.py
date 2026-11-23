@@ -89,12 +89,20 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
-    if any(marker not in index_html for marker in ("elsnStartupProgressPanel", "elsnStartupProgressElapsed", "startupProgressSteps", "PASO ")):
-        fail("La pantalla de carga debe mostrar la fase numerada, la operación actual y el tiempo en la fase.")
-    if "position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px)" not in index_html or "width:100vw;max-width:none" not in index_html or "document.body.appendChild(panel)" not in index_html:
-        fail("El panel de progreso debe ocupar todo el ancho del viewport y vivir fuera del contenedor estrecho de carga.")
-    if "#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;" not in index_html or "#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}" not in index_html:
-        fail("La barra de progreso original debe ocupar el ancho completo del viewport, no solo el panel informativo añadido.")
+    loading_markers = (
+        "elsnStartupProgressPanel",
+        "elsnStartupProgressElapsed",
+        "startupProgressSteps",
+        "elsnStartupProgressTrack",
+        "elsnStartupProgressFill",
+        "elsn-sp-segments",
+    )
+    if any(marker not in index_html for marker in loading_markers):
+        fail("La pantalla de carga debe incluir el HUD cinematográfico único, su barra real y los seis hitos.")
+    if "#elsnStartupProgressPanel{position:fixed;inset:0" not in index_html or "#loading .loadBottom{display:none!important}" not in index_html or "document.body.appendChild(panel)" not in index_html:
+        fail("El HUD debe cubrir el viewport, ocultar la interfaz antigua duplicada y vivir fuera del contenedor de carga.")
+    if any(marker in index_html for marker in (".elsn-sp-grid", ".elsn-sp-step", "En esta fase:")):
+        fail("La pantalla no debe recuperar tarjetas de fases ni duplicar el texto/temporizador antiguo.")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
     inspector_html = (ROOT / "inspector/index.html").read_text(encoding="utf-8")
