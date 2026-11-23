@@ -661,7 +661,7 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     if not materials or any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes/materials are missing")
     coat = ((document.get("extras") or {}).get("elsnAnimalCoat") or {})
-    if coat.get("algorithm") != "procedural-vertex-coat-v2" or coat.get("species") != path.stem.lower():
+    if coat.get("algorithm") != ASSET_CACHE_TRANSFORM_VERSION or coat.get("species") != path.stem.lower():
         raise RuntimeError(f"{label}: generated species-specific coat colors are missing")
     skinned_vertex_count = sum(
         int(document["accessors"][primitive["attributes"]["POSITION"]].get("count") or 0)
