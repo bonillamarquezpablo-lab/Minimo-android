@@ -24,6 +24,34 @@ assert.ok(buildSite.includes("created-after-octree") && buildSite.includes("octr
 assert.ok(indexHtml.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),"Felled trees must be transferred to dynamic octree selection before falling.");
 assert.ok(buildSite.includes('buildSpatialSelectionOctree();'),"The spatial index must be built before the campaign selector is shown.");
 
+const startupCoastWarmupStart=buildSite.indexOf('startup_coast_warmup_code = """');
+const startupCoastWarmupEnd=buildSite.indexOf('if html.count(fauna_scene_marker)',startupCoastWarmupStart);
+assert.ok(startupCoastWarmupStart>=0&&startupCoastWarmupEnd>startupCoastWarmupStart,
+  "The full initial coastline must be prepared during the blocking startup stage.");
+const startupCoastWarmup=buildSite.slice(startupCoastWarmupStart,startupCoastWarmupEnd);
+const startupCoastStages=[
+  "syncActiveBeachIsland();",
+  "syncActiveTidalFoamIsland();",
+  "syncNordicWaterReflectionIsland();"
+].map(stage=>startupCoastWarmup.indexOf(stage));
+assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
+  startupCoastStages.every(index=>index>=0)&&
+  startupCoastStages[0]<startupCoastStages[1]&&startupCoastStages[1]<startupCoastStages[2]&&
+  startupCoastWarmup.includes("await yieldStartupCoastFrame();")&&
+  startupCoastWarmup.includes("initialCoastReady")&&
+  startupCoastWarmup.includes("recordStartupTask('Costa, rompiente y reflejos de la isla inicial'"),
+  "Initial beach, tidal foam and reflection must be ready and measured before the first playable frame, with a yield between stages.");
+assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)'),
+  "Initial coastal warm-up must be inserted before the complete scene/shader readiness barrier.");
+const faunaOrderAt=buildSite.indexOf("html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]");
+const coastInsertionAt=buildSite.indexOf("html = html.replace(fauna_scene_marker, startup_coast_warmup_code");
+assert.ok(faunaOrderAt>=0&&coastInsertionAt>faunaOrderAt,
+  "The coast and reflection prewarm must run after the required fauna has been added to the scene.");
+assert.ok(buildSite.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null")&&
+  buildSite.includes("startupResourceSnapshot.coast.status!=='ready'"),
+  "The blocking startup gate must verify the initial coast, foam and reflection rather than merely attempting to prewarm them.");
+
+
 const sourceVersion="0.6.274";
 const htmlVersion=indexHtml.split('name="el-sin-nombre-build" content="')[1]?.split('"')[0];
 const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.split('<')[0];
