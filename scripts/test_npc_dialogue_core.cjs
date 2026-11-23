@@ -88,6 +88,9 @@ assert.match(runtime,/meshVisible:visible,meshReady:[\s\S]{0,120}screenInViewpor
 assert.match(runtime,/function positionTick\(\)\{[\s\S]{0,300}lastActive[\s\S]{0,300}slots\.some\(slot=>slot\.current\)/,"The light position timer must be dormant unless a live dialogue slot needs updating.");
 assert.match(runtime,/lastAttachment/);
 assert.match(runtime,/snapshotFailures/);
+assert.match(runtime,/lastSnapshot=null;diagnostics\.lastSnapshotInvalidatedAt=Date\.now\(\);[\s\S]{0,100}return null;/,"A failed bridge read must invalidate the previous snapshot instead of reusing stale NPC references.");
+assert.match(runtime,/function clearAllSlots\(reason\)[\s\S]{0,300}for\(const slot of slots\)clearSlot\(slot\);[\s\S]{0,180}pending\.length=0/,"Missing world snapshots and inactive scenes must detach every dialogue billboard and cancel queued replies.");
+assert.match(runtime,/if\(!s\)\{clearAllSlots\("snapshot-unavailable"\);render\(null\);lastActive=false;return;\}/,"A stale dialogue must be cleared immediately when the world bridge stops responding.");
 assert.match(runtime,/nearestNpcDistanceMeters/);
 assert.match(runtime,/BUBBLE_DURATION_MS=6000/);
 assert.match(runtime,/elsn-npc-social-memory-v1/);
