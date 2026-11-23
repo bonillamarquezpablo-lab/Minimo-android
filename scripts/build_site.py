@@ -1678,14 +1678,14 @@ function updateWildlife(dt){
   const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
    !!livingBeachLayers[initialCoastIslandIndex]&&
    tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
-   (isPerformanceMode||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
+   (isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
   window.__ELSN_INITIAL_COAST_WARMUP__={
    status:initialCoastReady?'ready':'failed',
    islandIndex:initialCoastIslandIndex,
    seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
    beachReady:!!livingBeachLayers[initialCoastIslandIndex],
    foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
-   reflectionReady:isPerformanceMode||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
+   reflectionReady:isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
    durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
   };
   if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
