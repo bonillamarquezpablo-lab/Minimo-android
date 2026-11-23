@@ -11,7 +11,7 @@ const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
   'const spatialActorRootPattern=',
-    'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
+    'const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
   'const spatialEffectMotionPattern=/^(?:NorseMovingFootprints|SunHalo|SunDisc|WindborneLeaf|HearthFlame|HearthSpark|GroundSplashParticleBatch|',
   "if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
