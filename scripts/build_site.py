@@ -1660,6 +1660,40 @@ function updateWildlife(dt){
     fauna_start_marker = " if(!coastalReferenceMode){\n  const faunaStartedAt=performance.now();\n  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];"
     fauna_end_marker = "\n const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();"
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
+    startup_coast_warmup_code = """ if(!coastalReferenceMode){
+  const startupCoastWarmupStartedAt=performance.now();
+  const yieldStartupCoastFrame=()=>new Promise(resolve=>{
+   let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
+   requestAnimationFrame(finish);setTimeout(finish,90);
+  });
+  setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
+  syncActiveBeachIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastIslandIndex=activeBeachIslandIndex;
+  if(initialCoastIslandIndex<0)throw new Error('RECURSO OBLIGATORIO: no se pudo identificar la costa de la isla inicial.');
+  syncActiveTidalFoamIsland();
+  await yieldStartupCoastFrame();
+  syncNordicWaterReflectionIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
+   !!livingBeachLayers[initialCoastIslandIndex]&&
+   tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
+   (isPerformanceMode||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
+  window.__ELSN_INITIAL_COAST_WARMUP__={
+   status:initialCoastReady?'ready':'failed',
+   islandIndex:initialCoastIslandIndex,
+   seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
+   beachReady:!!livingBeachLayers[initialCoastIslandIndex],
+   foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
+   reflectionReady:isPerformanceMode||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
+   durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
+  };
+  if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
+  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
+ }"""
+    if html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
     fauna_start = html.index(fauna_start_marker)
