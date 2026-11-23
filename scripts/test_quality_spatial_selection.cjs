@@ -25,7 +25,10 @@ for(const marker of [
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
   'const freezeSpatialStaticWorldMatrices=()=>{',
-  'mesh.freezeWorldMatrix()',
+  'mesh.computeWorldMatrix(true)',
+  'mesh.freezeWorldMatrix(worldMatrix)',
+  'mesh.isWorldMatrixFrozen===true',
+  'staticWorldMatrixFreezeMs=Number((performance.now()-startedAt).toFixed(2))',
   'mesh.unfreezeWorldMatrix()',
   'spatialSelectionStats.staticWorldMatricesFrozen=frozen',
   'freezeSpatialStaticWorldMatrices();',
@@ -39,7 +42,8 @@ for(const marker of [
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
   'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
   'meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount',
-  'meshSelectionBuildMs:spatialSelectionStats.buildMs'
+  'meshSelectionBuildMs:spatialSelectionStats.buildMs',
+  'meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
 const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{');
@@ -48,7 +52,7 @@ assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must 
 const freezeSource=builder.slice(freezeStart,freezeEnd);
 const movingVisualPattern='const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|';
 assert.ok(builder.includes(movingVisualPattern), 'Footprints, moving sun sprites, windborne leaves, hearth flames and sparks must remain dynamic and must never have their world matrices frozen.');
-assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.freezeWorldMatrix()'),
+assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.computeWorldMatrix(true)')&&freezeSource.includes('mesh.freezeWorldMatrix(worldMatrix)')&&freezeSource.includes('mesh.isWorldMatrixFrozen===true'),
   'Only spatially classified static meshes may have their world transforms frozen.');
 const dynamicPromotion=builder.indexOf('mesh.unfreezeWorldMatrix()');
 const freezeInvocation=builder.indexOf('freezeSpatialStaticWorldMatrices();');
@@ -92,4 +96,5 @@ assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(isTouchDe
 assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must not freeze the active list and stop dynamic rendering.');
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
+assert.ok(recorder.includes('meshSelectionStaticWorldMatrixFreezeMs: number(runtime.meshSelectionStaticWorldMatrixFreezeMs)'), 'Session reports must preserve static-matrix freeze cost.');
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
