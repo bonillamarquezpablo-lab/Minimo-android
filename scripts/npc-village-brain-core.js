@@ -146,7 +146,7 @@
  function formationOffset(index,count,spacing=1.35){
   const total=Math.max(1,Math.floor(Number(count)||1)),slot=Math.max(0,Math.floor(Number(index)||0))%total;
   const row=Math.floor(Math.sqrt(slot)),column=slot-row*row;
-  return Object.freeze({x:(column-row)*Math.max(.5,Number(spacing)||1.35),z:-row*Math.max(.5,Number(spacing)||1.35),row,width:row*2+1});
+  return Object.freeze({x:(column-row)*Math.max(.5,Number(spacing)||1.35),z:row===0?0:-row*Math.max(.5,Number(spacing)||1.35),row,width:row*2+1});
  }
  function attackTelegraph(elapsed,duration){
   const t=Math.max(0,Number(elapsed)||0),d=Math.max(.12,Number(duration)||.9),p=Math.min(1,t/d);
