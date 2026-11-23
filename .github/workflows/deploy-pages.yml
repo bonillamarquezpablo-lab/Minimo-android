@@ -145,13 +145,18 @@ jobs:
             ~/.cache/ms-playwright
           key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}-chromium
 
+      - name: Compute the stable external asset cache fingerprint
+        id: asset_cache_fingerprint
+        run: echo "fingerprint=$(python scripts/asset_cache_fingerprint.py)" >> "$GITHUB_OUTPUT"
+
       - name: Restore verified external game assets
         uses: actions/cache@v4
         with:
           path: .asset-cache/
-          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-${{ github.run_id }}
           restore-keys: |
-            el-sin-nombre-assets-${{ runner.os }}-
+            el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-
+            el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-
 
 
       - name: Validate the local HTTPS acceptance server
@@ -159,12 +164,15 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+      - name: Verify asset cache manifest and corruption handling
+        run: python scripts/test_asset_cache_integrity.py
+
       - name: Save downloaded assets even when another resource fails
         if: always()
         uses: actions/cache/save@v4
         with:
           path: .asset-cache/
-          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-${{ github.run_id }}
       - name: Verify realistic forest spacing and gull flight clips
         run: node scripts/test_forest_gull_assets.cjs
       - name: Verify night-effect CPU budgets without reducing Quality
