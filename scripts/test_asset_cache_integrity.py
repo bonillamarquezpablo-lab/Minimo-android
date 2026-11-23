@@ -143,5 +143,23 @@ class AssetCacheIntegrityTests(unittest.TestCase):
         self.assertFalse(cache_file.exists())
 
 
+class BuiltWildlifeAssetTests(unittest.TestCase):
+    def test_all_production_terrestrial_glbs_have_normalized_armature_roots(self):
+        for species in ("Deer", "Wolf", "Stag"):
+            path = build_site.DIST / "assets" / "models" / "wildlife" / f"{species}.glb"
+            self.assertTrue(path.is_file(), f"Required wildlife asset missing from built dist: {path}")
+            label = path.relative_to(build_site.DIST).as_posix()
+            document = build_site.validate_rigged_animal_glb(path, label)
+            self.assertEqual(
+                document["extras"]["elsnAnimalSkinRoot"]["algorithm"],
+                "animal-armature-root-v1",
+            )
+            nodes = document["nodes"]
+            root_index = document["extras"]["elsnAnimalSkinRoot"]["rootNode"]
+            self.assertEqual(nodes[root_index].get("name"), "AnimalArmature")
+            self.assertTrue(all(skin.get("skeleton") == root_index for skin in document["skins"]))
+
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
