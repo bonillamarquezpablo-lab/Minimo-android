@@ -41,7 +41,7 @@ assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
   startupCoastWarmup.includes("initialCoastReady")&&
   startupCoastWarmup.includes("recordStartupTask('Costa, rompiente y reflejos de la isla inicial'"),
   "Initial beach, tidal foam and reflection must be ready and measured before the first playable frame, with a yield between stages.");
-assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)'),
+assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\n" + fauna_scene_marker, 1)'),
   "Initial coastal warm-up must be inserted before the complete scene/shader readiness barrier.");
 
 const sourceVersion="0.6.274";
