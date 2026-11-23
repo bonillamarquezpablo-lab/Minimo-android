@@ -179,7 +179,7 @@ def main() -> None:
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain2" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain3" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
