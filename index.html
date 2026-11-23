@@ -8407,7 +8407,8 @@ function createRealWeapon(type='axe'){
   if(pose!==undefined)realWeaponPoseOverride=pose;
   const handActionPoseJustCleared=hadHandActionPose&&!realWeaponPoseOverride;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
-  const holderParent=realPlayerModelPivot;
+  // Attach the weapon to the live hand socket, not to a detached world-space point or the model pivot.
+  const holderParent=socket||realPlayerModelPivot;
   if(realWeaponHolder.parent!==holderParent){
    realWeaponHolder.parent=holderParent;
    realWeaponHandDefaultPosition=null;realWeaponHandDefaultRotation=null;
@@ -8458,7 +8459,8 @@ function createRealWeapon(type='axe'){
       .add(modelForward.scale(.04));
      stickAxis=forwardCarryAxis.clone();
     }
-    const inverseParent=realPlayerModelPivot.getWorldMatrix().clone();
+    holderParent.computeWorldMatrix(true);
+    const inverseParent=holderParent.getWorldMatrix().clone();
     inverseParent.invert();
     const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);
     const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();
@@ -8480,7 +8482,7 @@ function createRealWeapon(type='axe'){
    }
   }
   // Fallback original para armas distintas del palo o rigs sin hueso de mano.
-  if(realWeaponHolder.parent!==realPlayerModelPivot)realWeaponHolder.parent=realPlayerModelPivot;
+  if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;
   try{
    if(socket){
     realPlayerModelPivot.computeWorldMatrix(true);socket.computeWorldMatrix(true);
