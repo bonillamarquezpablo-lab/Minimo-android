@@ -7,9 +7,11 @@ from urllib.error import URLError, HTTPError
 import hashlib
 import json
 import math
+import os
 import re
 import struct
 import shutil
+import threading
 import subprocess
 import sys
 import tempfile
@@ -114,6 +116,178 @@ DOWNLOADS = {
         "https://raw.githubusercontent.com/rowink/CC0-Sounds-Web/main/public/sounds/kenney_rpgaudio/Audio/chop.ogg", 2_000, "audio"
     ),
 }
+
+
+ASSET_CACHE_SCHEMA_VERSION = 2
+ASSET_CACHE_TRANSFORM_VERSION = "procedural-vertex-coat-v3-skeleton-root-v1"
+_ASSET_CACHE_MANIFEST = None
+_ASSET_CACHE_MANIFEST_LOCK = threading.RLock()
+
+
+def _asset_processing_version(relative: str, kind: str) -> str:
+    if kind == "glb" and relative.startswith("assets/models/wildlife/"):
+        return ASSET_CACHE_TRANSFORM_VERSION
+    return "identity-v1"
+
+
+def _asset_spec_fingerprint(relative: str, url: str, minimum: int, kind: str) -> str:
+    payload = {
+        "schema": ASSET_CACHE_SCHEMA_VERSION,
+        "path": relative,
+        "url": url,
+        "minimumBytes": int(minimum),
+        "kind": kind,
+        "processing": _asset_processing_version(relative, kind),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def asset_cache_fingerprint() -> str:
+    """Stable identity for the complete external-asset set; excludes game-only code changes."""
+    assets = [
+        {
+            "path": relative,
+            "url": url,
+            "minimumBytes": int(minimum),
+            "kind": kind,
+            "processing": _asset_processing_version(relative, kind),
+        }
+        for relative, (url, minimum, kind) in sorted(DOWNLOADS.items())
+    ]
+    payload = {
+        "schema": ASSET_CACHE_SCHEMA_VERSION,
+        "babylon": BABYLON_VERSION,
+        "assets": assets,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:20]
+
+
+def _asset_cache_manifest_path() -> Path:
+    return ROOT / ".asset-cache" / "asset-cache-manifest.json"
+
+
+def _load_asset_cache_manifest() -> dict:
+    global _ASSET_CACHE_MANIFEST
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        if _ASSET_CACHE_MANIFEST is not None:
+            return _ASSET_CACHE_MANIFEST
+        manifest_path = _asset_cache_manifest_path()
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("schemaVersion") != ASSET_CACHE_SCHEMA_VERSION or not isinstance(manifest.get("entries"), dict):
+                raise ValueError("unsupported cache manifest schema")
+            _ASSET_CACHE_MANIFEST = manifest
+        except FileNotFoundError:
+            _ASSET_CACHE_MANIFEST = {"schemaVersion": ASSET_CACHE_SCHEMA_VERSION, "entries": {}}
+        except Exception as exc:
+            print(f"WARN Asset cache manifest ignored ({exc}); entries will be downloaded and re-verified.")
+            _ASSET_CACHE_MANIFEST = {"schemaVersion": ASSET_CACHE_SCHEMA_VERSION, "entries": {}}
+        return _ASSET_CACHE_MANIFEST
+
+
+def _write_asset_cache_manifest_locked() -> None:
+    manifest_path = _asset_cache_manifest_path()
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = manifest_path.with_name(manifest_path.name + ".tmp")
+    temporary.write_text(
+        json.dumps(_ASSET_CACHE_MANIFEST, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    os.replace(temporary, manifest_path)
+
+
+def _invalidate_asset_cache_entry(relative: str) -> None:
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        manifest = _load_asset_cache_manifest()
+        manifest["entries"].pop(relative, None)
+        _write_asset_cache_manifest_locked()
+    (ROOT / ".asset-cache" / relative).unlink(missing_ok=True)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_cached_asset(path: Path, relative: str, kind: str) -> None:
+    if kind != "glb":
+        return
+    if relative.startswith("assets/models/wildlife/"):
+        validate_rigged_animal_glb(path, relative)
+    elif path.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
+        validate_rigged_character_glb(path, relative)
+    else:
+        read_glb_document(path)
+
+
+def restore_verified_asset_cache(url: str, destination: Path, minimum: int, kind: str) -> dict | None:
+    """Restore one asset only when its spec, exact size, SHA-256 and format still match."""
+    relative = destination.relative_to(DIST).as_posix()
+    cache_file = ROOT / ".asset-cache" / relative
+    manifest = _load_asset_cache_manifest()
+    entry = manifest["entries"].get(relative)
+    expected_spec = _asset_spec_fingerprint(relative, url, minimum, kind)
+    if not isinstance(entry, dict) or entry.get("specFingerprint") != expected_spec:
+        if cache_file.exists():
+            cache_file.unlink(missing_ok=True)
+        if entry is not None:
+            _invalidate_asset_cache_entry(relative)
+        return None
+    try:
+        size = cache_file.stat().st_size
+        expected_size = int(entry.get("bytes") or 0)
+        expected_digest = str(entry.get("sha256") or "")
+        if size < minimum or size != expected_size or len(expected_digest) != 64:
+            raise ValueError("cached size or manifest metadata mismatch")
+        digest = _sha256_file(cache_file)
+        if digest != expected_digest:
+            raise ValueError("cached SHA-256 mismatch")
+        if entry.get("processing") != _asset_processing_version(relative, kind):
+            raise ValueError("cached processing version mismatch")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cache_file, destination)
+        _validate_cached_asset(destination, relative, kind)
+        print(f"OK {relative}: {size:,} bytes (asset cache SHA-256 verified)")
+        return {"path": relative, "bytes": size, "sha256": digest, "source": "verified-asset-cache"}
+    except Exception as exc:
+        print(f"WARN {relative}: cache rejected ({exc}); downloading a clean copy.", file=sys.stderr)
+        destination.unlink(missing_ok=True)
+        _invalidate_asset_cache_entry(relative)
+        return None
+
+
+def persist_verified_asset_cache(url: str, destination: Path, minimum: int, kind: str) -> dict:
+    """Atomically save a fully processed asset and its integrity record."""
+    relative = destination.relative_to(DIST).as_posix()
+    size = destination.stat().st_size
+    if size < minimum:
+        raise RuntimeError(f"Refusing to cache undersized asset {relative}: {size} bytes")
+    digest = _sha256_file(destination)
+    cache_file = ROOT / ".asset-cache" / relative
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    temporary_asset = cache_file.with_name(cache_file.name + ".tmp")
+    shutil.copy2(destination, temporary_asset)
+    os.replace(temporary_asset, cache_file)
+    entry = {
+        "url": url,
+        "kind": kind,
+        "minimumBytes": int(minimum),
+        "specFingerprint": _asset_spec_fingerprint(relative, url, minimum, kind),
+        "processing": _asset_processing_version(relative, kind),
+        "bytes": size,
+        "sha256": digest,
+    }
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        manifest = _load_asset_cache_manifest()
+        manifest["entries"][relative] = entry
+        _write_asset_cache_manifest_locked()
+    return {"path": relative, "bytes": size, "sha256": digest, "source": "downloaded-and-cached"}
+
 
 def read_glb_document(path: Path) -> dict:
     raw = path.read_bytes()
@@ -225,12 +399,87 @@ def _read_glb_position_accessor(document: dict, binary: bytearray, accessor_inde
     return [struct.unpack_from("<3f", binary, start + index * stride) for index in range(count)]
 
 
+def repair_terrestrial_animal_skin_roots(document: dict, label: str) -> list[dict]:
+    """Keep the complete structural AnimalArmature transform in each wildlife skin."""
+    species = Path(label).stem.lower()
+    if species not in {"wolf", "stag", "deer"}:
+        raise RuntimeError(f"Unknown terrestrial species for skin-root repair: {label}")
+    nodes = document.get("nodes") or []
+    skins = document.get("skins") or []
+    if not nodes or not skins:
+        raise RuntimeError(f"{label}: cannot repair an animal GLB without nodes and skins")
+    parents = {}
+    for parent_index, node in enumerate(nodes):
+        for child_index in node.get("children") or []:
+            child_index = int(child_index)
+            if child_index < 0 or child_index >= len(nodes):
+                raise RuntimeError(f"{label}: node {parent_index} has invalid child index {child_index}")
+            if child_index in parents:
+                raise RuntimeError(f"{label}: node {child_index} has more than one parent")
+            parents[child_index] = parent_index
+
+    def descends_from(node_index: int, ancestor_index: int) -> bool:
+        visited = set()
+        cursor = node_index
+        while cursor not in visited:
+            if cursor == ancestor_index:
+                return True
+            visited.add(cursor)
+            if cursor not in parents:
+                return False
+            cursor = parents[cursor]
+        raise RuntimeError(f"{label}: cycle detected in the glTF node hierarchy")
+
+    armature_indices = [
+        index for index, node in enumerate(nodes)
+        if str(node.get("name") or "") == "AnimalArmature"
+    ]
+    if len(armature_indices) != 1:
+        raise RuntimeError(
+            f"{label}: expected exactly one AnimalArmature node; found {armature_indices}"
+        )
+    armature_index = armature_indices[0]
+    repairs = []
+    for skin_index, skin in enumerate(skins):
+        joints = [int(index) for index in (skin.get("joints") or [])]
+        if not joints or any(index < 0 or index >= len(nodes) for index in joints):
+            raise RuntimeError(f"{label}: skin {skin_index} has invalid or empty joint indices")
+        if not all(descends_from(index, armature_index) for index in joints):
+            raise RuntimeError(
+                f"{label}: AnimalArmature does not contain every joint in skin {skin_index}"
+            )
+        original_root = skin.get("skeleton")
+        if original_root != armature_index:
+            skin.setdefault("extras", {})["elsnOriginalSkeletonRoot"] = original_root
+            skin["skeleton"] = armature_index
+            repairs.append({
+                "skin": skin_index,
+                "originalRoot": original_root,
+                "repairedRoot": armature_index,
+                "repairedRootName": "AnimalArmature",
+            })
+        skin.setdefault("extras", {})["elsnSkeletonRootRepair"] = {
+            "algorithm": "animal-armature-root-v1",
+            "rootName": "AnimalArmature",
+            "rootNode": armature_index,
+        }
+    document.setdefault("extras", {})["elsnAnimalSkinRoot"] = {
+        "algorithm": "animal-armature-root-v1",
+        "species": species,
+        "rootNode": armature_index,
+        "rootName": "AnimalArmature",
+        "repairs": repairs,
+    }
+    return repairs
+
+
 def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
     """Bake subtle coat color variation into glTF COLOR_0 without changing rigs or animation."""
     species = path.stem.lower()
     if species not in {"wolf", "stag", "deer"}:
         raise RuntimeError(f"Unknown terrestrial species for appearance baking: {label}")
     document, binary, chunks = _read_glb_payload(path)
+    repair_terrestrial_animal_skin_roots(document, label)
     primitives = []
     global_min = [float("inf")] * 3
     global_max = [float("-inf")] * 3
@@ -325,7 +574,7 @@ def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
             f"({added_vertices}/{total_skinned_vertices}); minimum is 90%."
         )
     document.setdefault("extras", {})["elsnAnimalCoat"] = {
-        "algorithm": "procedural-vertex-coat-v2",
+        "algorithm": ASSET_CACHE_TRANSFORM_VERSION,
         "species": species,
         "vertices": added_vertices,
         "skinnedVertices": total_skinned_vertices,
@@ -374,6 +623,37 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         )
     if max_joints < 8:
         raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    nodes = document.get("nodes") or []
+    parents = {
+        int(child): parent_index
+        for parent_index, node in enumerate(nodes)
+        for child in (node.get("children") or [])
+    }
+    root_metadata = ((document.get("extras") or {}).get("elsnAnimalSkinRoot") or {})
+    if root_metadata.get("algorithm") != "animal-armature-root-v1":
+        raise RuntimeError(f"{label}: normalized AnimalArmature skin-root metadata is missing")
+    root_index = root_metadata.get("rootNode")
+    if not isinstance(root_index, int) or root_index < 0 or root_index >= len(nodes):
+        raise RuntimeError(f"{label}: normalized skin root index is invalid")
+    if str(nodes[root_index].get("name") or "") != "AnimalArmature":
+        raise RuntimeError(f"{label}: normalized skin root is not AnimalArmature")
+    for skin_index, skin in enumerate(skins):
+        if skin.get("skeleton") != root_index:
+            raise RuntimeError(
+                f"{label}: skin {skin_index} starts at {skin.get('skeleton')}, expected {root_index} (AnimalArmature)"
+            )
+        for joint in skin.get("joints") or []:
+            cursor = int(joint)
+            visited = set()
+            while cursor != root_index and cursor in parents and cursor not in visited:
+                visited.add(cursor)
+                cursor = parents[cursor]
+            if cursor != root_index:
+                raise RuntimeError(
+                    f"{label}: skin {skin_index} joint {joint} is outside the normalized AnimalArmature hierarchy"
+                )
+        if ((skin.get("extras") or {}).get("elsnSkeletonRootRepair") or {}).get("algorithm") != "animal-armature-root-v1":
+            raise RuntimeError(f"{label}: skin {skin_index} lacks skeleton-root repair metadata")
     animation_names = [re.sub(r"[^a-z0-9]", "", str(item.get("name") or "").lower()) for item in animations]
     missing_clips = [clip for clip in ("idle", "walk", "gallop") if not any(name == clip or name.endswith(clip) for name in animation_names)]
     if missing_clips:
@@ -381,7 +661,7 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
     if not materials or any(not (mesh.get("primitives") or []) for mesh in meshes):
         raise RuntimeError(f"{label}: one or more animal meshes/materials are missing")
     coat = ((document.get("extras") or {}).get("elsnAnimalCoat") or {})
-    if coat.get("algorithm") != "procedural-vertex-coat-v2" or coat.get("species") != path.stem.lower():
+    if coat.get("algorithm") != ASSET_CACHE_TRANSFORM_VERSION or coat.get("species") != path.stem.lower():
         raise RuntimeError(f"{label}: generated species-specific coat colors are missing")
     skinned_vertex_count = sum(
         int(document["accessors"][primitive["attributes"]["POSITION"]].get("count") or 0)
@@ -414,21 +694,9 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     relative = destination.relative_to(DIST).as_posix()
-    cache_file = ROOT / ".asset-cache" / relative
-    if cache_file.is_file() and cache_file.stat().st_size >= minimum:
-        shutil.copy2(cache_file, destination)
-        if kind == "glb":
-            if destination.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
-                validate_rigged_character_glb(destination, relative)
-            elif destination.parent.name == "wildlife":
-                bake_procedural_animal_vertex_colors(destination, relative)
-                validate_rigged_animal_glb(destination, relative)
-            else:
-                read_glb_document(destination)
-        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
-        size = destination.stat().st_size
-        print(f"OK {relative}: {size:,} bytes (verified persistent asset cache)")
-        return {"path": relative, "bytes": size, "sha256": digest, "source": "persistent-build-cache"}
+    cached = restore_verified_asset_cache(url, destination, minimum, kind)
+    if cached is not None:
+        return cached
     last_error = None
     for attempt in range(1, 5):
         try:
@@ -470,7 +738,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     baked_vertices = bake_procedural_animal_vertex_colors(destination, relative)
                     document = validate_rigged_animal_glb(destination, relative)
                     size = destination.stat().st_size
-                    digest = hashlib.sha256(destination.read_bytes())
+                    digest = None  # The final processed file is streamed and hashed when persisted.
                     print(
                         f"OK animated animal GLB {relative}: "
                         f"{len(document.get('meshes') or [])} meshes, "
@@ -481,14 +749,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     )
                 else:
                     read_glb_document(destination)
-            cache_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(destination, cache_file)
-            return {
-                "path": destination.relative_to(DIST).as_posix(),
-                "bytes": size,
-                "sha256": digest.hexdigest(),
-                "source": url,
-            }
+            return persist_verified_asset_cache(url, destination, minimum, kind)
         except Exception as exc:
             last_error = exc
             destination.unlink(missing_ok=True)
@@ -506,18 +767,24 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 for chunk in iter(lambda: source.read(1024 * 1024), b""):
                     digest.update(chunk)
             if kind == "glb":
-                if destination.parent.name == "wildlife":
-                    bake_procedural_animal_vertex_colors(destination, destination.relative_to(DIST).as_posix())
-                    validate_rigged_animal_glb(destination, destination.relative_to(DIST).as_posix())
+                relative = destination.relative_to(DIST).as_posix()
+                if relative.startswith("assets/models/wildlife/"):
+                    existing = read_glb_document(destination)
+                    coat = ((existing.get("extras") or {}).get("elsnAnimalCoat") or {})
+                    if coat.get("algorithm") != ASSET_CACHE_TRANSFORM_VERSION or coat.get("species") != destination.stem.lower():
+                        bake_procedural_animal_vertex_colors(destination, relative)
+                    validate_rigged_animal_glb(destination, relative)
                     size = destination.stat().st_size
-                    digest = hashlib.sha256(destination.read_bytes())
+                elif destination.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
+                    validate_rigged_character_glb(destination, relative)
                 else:
                     read_glb_document(destination)
+            persist_verified_asset_cache(url, destination, minimum, kind)
             print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
             return {
                 "path": destination.relative_to(DIST).as_posix(),
                 "bytes": size,
-                "sha256": digest.hexdigest(),
+                "sha256": _sha256_file(destination),
                 "source": "repository-fallback",
             }
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
@@ -609,7 +876,7 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.347: dense flagship ground cover; constrained devices retain the prior safe density.
+    # 0.6.348: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
     grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
@@ -1012,12 +1279,12 @@ def main() -> None:
  if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
 }"""
     progress_replacement = """const startupProgressSteps=[
- {title:'Motor 3D',short:'Motor 3D',detail:'Babylon.js, WebGL e importador GLB · 0–39%'},
- {title:'Mundo',short:'Mundo',detail:'Islas, terreno, costa y vegetación · 40–81%'},
- {title:'Personajes',short:'Personajes',detail:'Protagonista y NPC obligatorios · 82–86%'},
- {title:'Fauna',short:'Fauna',detail:'Ciervos, lobo y aves · 87–92%'},
- {title:'Gráficos',short:'Gráficos',detail:'Texturas y shaders de la primera vista · 93–99%'},
- {title:'Listo',short:'Listo',detail:'Comprobación final antes de abrir la partida · 100%'}
+ {title:'MOTOR 3D',detail:'Despertando la maquinaria del mundo…'},
+ {title:'EL MUNDO',detail:'Dando forma a las islas y a la costa…'},
+ {title:'PERSONAJES',detail:'Reuniendo guardianes y guerreros…'},
+ {title:'FAUNA',detail:'Despertando la vida de las islas…'},
+ {title:'GRÁFICOS',detail:'Encendiendo luz, agua y atmósfera…'},
+ {title:'LA PARTIDA',detail:'Todo está preparado para zarpar…'}
 ];
 let startupProgressActiveIndex=-1,startupProgressStageStartedAt=performance.now();
 function ensureStartupProgressPanel(){
@@ -1025,14 +1292,36 @@ function ensureStartupProgressPanel(){
  if(panel)return panel;
  const style=document.createElement('style');
  style.id='elsn-startup-progress-style';
- style.textContent='#elsnStartupProgressPanel{box-sizing:border-box;width:min(760px,calc(100% - 28px));margin:9px auto 0;padding:10px 12px;border:1px solid rgba(235,190,143,.3);border-radius:12px;background:rgba(5,14,22,.9);color:#f7eee4;font:500 11px/1.35 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.22)}#elsnStartupProgressPanel *{box-sizing:border-box}#elsnStartupProgressPanel .elsn-sp-head,#elsnStartupProgressPanel .elsn-sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px}#elsnStartupProgressPanel .elsn-sp-head strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd3ac}#elsnStartupProgressPanel .elsn-sp-head span{font-variant-numeric:tabular-nums;color:#fff}#elsnStartupProgressPanel .elsn-sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}#elsnStartupProgressPanel .elsn-sp-step{min-width:0;padding:5px 2px;border:1px solid rgba(255,255,255,.13);border-radius:7px;color:rgba(255,255,255,.58);text-align:center;font-size:9px;white-space:nowrap}#elsnStartupProgressPanel .elsn-sp-step[aria-current=step]{border-color:#ffbd8b;background:rgba(235,153,99,.2);color:#fff;font-weight:800}#elsnStartupProgressPanel .elsn-sp-step.is-done{border-color:rgba(235,190,143,.42);color:#f0c6a2}#elsnStartupProgressPanel .elsn-sp-current{margin-top:8px;color:rgba(255,255,255,.78);font-size:10px}#elsnStartupProgressPanel #elsnStartupProgressAction{min-width:0;overflow-wrap:anywhere}#elsnStartupProgressPanel #elsnStartupProgressElapsed{flex:none;color:#ffd3ac;font-variant-numeric:tabular-nums}@media(max-width:460px){#elsnStartupProgressPanel{width:calc(100% - 22px);padding:8px 9px;margin-top:7px}#elsnStartupProgressPanel .elsn-sp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}#elsnStartupProgressPanel .elsn-sp-step{font-size:10px;padding:5px 2px}}';
- style.textContent+='#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;margin:0!important;padding-left:clamp(24px,6.2vw,104px)!important;padding-right:clamp(24px,6.2vw,104px)!important}#loading .loadPhase{box-sizing:border-box;width:100%}#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}#elsnStartupProgressPanel{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;width:100vw;max-width:none;margin:0;padding:10px 14px;border-left:0;border-right:0;border-radius:0;z-index:2147482000;pointer-events:none}@media(max-width:460px){#elsnStartupProgressPanel{left:0;right:0;width:100vw;max-width:none;margin:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom,0px));border-radius:0}}';
+ style.textContent=[
+  '#elsnStartupProgressPanel{position:fixed;inset:0;z-index:2147482000;pointer-events:none;color:#f4ead8;font-family:Georgia,serif}',
+  '#elsnStartupProgressPanel *{box-sizing:border-box}',
+  '#elsnStartupProgressPanel::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 17% 39%,rgba(179,137,79,.13),transparent 43%),radial-gradient(ellipse at 82% 18%,rgba(73,124,119,.23),transparent 42%),linear-gradient(180deg,rgba(2,10,13,.02) 0%,rgba(2,10,13,.03) 64%,rgba(2,9,11,.57) 82%,rgba(2,8,10,.94) 100%);pointer-events:none}',
+  '#elsnStartupProgressPanel::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(210,173,111,.5),transparent)}',
+  '#elsnStartupProgressPanel .elsn-sp-content{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(780px,100%);padding:18px clamp(22px,6vw,68px) calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(3,11,13,0) 0%,rgba(3,11,13,.46) 22%,rgba(3,11,13,.88) 100%);border-top:1px solid rgba(205,166,102,.24)}',
+  '#elsnStartupProgressPanel .elsn-sp-brand{display:flex;align-items:center;gap:9px;margin-bottom:11px;color:rgba(229,203,159,.78);font:700 9px/1.2 system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase}',
+  '#elsnStartupProgressPanel .elsn-sp-mark{display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid rgba(220,181,116,.54);border-radius:50%;color:#e3c18b;font:16px/1 Georgia,serif}',
+  '#elsnStartupProgressPanel .elsn-sp-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:10px}',
+  '#elsnStartupProgressPanel .elsn-sp-stage{display:block;color:#f1dfc0;font:700 clamp(20px,4vw,29px)/1.05 Georgia,serif;letter-spacing:.075em;text-transform:uppercase;text-shadow:0 2px 18px rgba(0,0,0,.5)}',
+  '#elsnStartupProgressPanel .elsn-sp-percent{flex:none;color:#f0d5a7;font:600 20px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums}',
+  '#elsnStartupProgressPanel .elsn-sp-track{height:3px;width:100%;overflow:hidden;background:rgba(255,255,255,.15);box-shadow:0 1px 8px rgba(0,0,0,.35)}',
+  '#elsnStartupProgressPanel .elsn-sp-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#9c7543,#f1d6a1);box-shadow:0 0 14px rgba(221,179,111,.55);transition:width .32s ease-out}',
+  '#elsnStartupProgressPanel .elsn-sp-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:rgba(244,234,216,.86);font:500 11px/1.35 system-ui,sans-serif}',
+  '#elsnStartupProgressPanel .elsn-sp-action{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.015em}',
+  '#elsnStartupProgressPanel .elsn-sp-elapsed{flex:none;color:rgba(225,194,143,.78);font-variant-numeric:tabular-nums;letter-spacing:.08em}',
+  '#elsnStartupProgressPanel .elsn-sp-segments{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:12px}',
+  '#elsnStartupProgressPanel .elsn-sp-segment{height:2px;background:rgba(255,255,255,.15);transition:background .25s ease,box-shadow .25s ease}',
+  '#elsnStartupProgressPanel .elsn-sp-segment.is-done{background:rgba(207,171,111,.66)}',
+  '#elsnStartupProgressPanel .elsn-sp-segment.is-active{background:#efd09b;box-shadow:0 0 9px rgba(239,208,155,.45)}',
+  '#loading .loadBottom{display:none!important}',
+  '@media(max-width:480px){#elsnStartupProgressPanel .elsn-sp-content{padding:14px 22px calc(15px + env(safe-area-inset-bottom,0px))}#elsnStartupProgressPanel .elsn-sp-brand{margin-bottom:8px;font-size:8px;letter-spacing:.19em}#elsnStartupProgressPanel .elsn-sp-heading{margin-bottom:8px}#elsnStartupProgressPanel .elsn-sp-stage{font-size:23px}#elsnStartupProgressPanel .elsn-sp-percent{font-size:18px}#elsnStartupProgressPanel .elsn-sp-footer{margin-top:8px;font-size:10px}#elsnStartupProgressPanel .elsn-sp-segments{margin-top:10px;gap:4px}}',
+  '@media(prefers-reduced-motion:reduce){#elsnStartupProgressPanel .elsn-sp-fill,#elsnStartupProgressPanel .elsn-sp-segment{transition:none}}'
+ ].join('');
  document.head.appendChild(style);
  panel=document.createElement('section');
  panel.id='elsnStartupProgressPanel';
  panel.setAttribute('role','status');
  panel.setAttribute('aria-live','polite');
- panel.innerHTML='<div class="elsn-sp-head"><strong id="elsnStartupProgressStage">PASO 1/6 · MOTOR 3D</strong><span id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-grid">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-step" data-step="'+index+'">'+(index+1)+'. '+step.short+'</span>').join('')+'</div><div class="elsn-sp-current"><span id="elsnStartupProgressAction">Preparando motor 3D…</span><span id="elsnStartupProgressElapsed">En esta fase: 0 s</span></div>';
+ panel.innerHTML='<div class="elsn-sp-content"><div class="elsn-sp-brand"><span class="elsn-sp-mark" aria-hidden="true">ᚠ</span><span>EL SIN NOMBRE · SAGA DEL NORTE</span></div><div class="elsn-sp-heading"><strong class="elsn-sp-stage" id="elsnStartupProgressStage">MOTOR 3D</strong><span class="elsn-sp-percent" id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-track" id="elsnStartupProgressTrack" role="progressbar" aria-label="Preparación de la partida" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="elsn-sp-fill" id="elsnStartupProgressFill"></span></div><div class="elsn-sp-footer"><span class="elsn-sp-action" id="elsnStartupProgressAction">Despertando la maquinaria del mundo…</span><span class="elsn-sp-elapsed" id="elsnStartupProgressElapsed">00 s</span></div><div class="elsn-sp-segments" aria-hidden="true">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-segment" data-step="'+index+'"></span>').join('')+'</div></div>';
  document.body.appendChild(panel);
  if(!window.__ELSN_STARTUP_PROGRESS_TIMER__)window.__ELSN_STARTUP_PROGRESS_TIMER__=window.setInterval(()=>{
   const loading=document.getElementById('loading');
@@ -1043,7 +1332,7 @@ function ensureStartupProgressPanel(){
    return;
   }
   const elapsed=document.getElementById('elsnStartupProgressElapsed');
-  if(elapsed&&startupProgressActiveIndex>=0)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+  if(elapsed&&startupProgressActiveIndex>=0)elapsed.textContent=String(Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))).padStart(2,'0')+' s';
  },1000);
  return panel;
 }
@@ -1056,16 +1345,20 @@ function renderStartupProgress(value,label){
  const step=startupProgressSteps[index];
  const heading=panel.querySelector('#elsnStartupProgressStage');
  const percent=panel.querySelector('#elsnStartupProgressPercent');
+ const fill=panel.querySelector('#elsnStartupProgressFill');
+ const track=panel.querySelector('#elsnStartupProgressTrack');
  const action=panel.querySelector('#elsnStartupProgressAction');
  const elapsed=panel.querySelector('#elsnStartupProgressElapsed');
- if(heading)heading.textContent='PASO '+(index+1)+'/'+startupProgressSteps.length+' · '+step.title.toUpperCase();
+ if(heading)heading.textContent=step.title;
  if(percent)percent.textContent=Math.floor(progress)+'%';
+ if(fill)fill.style.width=progress.toFixed(2)+'%';
+ if(track)track.setAttribute('aria-valuenow',String(Math.round(progress)));
  if(action)action.textContent=label||step.detail;
- if(elapsed)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+ if(elapsed)elapsed.textContent=String(Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))).padStart(2,'0')+' s';
  panel.querySelectorAll('[data-step]').forEach(node=>{
   const current=Number(node.getAttribute('data-step'));
   node.classList.toggle('is-done',current<index);
-  if(current===index)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');
+  node.classList.toggle('is-active',current===index);
  });
 }
 function setLoadingProgress(value,label){
@@ -1495,7 +1788,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.347: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.348: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -1662,6 +1955,37 @@ function updateWildlife(dt){
     fauna_start_marker = " if(!coastalReferenceMode){\n  const faunaStartedAt=performance.now();\n  const faunaTasks=[{name:'Fauna terrestre',promise:loadWildlifeModels()}];"
     fauna_end_marker = "\n const startupMemoryTextures=new Set(),startupMemoryGeometry=new Set();"
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
+    startup_coast_warmup_code = """ if(!coastalReferenceMode){
+  const startupCoastWarmupStartedAt=performance.now();
+  const yieldStartupCoastFrame=()=>new Promise(resolve=>{
+   let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
+   requestAnimationFrame(finish);setTimeout(finish,90);
+  });
+  setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
+  syncActiveBeachIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastIslandIndex=activeBeachIslandIndex;
+  if(initialCoastIslandIndex<0)throw new Error('RECURSO OBLIGATORIO: no se pudo identificar la costa de la isla inicial.');
+  syncActiveTidalFoamIsland();
+  await yieldStartupCoastFrame();
+  syncNordicWaterReflectionIsland();
+  await yieldStartupCoastFrame();
+  const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
+   !!livingBeachLayers[initialCoastIslandIndex]&&
+   tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
+   (isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
+  window.__ELSN_INITIAL_COAST_WARMUP__={
+   status:initialCoastReady?'ready':'failed',
+   islandIndex:initialCoastIslandIndex,
+   seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
+   beachReady:!!livingBeachLayers[initialCoastIslandIndex],
+   foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
+   reflectionReady:isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
+   durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
+  };
+  if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
+  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
+ }"""
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
     fauna_start = html.index(fauna_start_marker)
@@ -1671,6 +1995,11 @@ function updateWildlife(dt){
     scene_marker_index = html.index(fauna_scene_marker)
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
+    # Prepare the initial beach/foam/reflection after all fauna has joined the scene,
+    # before Babylon's full texture and shader readiness barrier unlocks gameplay.
+    if html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\n" + fauna_scene_marker, 1)
 
     # All three terrestrial species are required in both profiles. Performance keeps its
     # reduced movement/decision cadence; the five gulls remain Quality-only.
@@ -1782,6 +2111,7 @@ function updateWildlife(dt){
   soundEffects:audioPreloadResult,
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
+  coast:window.__ELSN_INITIAL_COAST_WARMUP__||null,
   world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
  };
  const startupResourceFailures=[];
@@ -1793,6 +2123,7 @@ function updateWildlife(dt){
   if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
+  if(!startupResourceSnapshot.coast||startupResourceSnapshot.coast.status!=='ready')startupResourceFailures.push('playa, fondo submarino, rompiente y reflejo de la isla inicial');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
@@ -2464,27 +2795,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.347: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.348: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.347; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.348; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.347\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.348\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.347.")
-    html = html.replace("0.6.274", "0.6.347")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.348.")
+    html = html.replace("0.6.274", "0.6.348")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'56',build:'0.6.347'"
+    diagnostic_build_replacement = "reportVersion:'57',build:'0.6.348'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.347 para normalizar.")
-    game_version = "0.6.347"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.348 para normalizar.")
+    game_version = "0.6.348"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4066,8 +4397,12 @@ function getWorldPhaseTimingSnapshot(){
     if(npc.pause<=0&&Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ)){
      const targetDx=npc.targetX-oldX,targetDz=npc.targetZ-oldZ,targetDistance=Math.hypot(targetDx,targetDz);
      if(targetDistance>.42){
-      const pace=brain.mode==='flee'?1.18:(brain.mode==='social'?.72:(brain.mode==='watch'?.34:(brain.mode==='rest'?.20:npc.speed)));
-      const step=Math.min(targetDistance,Math.max(.018,pace*ambientDt));
+      const wantedHeading=Math.atan2(targetDx,targetDz);
+      const turnDelta=Math.atan2(Math.sin(wantedHeading-p.rotation.y),Math.cos(wantedHeading-p.rotation.y));
+      if(!brain.locomotionState)brain.locomotionState={speed:0};
+      const motion=npcVillageBrain.computeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState);
+      const pace=motion.speed;
+      const step=Math.min(targetDistance,Math.max(.012,pace*ambientDt));
       const move=npcVillageBrain.chooseStep({x:oldX,z:oldZ,targetX:npc.targetX,targetZ:npc.targetZ,step,side:i%2===0?1:-1},(x,z)=>{
        if(!tryLandMove(x,z,.43,oldX,oldZ))return false;
        for(const other of ambientPeople){

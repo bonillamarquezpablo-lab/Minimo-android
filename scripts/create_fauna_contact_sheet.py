@@ -13,6 +13,22 @@ captures = manifest.get("captures") or []
 columns, thumb_w, thumb_h = 4, 400, 225
 label_h, gap, header_h = 44, 10, 72
 available, missing = [], []
+visual_capture_count = sum(
+    1 for entry in captures
+    if entry.get("angle") in {"front", "left", "rear", "right"}
+)
+raster_invalid = [
+    {
+        "file": entry.get("file"),
+        "subject": entry.get("subject"),
+        "angle": entry.get("angle"),
+        "integrity": entry.get("imageIntegrity") or None,
+    }
+    for entry in captures
+    if entry.get("angle") in {"front", "left", "rear", "right"}
+    and (entry.get("imageIntegrity") or {}).get("valid") is not True
+]
+raster_verified_count = max(0, visual_capture_count - len(raster_invalid))
 for entry in captures:
     source = OUT / str(entry.get("file") or "")
     (available if source.is_file() else missing).append((entry, source) if source.is_file() else str(entry.get("file") or ""))
@@ -29,7 +45,12 @@ for index, (entry, source_path) in enumerate(available):
     x, y = col * (thumb_w + gap), header_h + gap + row * (tile_h + gap)
     draw.rounded_rectangle((x, y, x + thumb_w - 1, y + label_h - 1), radius=4, fill=(30, 42, 49))
     title = str(entry.get("subject") or "animal")
-    detail = str(entry.get("angle") or "view") + " · " + str(entry.get("kind") or "unknown")
+    integrity = entry.get("imageIntegrity") or {}
+    raster_label = (
+        f" · raster {integrity.get('changedPixels', 0)} px · fill {float(integrity.get('fillRatio') or 0):.3f}"
+        if integrity else " · raster sin medir"
+    )
+    detail = str(entry.get("angle") or "view") + " · " + str(entry.get("kind") or "unknown") + raster_label
     draw.text((x + 8, y + 6), title[:58], fill=(244, 238, 220), font=font)
     draw.text((x + 8, y + 25), detail[:58], fill=(182, 194, 198), font=font)
     with Image.open(source_path) as source:
@@ -45,7 +66,9 @@ lines = [
     "# EL SIN NOMBRE — Auditoría visual de fauna", "",
     f"- Build: **{manifest.get('gameVersion') or 'no disponible'}**",
     f"- Animales: **{len(manifest.get('fauna') or [])}**",
-    f"- Vistas PNG verificadas: **{len(available)} / {len(captures)}**",
+    f"- Vistas PNG presentes: **{len(available)} / {len(captures)}**",
+    f"- Siluetas raster verificadas: **{raster_verified_count} / {visual_capture_count}**",
+    f"- Vistas con silueta insuficiente o métrica ausente: **{len(raster_invalid)}**",
     f"- Veredicto: **{manifest.get('verdict') or 'incomplete'}**",
     "- Método: capturas reales del canvas Babylon, cuatro ángulos por actor.",
     "- Modo: cámara y lectura temporal de escena; no se guardan ni modifican partidas.", "",
@@ -66,6 +89,15 @@ for animal in manifest.get("fauna") or []:
         f"| {len(animal.get('animationGroups') or [])} "
         f"| {d.get('width','—')} × {d.get('height','—')} × {d.get('depth','—')} |"
     )
+lines += ["", "## Capturas sin evidencia raster suficiente", ""]
+if raster_invalid:
+    for item in raster_invalid:
+        lines.append(
+            "- **" + str(item.get("subject")) + " / " + str(item.get("angle")) +
+            "** · " + json.dumps(item.get("integrity"), ensure_ascii=False)
+        )
+else:
+    lines.append("- Todas las vistas cardinales tienen una métrica raster válida.")
 lines += ["", "## Avisos", ""]
 if manifest.get("warnings"):
     for warning in manifest["warnings"]:
@@ -86,6 +118,9 @@ summary = {
     "verdict": manifest.get("verdict"),
     "animalCount": len(manifest.get("fauna") or []),
     "captureCount": len(available),
+    "rasterVerifiedCount": raster_verified_count,
+    "visualCaptureCount": visual_capture_count,
+    "rasterInvalidCaptures": raster_invalid,
     "missingCaptures": missing,
     "warnings": manifest.get("warnings") or [],
     "failures": manifest.get("failures") or [],

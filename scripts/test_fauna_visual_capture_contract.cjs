@@ -20,7 +20,7 @@ assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish');
 const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback',primaryFaunaStart);
-assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18'),
+assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 30') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
   'Release acceptance must validate all fauna using the stable CPU skinning path with enough time for the full four-view capture.');
 const cpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback');
 const cpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning fallback diagnostic evidence',cpuDiagnosticStart);
@@ -78,7 +78,7 @@ assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wo
   'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes("mesh.skeleton?.getTransformMatrices?.(mesh)") && capture.includes("boundsBasis='babylon-bone-matrices-world'") &&
-  capture.includes("getVerticesData?.(B?.VertexBuffer?.PositionKind||'position')"),
+  capture.includes("typeof mesh.setPositionsForCPUSkinning==='function'") && capture.includes('mesh.setPositionsForCPUSkinning()'),
   'Skinned fauna acceptance must measure original vertices through Babylon bone matrices exactly once, not stale GPU bind-pose bounds or double-skinned CPU vertices.');
 assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.height*.30') && capture.includes('minimumBodyDepth'),
   'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
@@ -90,6 +90,20 @@ assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a 
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
+const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.()!==false;');
+const rasterCaptureEnd=capture.indexOf('if(backgroundPng){',rasterCaptureStart);
+const rasterCaptureBlock=capture.slice(rasterCaptureStart,rasterCaptureEnd);
+assert.ok(capture.includes("source:'same-frame-projected-animal-bounds-raster-diff'") &&
+  capture.includes('changedPixels>=140') && capture.includes('fillRatio>=.008') &&
+  capture.includes('B.Vector3.Project') && capture.includes('backgroundPng=captureFrame();') &&
+  rasterCaptureStart>=0 && rasterCaptureEnd>rasterCaptureStart &&
+  !rasterCaptureBlock.includes('requestAnimationFrame') &&
+  capture.includes('view.imageIntegrity?.valid===true'),
+  'Four-view fauna captures must compare actor-visible and actor-hidden pixels inside the projected animal bounds, without counting water/sky animation drift; empty captures must fail.');
+assert.ok(capture.includes('measuredBounds:animal.bounds') &&
+  capture.includes('const min=measuredBounds?.min,max=measuredBounds?.max'),
+  'The capture camera must frame the same corrected skinned world bounds as the anatomical report, not stale bind-pose AABBs.');
+
 assert.ok(capture.includes('const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length') &&
   capture.includes("capture.angle==='bindpose-no-skinning'"),
   'Four cardinal camera views must be counted separately from optional bind-pose diagnostic images.');
@@ -102,4 +116,8 @@ assert.ok(capture.includes("if(animal.textures.some(texture=>texture.ready===fal
   'Material-only GLBs must not be reported as missing textures; pending textures and missing materials must remain visible.');
 assert.ok(sheet.includes('fauna-contact-sheet.jpg'));
 assert.ok(sheet.includes('fauna-inspection-report.md'));
+assert.ok(sheet.includes('raster_invalid') && sheet.includes('Capturas sin evidencia raster suficiente') &&
+  sheet.includes('rasterVerifiedCount'),
+  'The contact sheet must preserve incomplete images and explicitly report their missing visual evidence rather than silently treating them as verified.');
+
 console.log('Fauna visual capture contract: PASS (live animal inventory, rig, texture and animation diagnostics, plus four camera-verified views per animal).');

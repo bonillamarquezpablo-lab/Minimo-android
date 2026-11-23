@@ -109,7 +109,7 @@ jobs:
 
   build:
     name: Build and validate the complete game
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 50
     outputs:
       playwright-version: ${{ steps.playwright_version.outputs.version }}
@@ -145,13 +145,18 @@ jobs:
             ~/.cache/ms-playwright
           key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}-chromium
 
+      - name: Compute the stable external asset cache fingerprint
+        id: asset_cache_fingerprint
+        run: echo "fingerprint=$(python scripts/asset_cache_fingerprint.py)" >> "$GITHUB_OUTPUT"
+
       - name: Restore verified external game assets
         uses: actions/cache@v4
         with:
           path: .asset-cache/
-          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-${{ github.run_id }}
           restore-keys: |
-            el-sin-nombre-assets-${{ runner.os }}-
+            el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-
+            el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-
 
 
       - name: Validate the local HTTPS acceptance server
@@ -159,12 +164,15 @@ jobs:
 
       - name: Download all resources, build dist and run release validation
         run: python scripts/build_site.py
+      - name: Verify asset cache manifest and corruption handling
+        run: python scripts/test_asset_cache_integrity.py
+
       - name: Save downloaded assets even when another resource fails
         if: always()
         uses: actions/cache/save@v4
         with:
           path: .asset-cache/
-          key: el-sin-nombre-assets-${{ runner.os }}-${{ github.run_id }}
+          key: el-sin-nombre-assets-${{ runner.os }}-${{ runner.arch }}-${{ steps.asset_cache_fingerprint.outputs.fingerprint }}-${{ github.run_id }}
       - name: Verify realistic forest spacing and gull flight clips
         run: node scripts/test_forest_gull_assets.cjs
       - name: Verify night-effect CPU budgets without reducing Quality
@@ -204,6 +212,7 @@ jobs:
           name: el-sin-nombre-site-${{ github.sha }}
           path: dist/
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14
 
       - name: Configure native GitHub Pages deployment
@@ -219,7 +228,7 @@ jobs:
   startup:
     name: Real gameplay and offline Service Worker acceptance
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Checkout exact release candidate for runtime acceptance
@@ -290,7 +299,7 @@ jobs:
   fauna:
     name: Required fauna rigs, animation, textures and four-view visual acceptance
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - name: Checkout exact release candidate for fauna acceptance
@@ -335,11 +344,21 @@ jobs:
           cat artifacts/fauna-visual-captures/https-server.log
           exit 1
       - name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish
-        timeout-minutes: 18
+        timeout-minutes: 30
         env:
           FAUNA_TEST_URL: https://localhost:4175/
           FAUNA_SKINNING_MODE: cpu
         run: node scripts/fauna-visual-capture.mjs
+
+      - name: Build fauna contact sheet and visual failure report
+        if: always()
+        run: |
+          if [ -s artifacts/fauna-visual-captures/manifest.json ]; then
+            python -m pip install --disable-pip-version-check pillow
+            python scripts/create_fauna_contact_sheet.py artifacts/fauna-visual-captures
+          else
+            echo "No fauna manifest was produced; raw diagnostic logs will still be preserved."
+          fi
 
       - name: Stop CPU fauna acceptance HTTPS server
         if: always()
@@ -360,7 +379,7 @@ jobs:
   fauna-gpu-diagnostic:
     name: Optional GPU skinning comparison captures
     needs: [build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     continue-on-error: true
     steps:
@@ -409,7 +428,7 @@ jobs:
       - name: Diagnostic A/B capture with GPU skinning fallback (non-release acceptance)
         if: always() && steps.playwright_install.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 8
+        timeout-minutes: 18
         env:
           FAUNA_TEST_URL: https://localhost:4175/
           FAUNA_SKINNING_MODE: gpu
