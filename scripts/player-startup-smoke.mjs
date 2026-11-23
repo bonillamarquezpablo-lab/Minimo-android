@@ -735,7 +735,18 @@ async function main() {
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
     const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
-    await page.waitForTimeout(900);
+    const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
+    await page.waitForFunction(({beforeTicks,birds})=>{
+      const render=window.__ELSN_GULL_FLIGHT_RENDER__,after=window.getGameVisualActorDiagnostics?.()?.gulls||[];
+      if(!render||Number(render.frameTicks)<=beforeTicks||after.length!==5)return false;
+      return after.every((bird,index)=>{
+        const before=birds[index],a=before?.position,b=bird?.position;
+        const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+        return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>.15;
+      });
+    },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:8000,polling:100});
+    const gullRenderStateAfter=await page.evaluate(()=>window.__ELSN_GULL_FLIGHT_RENDER__||null);
+    assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
@@ -744,7 +755,7 @@ async function main() {
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
       assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
     }
-    manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,allThreeSystemsVisible:true,gullsMoved:true};
+    manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {
       const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
       return !!state && state.active === true;
