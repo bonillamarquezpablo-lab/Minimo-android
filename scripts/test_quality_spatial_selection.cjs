@@ -24,6 +24,11 @@ for(const marker of [
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
+  'const freezeSpatialStaticWorldMatrices=()=>{',
+  'mesh.freezeWorldMatrix()',
+  'mesh.unfreezeWorldMatrix()',
+  'spatialSelectionStats.staticWorldMatricesFrozen=frozen',
+  'freezeSpatialStaticWorldMatrices();',
   'spatialSelectionStats.dynamicFilterEnabled=false;',
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
@@ -37,6 +42,17 @@ for(const marker of [
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
+const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{');
+const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
+assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
+const freezeSource=builder.slice(freezeStart,freezeEnd);
+assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.freezeWorldMatrix()'),
+  'Only spatially classified static meshes may have their world transforms frozen.');
+const dynamicPromotion=builder.indexOf('mesh.unfreezeWorldMatrix()');
+const freezeInvocation=builder.indexOf('freezeSpatialStaticWorldMatrices();');
+const dynamicClassification=builder.indexOf('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);');
+assert.ok(dynamicPromotion>0&&freezeInvocation>dynamicClassification,
+  'Dynamic meshes must be unfrozen when promoted, and the static pass must run only after dynamic classification.');
 const dynamicAddStart=builder.indexOf('const addSpatialDynamicMesh=');
 const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAddStart);
 assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
