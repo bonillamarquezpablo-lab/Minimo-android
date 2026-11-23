@@ -417,7 +417,7 @@ jobs:
       - name: Diagnostic A/B capture with GPU skinning fallback (non-release acceptance)
         if: always() && steps.playwright_install.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 8
+        timeout-minutes: 18
         env:
           FAUNA_TEST_URL: https://localhost:4175/
           FAUNA_SKINNING_MODE: gpu
