@@ -1693,7 +1693,7 @@ function updateWildlife(dt){
  }"""
     if html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
-    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\n" + fauna_scene_marker, 1)
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
     fauna_start = html.index(fauna_start_marker)
