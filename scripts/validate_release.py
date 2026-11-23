@@ -376,6 +376,7 @@ def main() -> None:
         "rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip",
         "nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);",
         "flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0))",
+        "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
         "scene.setRenderingAutoClearDepthStencil(1,false,false,false)",
         "height:spec.spec.targetHeight*scale",
         "height:.95*size",

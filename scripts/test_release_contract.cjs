@@ -81,7 +81,9 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
-  buildSite.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  buildSite.includes("gull_motion_replacement = \"ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;") &&
+  buildSite.includes("flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0));") &&
+  buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
   !buildSite.includes("Seagull_Flight_Loop_") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),

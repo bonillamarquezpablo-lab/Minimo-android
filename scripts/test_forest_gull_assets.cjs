@@ -31,7 +31,7 @@ assert.ok(html.includes("flightRig,animation:nativeFlightClip,phase:i*1.25") && 
   html.includes("visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))") &&
   html.includes("groups.find(group=>/fly/i") &&
   html.includes("animationGroup:nativeFlightClip") &&
-  html.includes("b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase)") &&
+  html.includes("flight.speedRatio=.96+.08*Math.sin(elapsed*.7+(Number(b.phase)||0))") && html.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !html.includes("Seagull_Flight_Loop_") && !html.includes("addFlightTrack("),
   'Each gull must align its body horizontally and animate the entire imported GLB Fly clip without a discarded synthetic rig.');
 assert.ok(html.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)") && html.includes("footprintMesh.renderingGroupId=1"),
