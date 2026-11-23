@@ -26,15 +26,18 @@ assert.match(release, /Diagnostic A\/B capture with GPU skinning fallback/, 'GPU
 assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
-assert.match(release, /  startup:\n[\s\S]*?needs: \[build\]/, 'The gameplay/offline smoke must run as an independent required job.');
-assert.match(release, /  fauna:\n[\s\S]*?needs: \[build\]/, 'The full CPU fauna visual acceptance must run as an independent required job.');
+assert.match(release, /  changes:\n[\s\S]*?outputs:\n[\s\S]*?game: \$\{\{ steps\.scope\.outputs\.game \}\}[\s\S]*?fauna: \$\{\{ steps\.scope\.outputs\.fauna \}\}/, 'The pipeline must classify changed game and fauna components.');
+assert.match(release, /  startup:\n[\s\S]*?if: needs\.changes\.outputs\.game == 'true'[\s\S]*?needs: \[build, changes\]/, 'The gameplay/offline smoke must run whenever game runtime files change.');
+assert.match(release, /  fauna:\n[\s\S]*?if: needs\.changes\.outputs\.fauna == 'true'[\s\S]*?needs: \[build, changes\]/, 'The full CPU fauna visual acceptance must run whenever fauna or packaged assets change.');
 assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /openssl req -x509/);
-assert.match(release, /needs: \[build, contracts, startup, fauna\]/, 'Pages must wait for the built package, all source contracts, gameplay/offline acceptance and CPU fauna visual acceptance.');
+assert.match(release, /needs: \[build, contracts, startup, fauna, changes\]/, 'Pages must wait for the build, source contracts, scope detection and applicable acceptance gates.');
+assert.match(release, /needs\.startup\.result == 'success' \|\| needs\.startup\.result == 'skipped'/, 'A skipped startup gate is accepted only when no game runtime files changed.');
+assert.match(release, /needs\.fauna\.result == 'success' \|\| needs\.fauna\.result == 'skipped'/, 'A skipped fauna gate is accepted only when no fauna or packaged asset files changed.');
 assert.match(release, /if: github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/);
-assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna\]/, 'Public Pages deployment must be gated by every mandatory acceptance job.');
+assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna, changes\]/, 'Public Pages deployment must be gated by the build, all source contracts, scope detection and every applicable acceptance job.');
 assert.match(release, /Preserve runtime acceptance evidence/);
 assert.doesNotMatch(release, /force: true|git push origin main/i);
 
