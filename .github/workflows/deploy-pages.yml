@@ -167,6 +167,7 @@ jobs:
 
   build:
     name: Build and validate the complete game
+    needs: [changes]
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     outputs:
@@ -188,6 +189,7 @@ jobs:
           node-version: "22"
 
       - name: Resolve the exact Playwright version for browser-cache compatibility
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         id: playwright_version
         shell: bash
         run: |
@@ -196,6 +198,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Restore Playwright package and matching Chromium cache
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -248,6 +251,7 @@ jobs:
         run: node scripts/test_inspector_phase1_packaging.cjs
 
       - name: Prepare shared Playwright and Chromium cache for parallel browser gates
+        if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         run: |
           npm install --no-save --no-package-lock "playwright@${{ steps.playwright_version.outputs.version }}"
           npx playwright install --with-deps chromium
