@@ -28,7 +28,7 @@ const SOCIAL_MEMORY_KEY="elsn-npc-social-memory-v1";
 function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.getItem(SOCIAL_MEMORY_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.pairs))return;for(const row of data.pairs.slice(-64)){if(!row||typeof row.key!=="string"||row.key.length>180)continue;relationships.set(row.key,{key:row.key,rapport:Math.max(0,Math.min(5,Number(row.rapport)||0)),exchanges:Math.max(0,Math.floor(Number(row.exchanges)||0)),recentTopics:Array.isArray(row.recentTopics)?row.recentTopics.map(x=>String(x).slice(0,40)).slice(-4):[]});}}catch(_){}}
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,staleBubbleSlotsCleared:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:""};
 const positioningSamples=new Float32Array(120);let positioningCursor=0,positioningCount=0;
 function recordPositioningSample(startedAt){
  const duration=Math.max(0,performance.now()-startedAt);
@@ -53,7 +53,33 @@ function idOf(n){const root=rootOf(n);return String(n&&n.parts&&(n.parts.name||(
 function worldPosition(node){if(!node)return null;try{const p=typeof node.getAbsolutePosition==="function"?node.getAbsolutePosition():node.position||null;return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.z))?p:null;}catch(_){return null;}}
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
-function enabled(n){const r=rootOf(n);if(!r)return false;try{return (typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
+function enabled(n){const r=rootOf(n);if(!r)return false;try{return !(typeof r.isDisposed==="function"&&r.isDisposed())&&(typeof r.isEnabled!=="function"||r.isEnabled())&&r.isVisible!==false&&r.visibility!==0;}catch(_){return false;}}
+function registeredNpc(npc,s){
+ if(!npc||!s||!s.scene||npc.alive===false||npc.recruited===true)return false;
+ const root=rootOf(npc);if(!root)return false;
+ try{
+  if(typeof root.isDisposed==="function"&&root.isDisposed())return false;
+  if(typeof root.getScene==="function"&&root.getScene()!==s.scene)return false;
+  if(typeof root.isEnabled==="function"&&!root.isEnabled())return false;
+ }catch(_){return false;}
+ const position=worldPosition(root);
+ if(!position||!s.playerPosition||distance(position,s.playerPosition)>RANGE)return false;
+ const people=Array.isArray(s.people)?s.people:[];
+ for(let i=0;i<people.length;i++){
+  const candidate=people[i];
+  if(!candidate||candidate.alive===false||candidate.recruited===true)continue;
+  if(rootOf(candidate)===root)return true;
+ }
+ return false;
+}
+function pruneStaleSlots(s){
+ for(const slot of slots){
+  if(slot.current&&!registeredNpc(slot.current.npc,s)){
+   diagnostics.staleBubbleSlotsCleared++;
+   clearSlot(slot);
+  }
+ }
+}
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
 function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
 function nearbyPeople(s){
@@ -108,7 +134,8 @@ function startBubble(npc,content,now,duration){
 }
 function clearSlot(slot){
  slot.current=null;
- if(slot.mesh)slot.mesh.setEnabled(false);
+ if(slot.mesh){slot.mesh.setEnabled(false);slot.mesh.parent=null;}
+ slot.anchor=null;
 }
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
@@ -193,7 +220,7 @@ function updateWorldBubble(slot,s){
  };
  diagnostics.projectionAttempts++;
  if(!c||!s||!s.scene||!s.engine)return hide("missing-scene-or-engine");
- const npc=c.npc;if(!enabled(npc))return hide("npc-disabled");
+ const npc=c.npc;if(!registeredNpc(npc,s))return hide("npc-unregistered-or-disposed");if(!enabled(npc))return hide("npc-disabled");
  const root=rootOf(npc);
  try{if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);}catch(_){}
   const rootPos=worldPosition(root);
@@ -239,14 +266,14 @@ function schedulerTick(){
  diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);
  if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}
  if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}
- expire(now);
+ expire(now);pruneStaleSlots(s);
  const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));
  diagnostics.nearestNpcName=nearby[0]?.id||null;
  processPending(now,ids);schedule(now,nearby,s);render(s);
 }
 function positionTick(){
  if(!lastActive||!slots.some(slot=>slot.current)||document.hidden||blockingUi())return;
- const s=snapshot();if(s)render(s);
+ const s=snapshot();if(s){pruneStaleSlots(s);render(s);}
 }
 function start(){
  if(schedulerHandle||positionHandle)return;
