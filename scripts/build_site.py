@@ -4066,8 +4066,12 @@ function getWorldPhaseTimingSnapshot(){
     if(npc.pause<=0&&Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ)){
      const targetDx=npc.targetX-oldX,targetDz=npc.targetZ-oldZ,targetDistance=Math.hypot(targetDx,targetDz);
      if(targetDistance>.42){
-      const pace=brain.mode==='flee'?1.18:(brain.mode==='social'?.72:(brain.mode==='watch'?.34:(brain.mode==='rest'?.20:npc.speed)));
-      const step=Math.min(targetDistance,Math.max(.018,pace*ambientDt));
+      const wantedHeading=Math.atan2(targetDx,targetDz);
+      const turnDelta=Math.atan2(Math.sin(wantedHeading-p.rotation.y),Math.cos(wantedHeading-p.rotation.y));
+      if(!brain.locomotionState)brain.locomotionState={speed:0};
+      const motion=npcVillageBrain.computeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState);
+      const pace=motion.speed;
+      const step=Math.min(targetDistance,Math.max(.012,pace*ambientDt));
       const move=npcVillageBrain.chooseStep({x:oldX,z:oldZ,targetX:npc.targetX,targetZ:npc.targetZ,step,side:i%2===0?1:-1},(x,z)=>{
        if(!tryLandMove(x,z,.43,oldX,oldZ))return false;
        for(const other of ambientPeople){
