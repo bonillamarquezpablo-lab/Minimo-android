@@ -19,6 +19,12 @@ assert.match(release, /el-sin-nombre-playwright-.*needs\.build\.outputs\.playwri
 assert.match(release, /Start the built release on local HTTPS for Service Worker acceptance/);
 assert.match(release, /Verify startup, required NPCs, gameplay and offline Service Worker restart before publish/);
 assert.match(release, /node scripts\/player-startup-smoke\.mjs/);
+assert.ok(smoke.includes("/^Fly(?:[_-].+)?$/i.test(bird.flightName||'')"),
+  'The startup smoke must accept native Fly clip names, including namespaced Fly_Gull_* variants.');
+assert.ok(release.includes("scripts/(build_site\\.py|validate_release\\.py|player-startup-smoke\\.mjs|nordic/)"),
+  'A startup smoke change must trigger the published-site build.');
+assert.ok(release.includes("scripts/(build_site\\.py|player-startup-smoke\\.mjs|fauna-visual-capture\\.mjs|test_fauna_visual_capture_contract\\.cjs|test_wildlife_runtime_contract\\.cjs|test_forest_gull_assets\\.cjs|create_fauna_contact_sheet\\.py)"),
+  'A startup smoke change must run fauna acceptance together with the gameplay smoke.');
 assert.match(release, /Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish/);
 assert.match(release, /FAUNA_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /FAUNA_SKINNING_MODE: cpu/, 'Required mobile fauna acceptance must use the stable CPU skinning path.');

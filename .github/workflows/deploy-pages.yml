@@ -72,7 +72,7 @@ jobs:
             echo "fauna=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|nordic/))' <<<"$changed"; then
+          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|player-startup-smoke\.mjs|nordic/))' <<<"$changed"; then
             echo "site=true" >> "$GITHUB_OUTPUT"
           else
             echo "site=false" >> "$GITHUB_OUTPUT"
@@ -82,7 +82,7 @@ jobs:
           else
             echo "game=false" >> "$GITHUB_OUTPUT"
           fi
-          if grep -Eq '^(index\.html|assets/|scripts/(build_site\.py|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_wildlife_runtime_contract\.cjs|test_forest_gull_assets\.cjs|create_fauna_contact_sheet\.py))' <<<"$changed"; then
+          if grep -Eq '^(index\.html|assets/|scripts/(build_site\.py|player-startup-smoke\.mjs|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_wildlife_runtime_contract\.cjs|test_forest_gull_assets\.cjs|create_fauna_contact_sheet\.py))' <<<"$changed"; then
             echo "fauna=true" >> "$GITHUB_OUTPUT"
           else
             echo "fauna=false" >> "$GITHUB_OUTPUT"
