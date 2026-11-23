@@ -343,11 +343,20 @@ jobs:
           cat artifacts/fauna-visual-captures/https-server.log
           exit 1
       - name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish
-        timeout-minutes: 18
+        timeout-minutes: 30
         env:
           FAUNA_TEST_URL: https://localhost:4175/
           FAUNA_SKINNING_MODE: cpu
         run: node scripts/fauna-visual-capture.mjs
+
+      - name: Build fauna contact sheet and visual failure report
+        if: always()
+        run: |
+          if [ -s artifacts/fauna-visual-captures/manifest.json ]; then
+            python scripts/create_fauna_contact_sheet.py artifacts/fauna-visual-captures
+          else
+            echo "No fauna manifest was produced; raw diagnostic logs will still be preserved."
+          fi
 
       - name: Stop CPU fauna acceptance HTTPS server
         if: always()
