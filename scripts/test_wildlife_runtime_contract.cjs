@@ -31,7 +31,7 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
 assert.ok(builder.includes('def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:') &&
   builder.includes('primitive.setdefault("attributes", {})["COLOR_0"] = accessor_index') &&
-  builder.includes('coat.get("algorithm") != "procedural-vertex-coat-v2"') &&
+  builder.includes('coat.get("algorithm") != "procedural-vertex-coat-v3-skeleton-root-v1"') &&
   builder.includes('coverage < 0.90'),
   'Every terrestrial animal must ship with a valid, sufficiently complete vertex-colour coat stream; a technically loaded but flat unshaded GLB must fail release validation.');
 assert.match(html,/WILDLIFE_MODEL_DEFS=\{deer:/);
@@ -155,4 +155,11 @@ assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(na
   builder.includes("alignmentDot<.995"),
   "The gull body axis must be aligned from the evaluated native Fly pose, then rejected if residual pitch is not horizontal.");
 assert.ok(builder.includes('("idle", "walk", "gallop")'), "Every terrestrial species must provide the real Idle, Walk and Gallop GLB clips.");
+assert.ok(builder.includes('def repair_terrestrial_animal_skin_roots(document: dict, label: str) -> list[dict]:') &&
+  builder.includes('skin["skeleton"] = armature_index') &&
+  builder.includes('"algorithm": "animal-armature-root-v1"') &&
+  builder.includes('ASSET_CACHE_TRANSFORM_VERSION = "procedural-vertex-coat-v3-skeleton-root-v1"'),
+  'Wildlife GLBs must be normalized to their complete AnimalArmature hierarchy and invalidate stale pre-repair cache entries.');
+assert.ok(fs.readFileSync('scripts/fauna-visual-capture.mjs','utf8').includes("typeof mesh.setPositionsForCPUSkinning==='function'"),
+  'The fauna capture diagnostic must use original CPU-skinning source vertices before applying bone matrices.');
 console.log('WILDLIFE RUNTIME CONTRACT: PASS (3 complete terrestrial species in both profiles, GLB integrity, skeletons, clips, textures, transactional cleanup and blocking readiness).');
