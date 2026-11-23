@@ -2,12 +2,11 @@ name: Laboratorio nocturno y agentes especialistas — EL SIN NOMBRE
 # Optional graphics audit: run only when a visual or structural change needs evidence.
 
 on:
+  # Run on push only when the Inspector/capture implementation itself changes.
+  # General game builds and unrelated runtime edits do not launch the full cloud lab.
   push:
     branches: [main]
     paths:
-      - 'scripts/build_site.py'
-      - 'scripts/test_mobile_startup_loading.cjs'
-      - 'scripts/test_wildlife_runtime_contract.cjs'
       - 'scripts/fauna-visual-capture.mjs'
       - 'scripts/create_fauna_contact_sheet.py'
       - 'scripts/run-unified-inspector.mjs'
