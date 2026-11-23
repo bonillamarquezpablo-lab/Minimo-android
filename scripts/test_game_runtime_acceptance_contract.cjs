@@ -38,9 +38,8 @@ assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, faun
 assert.match(release, /Preserve runtime acceptance evidence/);
 assert.doesNotMatch(release, /force: true|git push origin main/i);
 
-assert.match(workflow, /^  pull_request:/m, 'The acceptance workflow must run on integration PRs.');
-assert.match(workflow, /branches: \[main\]/, 'The acceptance workflow must target main.');
-assert.match(workflow, /^  workflow_dispatch:/m, 'A manual acceptance run must remain available.');
+assert.doesNotMatch(workflow, /^  pull_request:/m, 'The standalone duplicate build must not run automatically; deploy-pages owns required PR runtime acceptance.');
+assert.match(workflow, /^  workflow_dispatch:/m, 'Keep independent runtime acceptance available for manual regression investigations.');
 assert.doesNotMatch(workflow, /^  push:/m, 'Avoid duplicate automatic runs on branch pushes.');
 assert.doesNotMatch(workflow, /phase2\/autonomous-repair-safety|test_autonomous_lab_agents|test_ai_visual_review|test_autonomous_repair/,
   'The acceptance workflow cannot depend on unmerged autonomous-lab files.');
