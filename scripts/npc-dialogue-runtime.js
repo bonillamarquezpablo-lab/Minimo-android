@@ -81,7 +81,7 @@ function pruneStaleSlots(s){
  }
 }
 function blockingUi(){if(document.body.classList.contains("map-open"))return true;const intro=document.getElementById("intro");return!!(intro&&intro.classList.contains("open")&&intro.getAttribute("aria-hidden")!=="true");}
-function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;console.warn("NPC dialogue snapshot:",error);return lastSnapshot;}}
+function snapshot(){try{const value=Bridge.getSnapshot();diagnostics.bridgeError="";diagnostics.bridgeReportedActive=!!(value&&value.active);if(value)lastSnapshot=value;return value;}catch(error){diagnostics.snapshotFailures++;diagnostics.bridgeError=String(error&&error.message||error);diagnostics.lastError=diagnostics.bridgeError;lastSnapshot=null;diagnostics.lastSnapshotInvalidatedAt=Date.now();console.warn("NPC dialogue snapshot:",error);return null;}}
 function nearbyPeople(s){
   const people=Array.isArray(s&&s.people)?s.people:[];
   diagnostics.worldPeopleCount=people.length;
@@ -134,8 +134,16 @@ function startBubble(npc,content,now,duration){
 }
 function clearSlot(slot){
  slot.current=null;
- if(slot.mesh){slot.mesh.setEnabled(false);slot.mesh.parent=null;}
+ if(slot.mesh){try{slot.mesh.setEnabled(false);slot.mesh.parent=null;}catch(_){slot.mesh=null;slot.texture=null;slot.material=null;}}
  slot.anchor=null;
+ slot.textDirty=true;
+}
+function clearAllSlots(reason){
+ for(const slot of slots)clearSlot(slot);
+ pending.length=0;
+ renderedCount=0;
+ diagnostics.lastClearReason=String(reason||"world-unavailable");
+ diagnostics.lastClearAt=Date.now();
 }
 function expire(now){for(const slot of slots)if(slot.current&&slot.current.expiresAt<=now)clearSlot(slot);}
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
@@ -264,7 +272,8 @@ function render(s){
 function schedulerTick(){
  const now=Date.now(),s=snapshot();
  diagnostics.lastTickAt=now;diagnostics.bridgeActive=!!(s&&s.active);
- if(!s||!s.active||document.hidden||blockingUi()){render(s);lastActive=false;return;}
+ if(!s){clearAllSlots("snapshot-unavailable");render(null);lastActive=false;return;}
+ if(!s.active||document.hidden||blockingUi()){clearAllSlots(!s.active?"world-inactive":(document.hidden?"document-hidden":"blocking-ui"));render(s);lastActive=false;return;}
  if(!lastActive){for(const slot of slots)clearSlot(slot);pending.length=0;lastActive=true;}
  expire(now);pruneStaleSlots(s);
  const nearby=nearbyPeople(s),ids=new Set(nearby.map(x=>x.id));
