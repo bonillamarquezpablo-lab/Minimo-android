@@ -36,7 +36,7 @@ assert.match(release, /openssl req -x509/);
 assert.match(release, /needs: \[build, contracts, startup, fauna, changes\]/, 'Pages must wait for the build, source contracts, scope detection and applicable acceptance gates.');
 assert.match(release, /needs\.startup\.result == 'success' \|\| needs\.startup\.result == 'skipped'/, 'A skipped startup gate is accepted only when no game runtime files changed.');
 assert.match(release, /needs\.fauna\.result == 'success' \|\| needs\.fauna\.result == 'skipped'/, 'A skipped fauna gate is accepted only when no fauna or packaged asset files changed.');
-assert.match(release, /github\.event_name != 'pull_request' && github\.ref == 'refs\/heads\/main'/, 'Production Pages can deploy only from main after applicable acceptance gates pass.');
+assert.match(release, /github\.event_name != 'pull_request' &&\s+github\.ref == 'refs\/heads\/main'/, 'Production Pages can deploy only from main after applicable acceptance gates pass.');
 assert.match(release, /  deploy:[\s\S]*?needs: \[build, contracts, startup, fauna, changes\]/, 'Public Pages deployment must be gated by the build, all source contracts, scope detection and every applicable acceptance job.');
 assert.match(release, /Preserve runtime acceptance evidence/);
 assert.doesNotMatch(release, /force: true|git push origin main/i);
