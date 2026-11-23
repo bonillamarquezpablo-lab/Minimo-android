@@ -119,7 +119,7 @@ DOWNLOADS = {
 
 
 ASSET_CACHE_SCHEMA_VERSION = 2
-ASSET_CACHE_TRANSFORM_VERSION = "procedural-vertex-coat-v2"
+ASSET_CACHE_TRANSFORM_VERSION = "procedural-vertex-coat-v3-skeleton-root-v1"
 _ASSET_CACHE_MANIFEST = None
 _ASSET_CACHE_MANIFEST_LOCK = threading.RLock()
 
@@ -399,12 +399,87 @@ def _read_glb_position_accessor(document: dict, binary: bytearray, accessor_inde
     return [struct.unpack_from("<3f", binary, start + index * stride) for index in range(count)]
 
 
+def repair_terrestrial_animal_skin_roots(document: dict, label: str) -> list[dict]:
+    """Keep the complete structural AnimalArmature transform in each wildlife skin."""
+    species = Path(label).stem.lower()
+    if species not in {"wolf", "stag", "deer"}:
+        raise RuntimeError(f"Unknown terrestrial species for skin-root repair: {label}")
+    nodes = document.get("nodes") or []
+    skins = document.get("skins") or []
+    if not nodes or not skins:
+        raise RuntimeError(f"{label}: cannot repair an animal GLB without nodes and skins")
+    parents = {}
+    for parent_index, node in enumerate(nodes):
+        for child_index in node.get("children") or []:
+            child_index = int(child_index)
+            if child_index < 0 or child_index >= len(nodes):
+                raise RuntimeError(f"{label}: node {parent_index} has invalid child index {child_index}")
+            if child_index in parents:
+                raise RuntimeError(f"{label}: node {child_index} has more than one parent")
+            parents[child_index] = parent_index
+
+    def descends_from(node_index: int, ancestor_index: int) -> bool:
+        visited = set()
+        cursor = node_index
+        while cursor not in visited:
+            if cursor == ancestor_index:
+                return True
+            visited.add(cursor)
+            if cursor not in parents:
+                return False
+            cursor = parents[cursor]
+        raise RuntimeError(f"{label}: cycle detected in the glTF node hierarchy")
+
+    armature_indices = [
+        index for index, node in enumerate(nodes)
+        if str(node.get("name") or "") == "AnimalArmature"
+    ]
+    if len(armature_indices) != 1:
+        raise RuntimeError(
+            f"{label}: expected exactly one AnimalArmature node; found {armature_indices}"
+        )
+    armature_index = armature_indices[0]
+    repairs = []
+    for skin_index, skin in enumerate(skins):
+        joints = [int(index) for index in (skin.get("joints") or [])]
+        if not joints or any(index < 0 or index >= len(nodes) for index in joints):
+            raise RuntimeError(f"{label}: skin {skin_index} has invalid or empty joint indices")
+        if not all(descends_from(index, armature_index) for index in joints):
+            raise RuntimeError(
+                f"{label}: AnimalArmature does not contain every joint in skin {skin_index}"
+            )
+        original_root = skin.get("skeleton")
+        if original_root != armature_index:
+            skin.setdefault("extras", {})["elsnOriginalSkeletonRoot"] = original_root
+            skin["skeleton"] = armature_index
+            repairs.append({
+                "skin": skin_index,
+                "originalRoot": original_root,
+                "repairedRoot": armature_index,
+                "repairedRootName": "AnimalArmature",
+            })
+        skin.setdefault("extras", {})["elsnSkeletonRootRepair"] = {
+            "algorithm": "animal-armature-root-v1",
+            "rootName": "AnimalArmature",
+            "rootNode": armature_index,
+        }
+    document.setdefault("extras", {})["elsnAnimalSkinRoot"] = {
+        "algorithm": "animal-armature-root-v1",
+        "species": species,
+        "rootNode": armature_index,
+        "rootName": "AnimalArmature",
+        "repairs": repairs,
+    }
+    return repairs
+
+
 def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
     """Bake subtle coat color variation into glTF COLOR_0 without changing rigs or animation."""
     species = path.stem.lower()
     if species not in {"wolf", "stag", "deer"}:
         raise RuntimeError(f"Unknown terrestrial species for appearance baking: {label}")
     document, binary, chunks = _read_glb_payload(path)
+    repair_terrestrial_animal_skin_roots(document, label)
     primitives = []
     global_min = [float("inf")] * 3
     global_max = [float("-inf")] * 3
@@ -499,7 +574,7 @@ def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:
             f"({added_vertices}/{total_skinned_vertices}); minimum is 90%."
         )
     document.setdefault("extras", {})["elsnAnimalCoat"] = {
-        "algorithm": "procedural-vertex-coat-v2",
+        "algorithm": ASSET_CACHE_TRANSFORM_VERSION,
         "species": species,
         "vertices": added_vertices,
         "skinnedVertices": total_skinned_vertices,
@@ -548,6 +623,37 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
         )
     if max_joints < 8:
         raise RuntimeError(f"{label}: animal rig is incomplete ({max_joints} joints; expected >=8)")
+    nodes = document.get("nodes") or []
+    parents = {
+        int(child): parent_index
+        for parent_index, node in enumerate(nodes)
+        for child in (node.get("children") or [])
+    }
+    root_metadata = ((document.get("extras") or {}).get("elsnAnimalSkinRoot") or {})
+    if root_metadata.get("algorithm") != "animal-armature-root-v1":
+        raise RuntimeError(f"{label}: normalized AnimalArmature skin-root metadata is missing")
+    root_index = root_metadata.get("rootNode")
+    if not isinstance(root_index, int) or root_index < 0 or root_index >= len(nodes):
+        raise RuntimeError(f"{label}: normalized skin root index is invalid")
+    if str(nodes[root_index].get("name") or "") != "AnimalArmature":
+        raise RuntimeError(f"{label}: normalized skin root is not AnimalArmature")
+    for skin_index, skin in enumerate(skins):
+        if skin.get("skeleton") != root_index:
+            raise RuntimeError(
+                f"{label}: skin {skin_index} starts at {skin.get('skeleton')}, expected {root_index} (AnimalArmature)"
+            )
+        for joint in skin.get("joints") or []:
+            cursor = int(joint)
+            visited = set()
+            while cursor != root_index and cursor in parents and cursor not in visited:
+                visited.add(cursor)
+                cursor = parents[cursor]
+            if cursor != root_index:
+                raise RuntimeError(
+                    f"{label}: skin {skin_index} joint {joint} is outside the normalized AnimalArmature hierarchy"
+                )
+        if ((skin.get("extras") or {}).get("elsnSkeletonRootRepair") or {}).get("algorithm") != "animal-armature-root-v1":
+            raise RuntimeError(f"{label}: skin {skin_index} lacks skeleton-root repair metadata")
     animation_names = [re.sub(r"[^a-z0-9]", "", str(item.get("name") or "").lower()) for item in animations]
     missing_clips = [clip for clip in ("idle", "walk", "gallop") if not any(name == clip or name.endswith(clip) for name in animation_names)]
     if missing_clips:
