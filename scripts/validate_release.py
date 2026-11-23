@@ -863,6 +863,13 @@ def main() -> None:
         fail("Falta la telemetría de los huesos de agarre.")
     if "club-local-player-anchor" not in index_html or "function syncRealWeaponAnchor(" not in index_html:
         fail("Falta el anclaje del palo al jugador.")
+    weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
+    weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
+    weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+        fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
+    if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
+        fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html or "const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);" not in index_html or "const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();" not in index_html:
         fail("El palo no conserva el desplazamiento frontal y el anclaje local de la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
