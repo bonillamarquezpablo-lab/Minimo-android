@@ -4182,6 +4182,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # This function is called only when the Inspector user requests a world capture.
     world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
     # 0.6.351 release gate: render-loop changes require a fresh build and real-gameplay acceptance.
+    # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
  // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
  const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};

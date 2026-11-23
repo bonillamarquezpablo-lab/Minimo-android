@@ -270,7 +270,7 @@ jobs:
         if: needs.changes.outputs.game == 'true' || needs.changes.outputs.fauna == 'true'
         run: |
           npm install --no-save --no-package-lock "playwright@${{ steps.playwright_version.outputs.version }}"
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
 
 
 
