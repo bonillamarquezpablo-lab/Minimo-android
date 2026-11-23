@@ -439,7 +439,7 @@ async function main() {
               if(wasEnabled){other.setEnabled(false);hidden.push(other);}
             }
           }
-          let readback=null,cameraVerified=false,png=null,bindPosePng=null,temporaryCamera=null,previousCamera=null,previousActiveCameras=null;
+          let readback=null,cameraVerified=false,png=null,bindPosePng=null,imageIntegrity=null,temporaryCamera=null,previousCamera=null,previousActiveCameras=null;
           try{
             const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
             if(!B?.UniversalCamera||!canvas)throw new Error('No se puede crear una cámara temporal Babylon para una captura visual aislada.');
@@ -498,7 +498,7 @@ async function main() {
             // Capture the same view once without this actor. A raster comparison proves
             // that the PNG contains the animal itself, not just a valid non-empty canvas.
             const actorWasEnabled=root.isEnabled?.()!==false;
-            let backgroundPng=null,imageIntegrity=null;
+            let backgroundPng=null;
             try{
               root.setEnabled(false);
               await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
