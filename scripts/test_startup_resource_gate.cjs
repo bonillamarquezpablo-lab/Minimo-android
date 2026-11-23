@@ -35,6 +35,17 @@ assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildl
 assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.includes('startupResourceFailures.length'),
   'The player must publish a final readiness gate based on actual resources.');
 assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));
+
+assert.ok(html.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null"),
+  'The startup report must include measured initial beach, seabed, foam and reflection readiness.');
+assert.ok(html.includes("startupResourceSnapshot.coast.status!=='ready'"),
+  'Gameplay must remain blocked until the complete initial coast is ready.');
+assert.ok(html.includes("startup_coast_warmup_code")&&
+  html.includes("syncActiveBeachIsland()")&&
+  html.includes("syncActiveTidalFoamIsland()")&&
+  html.includes("syncNordicWaterReflectionIsland()"),
+  'The full initial coastal systems must be built before the player enters the world.');
+
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
