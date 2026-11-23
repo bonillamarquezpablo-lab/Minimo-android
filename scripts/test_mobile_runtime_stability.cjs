@@ -41,7 +41,7 @@ for (const marker of [
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
   'meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason',
-  'spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i',
+  'spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i',
   'created-after-octree',
   'octree-initial-dynamic',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',

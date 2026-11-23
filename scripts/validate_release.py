@@ -573,6 +573,8 @@ def main() -> None:
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
         "meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason",
         "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
+        "meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen",
+        "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors",
     )
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:

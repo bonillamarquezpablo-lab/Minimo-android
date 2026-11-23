@@ -492,7 +492,10 @@
         meshSelectionDynamicFilterLastMs: number(runtime.meshSelectionDynamicFilterLastMs),
         meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs),
         meshSelectionDynamicFilterErrors: number(runtime.meshSelectionDynamicFilterErrors),
-        meshSelectionBuildMs: number(runtime.meshSelectionBuildMs)
+        meshSelectionBuildMs: number(runtime.meshSelectionBuildMs),
+        meshSelectionStaticWorldMatricesFrozen: number(runtime.meshSelectionStaticWorldMatricesFrozen),
+        meshSelectionStaticWorldMatrixFreezeErrors: number(runtime.meshSelectionStaticWorldMatrixFreezeErrors),
+        meshSelectionStaticWorldMatrixFreezeSkipped: number(runtime.meshSelectionStaticWorldMatrixFreezeSkipped)
       },
       memory: {
         usedJSHeapSizeBytes: number(browserMemory && browserMemory.usedJSHeapSize),
@@ -1196,6 +1199,9 @@
           spatialSelection: {
             enabled: scene.meshSelectionOctreeEnabled === true,
             buildMs: number(scene.meshSelectionBuildMs),
+            staticWorldMatricesFrozen: number(scene.meshSelectionStaticWorldMatricesFrozen),
+            staticWorldMatrixFreezeErrors: number(scene.meshSelectionStaticWorldMatrixFreezeErrors),
+            staticWorldMatrixFreezeSkipped: number(scene.meshSelectionStaticWorldMatrixFreezeSkipped),
             dynamicFilterAverageMs: number(scene.meshSelectionDynamicFilterAverageMs),
             dynamicFilterMaxMs: number(scene.meshSelectionDynamicFilterMaxMs),
             candidates: number(scene.meshSelectionDynamicFilterCandidates),

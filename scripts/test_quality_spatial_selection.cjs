@@ -11,9 +11,9 @@ const workflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 for(const marker of [
   'const spatialActorRootPattern=',
-    'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
+    'const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
-  'const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|',
+  'const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|',
   "if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
@@ -24,6 +24,11 @@ for(const marker of [
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason='octree-initial-dynamic'",
   'function buildSpatialSelectionOctree()',
+  'const freezeSpatialStaticWorldMatrices=()=>{',
+  'mesh.freezeWorldMatrix()',
+  'mesh.unfreezeWorldMatrix()',
+  'spatialSelectionStats.staticWorldMatricesFrozen=frozen',
+  'freezeSpatialStaticWorldMatrices();',
   'spatialSelectionStats.dynamicFilterEnabled=false;',
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
@@ -37,6 +42,19 @@ for(const marker of [
   'meshSelectionBuildMs:spatialSelectionStats.buildMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
+const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{');
+const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
+assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
+const freezeSource=builder.slice(freezeStart,freezeEnd);
+const movingVisualPattern='const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|';
+assert.ok(builder.includes(movingVisualPattern), 'Footprints, moving sun sprites, windborne leaves, hearth flames and sparks must remain dynamic and must never have their world matrices frozen.');
+assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.freezeWorldMatrix()'),
+  'Only spatially classified static meshes may have their world transforms frozen.');
+const dynamicPromotion=builder.indexOf('mesh.unfreezeWorldMatrix()');
+const freezeInvocation=builder.indexOf('freezeSpatialStaticWorldMatrices();');
+const dynamicClassification=builder.indexOf('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);');
+assert.ok(dynamicPromotion>0&&freezeInvocation>dynamicClassification,
+  'Dynamic meshes must be unfrozen when promoted, and the static pass must run only after dynamic classification.');
 const dynamicAddStart=builder.indexOf('const addSpatialDynamicMesh=');
 const dynamicAddEnd=builder.indexOf('const removeSpatialDynamicMesh=',dynamicAddStart);
 assert.ok(dynamicAddStart>=0&&dynamicAddEnd>dynamicAddStart,'Dynamic mesh registration must remain present.');
@@ -44,7 +62,7 @@ const dynamicAddSource=builder.slice(dynamicAddStart,dynamicAddEnd);
 assert.ok(dynamicAddSource.includes('mesh.__elsnSpatialDynamic')&&dynamicAddSource.includes('dynamic.push(mesh)')&&!dynamicAddSource.includes('dynamic.indexOf(mesh)'),'Dynamic mesh registration must use the existing per-mesh O(1) duplicate flag instead of a repeated linear search.');
 assert.ok(dynamicAddSource.includes('deferStats=false') && dynamicAddSource.includes('if(!deferStats)updateSpatialSelectionCounts();') &&
   builder.includes('addSpatialDynamicMesh(mesh,null,false,true);') &&
-  builder.includes('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);\n   updateSpatialSelectionCounts();'),
+  builder.includes('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);\n   const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();\n   updateSpatialSelectionCounts();'),
   'Initial dynamic mesh registration must batch global statistics once after the scene scan; live objects must still update stats immediately.');
 
 for(const marker of [
