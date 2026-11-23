@@ -1691,9 +1691,6 @@ function updateWildlife(dt){
   if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
   recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
  }"""
-    if html.count(fauna_scene_marker) != 1:
-        raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
-    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\n" + fauna_scene_marker, 1)
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
     fauna_start = html.index(fauna_start_marker)
@@ -1703,6 +1700,11 @@ function updateWildlife(dt){
     scene_marker_index = html.index(fauna_scene_marker)
     ordered_fauna = " setLoadingProgress(87,coastalReferenceMode?'Preparando la referencia costera…':'Preparando fauna de la isla inicial…');\n" + fauna_block + "\n setLoadingProgress(93,coastalReferenceMode?'Preparando shaders de costa…':'Preparando texturas y shaders de la zona inicial…');\n"
     html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]
+    # Build the initial beach, tide foam and active-island reflection after required fauna,
+    # so the initial water reflection includes every world actor before gameplay is unlocked.
+    if html.count(fauna_scene_marker) != 1:
+        raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)
 
     # All three terrestrial species are required in both profiles. Performance keeps its
     # reduced movement/decision cadence; the five gulls remain Quality-only.
