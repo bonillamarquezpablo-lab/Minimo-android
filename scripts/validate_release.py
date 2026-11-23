@@ -19,6 +19,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "RealCastawayStickBranch",
     "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();",
     "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;",
+    "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
 )
 
 HTML_PAGES = (
