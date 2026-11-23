@@ -198,9 +198,10 @@ assert.match(html,/if\(isPerformanceMode\)return;/,"Performance must skip grass 
 assert.match(html,/if\(onShip\|\|bestRatio>1\.09\)currentIsland=-1/,"Grass on another island must wait until the player disembarks.");
 assert.match(html,/if\(!isPerformanceMode\)\{[\s\S]*?await createRealGrass\(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ\)/,"Only Quality prepares nearby grass before gameplay starts.");
 assert.match(html,/function updateActiveIslandGrass\(dt\)/,"Quality-only active-area grass streaming must be available.");
-assert.match(html,/Math\.hypot\(focus\.x-grassStreamCenterX,focus\.z-grassStreamCenterZ\)>=GRASS_STREAM_RECENTER_DISTANCE/,"The local grass area must recenter as the player moves.");
+assert.match(html,/const sameIsland=currentIsland===grassStreamActiveIslandIndex;\s*if\(!sameIsland&&!grassStreamPromise\)/,"Full-island Quality grass must rebuild only when the active island changes.");
+assert.match(html,/if\(sameIsland\)\{grassSameIslandSkipCount\+\+;return;\}/,"Walking inside the same island must reuse its existing full-island grass batches.");
 assert.match(html,/const show=batch\.islandIndex===visibleGrassIslandIndex/,"All grass batches belonging to the occupied island must remain visible.");
-assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise\}/,"Runtime diagnostics must expose the active grass island and pending streaming state.");
+assert.match(html,/grassStream:\{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise,builds:grassStreamBuildCount,sameIslandSkips:grassSameIslandSkipCount\}/,"Runtime diagnostics must expose active-island grass builds and avoided same-island rebuilds.");
 assert.match(html,/await Promise\.all\(\[playerHumanLoadPromise,npcStartupPromise\]\)/,"Protagonist and initial-island NPC GLBs must block entry.");
 assert.match(html,/const faunaTasks=\[\{name:\'Fauna terrestre\',promise:loadWildlifeModels\(\)\}\]/,"Quality wildlife must join the blocking startup barrier.");
 assert.match(html,/faunaTasks\.push\(\{name:\'Gaviotas 3D\',promise:loadRiggedCoastalGulls\(\)\}\)/,"Rigged gull imports must also finish before entry.");
