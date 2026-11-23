@@ -1887,7 +1887,7 @@ function setLoadingProgress(value,label){
 
     # Five birds are cheap to update every frame; generic entity LOD must not freeze the flock.
     gull_motion_marker = "ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}});"
-    gull_motion_replacement = ""  # Flock motion is driven by Babylon render frames.
+    gull_motion_replacement = ""  # Render-observer motion runs every Babylon frame, independent of throttled world updates.
     if html.count(gull_motion_marker) != 1:
         raise SystemExit("No se encontró el bucle único de órbita de gaviotas.")
     html = html.replace(gull_motion_marker,gull_motion_replacement,1)
