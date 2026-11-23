@@ -81,7 +81,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
-  buildSite.includes("gull_motion_replacement = \"ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;") &&
+  buildSite.includes("scene.onBeforeRenderObservable.add(()=>{") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,observer:gullFlightRenderObserver};") &&
   buildSite.includes("flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);") &&
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
