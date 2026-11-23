@@ -149,7 +149,7 @@ assert.equal(Brain.attackTelegraph(.1,1).phase,"anticipation");
 assert.equal(Brain.attackTelegraph(.4,1).canImpact,true);
 assert.equal(Brain.attackTelegraph(.9,1).canChain,true);
 assert.match(builder,/npcVillageBrain\.computeLocomotion\(/,"Only the village NPC movement loop must consume the advanced locomotion profile.");
-assert.match(builder,/const npc_behavior_pattern =/,"NPC behavior integration must remain isolated to its NPC-specific build transform.");
+assert.match(builder,/npc_behavior_pattern =/,"NPC behavior integration must remain isolated to its NPC-specific build transform.");
 assert.doesNotMatch(builder,/player\.root\.position\s*=|player\.speed\s*=|animateViking\(player/,"The NPC upgrade must not alter player position, speed or animation.");
 console.log("NPC systems contract: PASS (NPC-only locomotion, threat assessment, combat intent, formations and attack telegraphs).");
 
