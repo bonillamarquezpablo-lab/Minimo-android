@@ -198,3 +198,13 @@ assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
   dialogueRuntime.includes('{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
   'NPC world dialogues must remain readable at mobile camera distance.');
+
+const weaponAnchorStart=source.indexOf('function syncRealWeaponAnchor(');
+const weaponAnchorEnd=source.indexOf('function updateRealWeaponPose(',weaponAnchorStart);
+const weaponAnchorSource=source.slice(weaponAnchorStart,weaponAnchorEnd);
+assert.ok(weaponAnchorStart>=0&&weaponAnchorEnd>weaponAnchorStart,'The real weapon anchor implementation must remain present.');
+assert.ok(weaponAnchorSource.includes('const holderParent=socket||realPlayerModelPivot;')&&weaponAnchorSource.includes('holderParent.getWorldMatrix().clone()'),'The equipped weapon must be transformed into the animated hand socket space so it follows the character instead of remaining at an old world position.');
+assert.ok(!weaponAnchorSource.includes('const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()'),'Weapon fallback poses must use the same live attachment parent as the primary pose.');
+assert.ok(source.includes("e.parts.alive=false;")&&source.includes("guard.parts.alive=true;"),'Dead and reset guards must synchronize their renderable actor lifecycle state.');
+assert.ok(source.includes("setFactionBadge(guard.parts,'friendly');"),'A recruited guard must switch its faction indicator to friendly.');
+assert.ok(source.includes('hideFactionBadge(parts);crewman.landed=false;crewman.invaderRef=null;parts.faction=\'enemy\';'),'Crew returned to a ship must not retain a detached enemy marker.');
