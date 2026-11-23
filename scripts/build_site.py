@@ -1704,7 +1704,7 @@ function updateWildlife(dt){
     # before Babylon's full texture and shader readiness barrier unlocks gameplay.
     if html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró exactamente una barrera de compilación de escena para precalentar la costa.")
-    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)
+    html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\n" + fauna_scene_marker, 1)
 
     # All three terrestrial species are required in both profiles. Performance keeps its
     # reduced movement/decision cadence; the five gulls remain Quality-only.
