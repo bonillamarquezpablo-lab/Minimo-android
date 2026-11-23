@@ -22,7 +22,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,observer:gullFlightRenderObserver};",
     "b.root.position.x=Math.cos(a)*radius-36;",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
-    "const gullClockSeconds=performance.now()*.001;",
+    "const now=performance.now()*.001;",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
     "flightElapsed=Math.max(0,now-b.flightClockOrigin)",
     "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
