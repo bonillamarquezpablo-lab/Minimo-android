@@ -20,6 +20,8 @@ assert.ok(build.includes("#loading .loadBottom{display:none!important}") && buil
   'The obsolete loading footer must be hidden so only the new cinematic HUD remains visible.');
 assert.ok(!build.includes("En esta fase:") && !build.includes(".elsn-sp-grid") && !build.includes("elsn-sp-step"),
   'The loading screen must not reintroduce overlapping text or boxed phase cards.');
+assert.ok(smoke.includes("loading-screen-layout.png") && smoke.includes("#elsnStartupProgressPanel .elsn-sp-content") && smoke.includes("loadingScreenLayoutCapture"),
+  'The real-player startup smoke must preserve a rendered screenshot of the loading HUD for visual review.');
 assert.ok(build.includes("await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));") &&
   build.includes("Yield once before synchronous world construction"),
   'The browser must paint the 40% world-building milestone before synchronous scene generation starts.');
