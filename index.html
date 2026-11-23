@@ -2582,12 +2582,31 @@ async function removeStrayDebugGeometry(targetScene){
  }
  factionBadgeMaterials.friendly=createFactionBadgeMaterial('friendly');factionBadgeMaterials.enemy=createFactionBadgeMaterial('enemy');
  const FACTION_BADGE_FADE_DISTANCE=18,FACTION_BADGE_MAX_DISTANCE=28;
+ function hideFactionBadge(parts){
+  const badge=parts&&parts.factionBadge;
+  if(!badge)return;
+  try{
+   if(typeof badge.isDisposed==='function'&&badge.isDisposed()){parts.factionBadge=null;return;}
+   badge.setEnabled(false);
+  }catch(_){}
+ }
  function setFactionBadge(parts,faction){
-  if(!parts||!parts.root)return;
+  const root=parts&&parts.root;
+  if(!root||parts.alive===false||(typeof root.isDisposed==='function'&&root.isDisposed())){
+   hideFactionBadge(parts);return;
+  }
+  try{
+   if(typeof root.getScene==='function'&&root.getScene()!==scene){hideFactionBadge(parts);return;}
+   if(typeof root.isEnabled==='function'&&!root.isEnabled()){hideFactionBadge(parts);return;}
+   if(root.isVisible===false||root.visibility===0){hideFactionBadge(parts);return;}
+  }catch(_){hideFactionBadge(parts);return;}
   const kind=faction==='friendly'?'friendly':'enemy';
+  if(parts.factionBadge&&typeof parts.factionBadge.isDisposed==='function'&&parts.factionBadge.isDisposed())parts.factionBadge=null;
   if(!parts.factionBadge){
    const badge=B.MeshBuilder.CreatePlane('FactionBadge_'+kind+'_'+String(parts.name||'warrior'),{width:.39,height:.43,sideOrientation:B.Mesh.DOUBLESIDE},scene);
-   badge.parent=parts.root;badge.position=v(0,2.66,0);badge.billboardMode=B.Mesh.BILLBOARDMODE_ALL;badge.isPickable=false;badge.renderingGroupId=1;parts.factionBadge=badge;
+   badge.parent=root;badge.position=v(0,2.66,0);badge.billboardMode=B.Mesh.BILLBOARDMODE_ALL;badge.isPickable=false;badge.renderingGroupId=1;parts.factionBadge=badge;
+  }else if(parts.factionBadge.parent!==root){
+   parts.factionBadge.parent=root;parts.factionBadge.position=v(0,2.66,0);
   }
   if(parts.factionBadgeType!==kind){parts.factionBadge.material=factionBadgeMaterials[kind];parts.factionBadgeType=kind;}
   parts.factionBadge.setEnabled(true);
@@ -8012,7 +8031,7 @@ function createRealWeapon(type='axe'){
   realWeaponHolder=new B.TransformNode('RealVikingRightHandWeaponAnchor',scene);
   realWeaponAnchorCalibrated=false;realWeaponAnchorType='';realWeaponPoseOverride=null;realWeaponHandDefaultPosition=null;realWeaponHandDefaultRotation=null;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
-  realWeaponHolder.parent=type==='club'?null:(realPlayerModelPivot||socket);
+  realWeaponHolder.parent=realPlayerModelPivot||socket;
   realWeaponHolder.scaling.setAll(.86);
   const makeGroup=name=>newGroup('RealWeapon_'+name,realWeaponHolder);
   const club=makeGroup('Club');club.position.y=-.20;
@@ -8388,7 +8407,7 @@ function createRealWeapon(type='axe'){
   if(pose!==undefined)realWeaponPoseOverride=pose;
   const handActionPoseJustCleared=hadHandActionPose&&!realWeaponPoseOverride;
   const socket=realHandNode||realWeaponSocketNode||realForearmNode||realUpperArmNode||null;
-  const holderParent=equippedWeapon==='club'?null:realPlayerModelPivot;
+  const holderParent=realPlayerModelPivot;
   if(realWeaponHolder.parent!==holderParent){
    realWeaponHolder.parent=holderParent;
    realWeaponHandDefaultPosition=null;realWeaponHandDefaultRotation=null;
@@ -8398,16 +8417,15 @@ function createRealWeapon(type='axe'){
   const r=realWeaponPoseOverride||defaultPose;
   const enableEquipped=()=>Object.entries(realWeaponGroups||{}).forEach(([key,node])=>{if(node)node.setEnabled(key===equippedWeapon);});
   if(equippedWeapon==='club'){
-   // Anclaje mundial independiente de la jerarquía local de los huesos GLB.
-   // Se recalcula tras la pose del personaje para seguir la mano en tierra y barco.
+   // Mantiene la calibración anatómica original de la palma, pero convierte el
+   // resultado a espacio local del modelo: el palo hereda siempre el movimiento
+   // del jugador y no puede quedarse suspendido en la última posición mundial.
    try{
     player.root.computeWorldMatrix(true);
     realPlayerModelPivot.computeWorldMatrix(true);
     const worldUp=new B.Vector3(0,1,0);
     const modelRight=realPlayerModelPivot.getDirection(B.Axis.X).normalize();
     const modelForward=realPlayerModelPivot.getDirection(B.Axis.Z).normalize();
-    // El tramo largo del palo apunta al frente y ligeramente hacia abajo.
-    // El eje local +Y mira atrás/arriba; el tramo -Y queda orientado al avance.
     const forwardCarryAxis=modelForward.clone().add(new B.Vector3(0,.24,0)).normalize();
     let gripWorld=null,stickAxis=forwardCarryAxis.clone();
     if(realHandNode){
@@ -8418,8 +8436,6 @@ function createRealWeapon(type='axe'){
       const distal=gripWorld.subtract(realForearmNode.getAbsolutePosition());
       if(distal.lengthSquared()>.0001){
        distal.normalize();
-       // Move a short distance toward the fingers, then expose the shaft just
-       // in front of the palm so it cannot disappear inside the torso mesh.
        gripWorld.addInPlace(distal.scale(.025));
       }
      }
@@ -8442,9 +8458,13 @@ function createRealWeapon(type='axe'){
       .add(modelForward.scale(.04));
      stickAxis=forwardCarryAxis.clone();
     }
+    const inverseParent=realPlayerModelPivot.getWorldMatrix().clone();
+    inverseParent.invert();
+    const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);
+    const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();
     const poseRotation=B.Quaternion.RotationYawPitchRoll(r.y||0,r.x||0,r.z||0);
-    realWeaponHolder.position.copyFrom(gripWorld);
-    realWeaponHolder.rotationQuaternion=quaternionAlignYTo(stickAxis).multiply(poseRotation).normalize();
+    realWeaponHolder.position.copyFrom(localGrip);
+    realWeaponHolder.rotationQuaternion=quaternionAlignYTo(localAxis).multiply(poseRotation).normalize();
     realWeaponHolder.setEnabled(true);
     enableEquipped();
     if(realWeaponGroups.club){
@@ -8452,11 +8472,11 @@ function createRealWeapon(type='axe'){
       mesh.setEnabled(true);mesh.isVisible=true;mesh.visibility=1;mesh.isPickable=false;
      });
     }
-    realWeaponAnchorCalibrated=true;realWeaponAnchorType='club-world-anchor';
+    realWeaponAnchorCalibrated=true;realWeaponAnchorType='club-local-player-anchor';
     realWeaponHolder.computeWorldMatrix(true);
     return;
    }catch(err){
-    console.warn('No se pudo fijar el palo al punto mundial de la mano; se usará el socket de reserva.',err);
+    console.warn('No se pudo fijar el palo a la palma local del jugador; se usará el socket de reserva.',err);
    }
   }
   // Fallback original para armas distintas del palo o rigs sin hueso de mano.
@@ -9891,7 +9911,7 @@ function createRealWeapon(type='axe'){
  // REAL GRASS: crossed 3D blades placed on each island. The terrain keeps its PBR-like ground material,
  // but the eye now reads individual tufts and depth rather than a flat green carpet.
  // Keep the count outside createRealGrass(): grassMesh itself is local to that builder.
- let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
+ let grassInstanceCount=0,grassBatchCount=0,grassWindAccumulator=0,grassWindClock=0,grassStreamBuildCount=0,grassSameIslandSkipCount=0;const grassWindMeshes=[];let grassWindBasePositions=null,grassWindPositions=null;
  const qualityGrassLodBatches=[];let qualityGrassLodAccumulator=0,qualityGrassVisibleBatchCount=0;const GRASS_STREAM_RECENTER_DISTANCE=isTouchDevice?58:46;let grassStagingResources=null;
  let grassBatchMaterial=null,grassStreamActiveIslandIndex=-2,grassStreamPromise=null,grassStreamCenterX=NaN,grassStreamCenterZ=NaN;
  async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false){
@@ -10120,8 +10140,7 @@ function createRealWeapon(type='axe'){
  async function streamActiveIslandGrass(index,focusX,focusZ){
   if(isPerformanceMode)return;
   const sameIsland=index===grassStreamActiveIslandIndex;
-  const moved=Number.isFinite(focusX)&&Number.isFinite(focusZ)&&Math.hypot(focusX-grassStreamCenterX,focusZ-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;
-  if(sameIsland&&!moved)return;
+  if(sameIsland){grassSameIslandSkipCount++;return;}
   const validIsland=Number.isInteger(index)&&index>=0&&index<land.length;
   if(!validIsland){
    const retiredGrassBatches=qualityGrassLodBatches.splice(0,qualityGrassLodBatches.length);
@@ -10141,7 +10160,7 @@ function createRealWeapon(type='axe'){
    for(const batch of stagedGrass.batches){batch.mesh.setEnabled(true);batch.mesh.isVisible=true;}
    for(const batch of retiredGrassBatches){try{if(batch.mesh&&!(batch.mesh.isDisposed&&batch.mesh.isDisposed()))batch.mesh.dispose(false,false);}catch(_){}}
    if(previousMaterial&&previousMaterial!==stagedGrass.material){try{previousMaterial.dispose(false,false);}catch(_){}}
-   grassBatchMaterial=stagedGrass.material;
+   grassBatchMaterial=stagedGrass.material;grassStreamBuildCount++;
    grassInstanceCount=stagedGrass.count;grassBatchCount=stagedGrass.batchCount;
    grassDebugClumpCount=stagedGrass.count;grassDebugBatchCount=stagedGrass.batchCount;
    grassDebugIslandStats.length=0;grassDebugIslandStats.push(...stagedGrass.islandStats);
@@ -10171,8 +10190,7 @@ function createRealWeapon(type='axe'){
   }
   if(onShip||bestRatio>1.09)currentIsland=-1;
   const sameIsland=currentIsland===grassStreamActiveIslandIndex;
-  const moved=sameIsland&&currentIsland>=0&&Math.hypot(focus.x-grassStreamCenterX,focus.z-grassStreamCenterZ)>=GRASS_STREAM_RECENTER_DISTANCE;
-  if((!sameIsland||moved)&&!grassStreamPromise){
+  if(!sameIsland&&!grassStreamPromise){
    grassStreamPromise=streamActiveIslandGrass(currentIsland,focus.x,focus.z).catch(error=>{console.error('No se pudo cargar la hierba cercana de la isla activa:',error);}).finally(()=>{grassStreamPromise=null;});
   }
   let visible=0;
@@ -10533,12 +10551,23 @@ function villageHostileDefenders(vl){
  const companions=[];const MAX_RECRUITS=12;let actionVillage=null;
  function refreshFactionBadges(){
   for(const village of villages)for(const guard of village.guards){
-   if(!guard.alive){if(guard.parts.factionBadge)guard.parts.factionBadge.setEnabled(false);continue;}
+   if(!guard.alive){hideFactionBadge(guard.parts);continue;}
    setFactionBadge(guard.parts,isFriendlyGuard(guard)?'friendly':'enemy');
   }
-  for(const guard of campGuards)if(guard.alive)setFactionBadge(guard.parts,'friendly');
-  for(const ally of companions)if(ally.recruited)setFactionBadge(ally.parts,'friendly');
-  for(const vessel of enemyShips)if(!vessel.sunk)for(const crewman of vessel.crew)setFactionBadge(crewman.parts,'enemy');
+  for(const guard of campGuards){
+   if(guard.alive)setFactionBadge(guard.parts,'friendly');
+   else hideFactionBadge(guard.parts);
+  }
+  for(const ally of companions){
+   if(ally.recruited)setFactionBadge(ally.parts,'friendly');
+   else hideFactionBadge(ally.parts);
+  }
+  for(const vessel of enemyShips)for(const crewman of vessel.crew){
+   const invader=crewman.invaderRef;
+   const liveOnWorld=!vessel.sunk&&(!crewman.landed||!!(invader&&invader.alive));
+   if(!liveOnWorld){hideFactionBadge(crewman.parts);continue;}
+   setFactionBadge(crewman.parts,invader&&(invader.recruited||invader.surrendered)?'friendly':'enemy');
+  }
  }
  const noticeQueue=[];let noticeActive=false,noticeCurrent='';
  function showNextNotice(){const element=document.getElementById('notice');if(!element||!noticeQueue.length){noticeActive=false;noticeCurrent='';return;}noticeCurrent=noticeQueue.shift();noticeActive=true;element.textContent=noticeCurrent;element.style.opacity='1';clearTimeout(msg.timer);msg.timer=setTimeout(()=>{element.style.opacity='0';msg.timer=setTimeout(()=>{noticeActive=false;noticeCurrent='';showNextNotice();},150);},1350);}
@@ -10861,7 +10890,7 @@ function villageHostileDefenders(vl){
    animationFailureLog:animationFailureLog.slice(-30),
    player:{x:Number(player.root.position.x.toFixed(2)),y:Number(player.root.position.y.toFixed(2)),z:Number(player.root.position.z.toFixed(2)),ground:Number(terrainSurfaceAt(player.root.position.x,player.root.position.z).toFixed(3)),speed:Number((playerActualSpeed||0).toFixed(2)),footY,modelReady:realPlayerReady,manualLocomotion:realPlayerManualLocomotion,action:playerAction,actionTimer:Number(actionTimer.toFixed(3)),mode:realPlayerMode,currentGroup:realPlayerCurrentGroup&&realPlayerCurrentGroup.name||null,currentGroupPlaying:!!(realPlayerCurrentGroup&&realPlayerCurrentGroup.isPlaying),walkGroup:playerWalk&&playerWalk.name||null,walkPlaying:!!(playerWalk&&playerWalk.isPlaying),runGroup:playerRun&&playerRun.name||null,runPlaying:!!(playerRun&&playerRun.isPlaying)},
    boat:{onShip,velocity:Number(boatVelocity.toFixed(3)),position:{x:Number(ship.position.x.toFixed(2)),y:Number(ship.position.y.toFixed(2)),z:Number(ship.position.z.toFixed(2))},rotation:{x:Number(ship.rotation.x.toFixed(3)),y:Number(ship.rotation.y.toFixed(3)),z:Number(ship.rotation.z.toFixed(3))},flatWakeStrips:shipWake.map(w=>({name:w.name,enabled:w.isEnabled()})),activeSprayParticles:activeSpray,sprayCapacity:VESSEL_SPRAY_COUNT},
-   runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?window.__elSinNombrePerformanceAudit.snapshot():null,performanceAssessment:{targetFps:targetFrameRate,frameBudget60Ms:Number(frameBudget60Ms.toFixed(2)),frameBudget90Ms:Number(frameBudget90Ms.toFixed(2)),frameBudget30Ms:Number(frameBudget30Ms.toFixed(2)),framesOver60Budget:framesOver60,framesOver60BudgetPct:frameTimes.length?Number((framesOver60/frameTimes.length*100).toFixed(1)):null,framesOver90Budget:framesOver90,framesOver90BudgetPct:frameTimes.length?Number((framesOver90/frameTimes.length*100).toFixed(1)):null,framesOver30Budget:framesOver30,framesOver30BudgetPct:frameTimes.length?Number((framesOver30/frameTimes.length*100).toFixed(1)):null,worldUpdateCpuMs:worldCpuMs,sceneRenderSubmissionCpuMs:renderSubmitCpuMs,combinedMeasuredCpuMs:Number(measuredCpuMs.toFixed(2)),bottleneckHint:performanceBottleneck,gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'},frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99),max:frameTimes.length?Number(frameTimes[frameTimes.length-1].toFixed(2)):null},graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,habitableColliderBackfillCount,activeFoamIsland:activeBeachIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),groundRecovery:{...groundRecoveryDiagnostics,lastSearchMs:Number(groundRecoveryDiagnostics.lastSearchMs.toFixed(3)),maxSearchMs:Number(groundRecoveryDiagnostics.maxSearchMs.toFixed(3)),retryCooldownMs:GROUND_RECOVERY_RETRY_MS},terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise},grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,devicePixelRatio:deviceDpr,screen:{width:screen.width||null,height:screen.height||null,innerWidth:window.innerWidth||null,innerHeight:window.innerHeight||null,visibilityState:document.visibilityState},isTouchDevice,textureCount:scene.textures.length,materialCount:scene.materials.length,hardwareMaxTextureSize:engine.getCaps().maxTextureSize||null,hardwareMaxRenderbufferSize:engine.getCaps().maxRenderbufferSize||null,userAgent:navigator.userAgent},
+   runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?window.__elSinNombrePerformanceAudit.snapshot():null,performanceAssessment:{targetFps:targetFrameRate,frameBudget60Ms:Number(frameBudget60Ms.toFixed(2)),frameBudget90Ms:Number(frameBudget90Ms.toFixed(2)),frameBudget30Ms:Number(frameBudget30Ms.toFixed(2)),framesOver60Budget:framesOver60,framesOver60BudgetPct:frameTimes.length?Number((framesOver60/frameTimes.length*100).toFixed(1)):null,framesOver90Budget:framesOver90,framesOver90BudgetPct:frameTimes.length?Number((framesOver90/frameTimes.length*100).toFixed(1)):null,framesOver30Budget:framesOver30,framesOver30BudgetPct:frameTimes.length?Number((framesOver30/frameTimes.length*100).toFixed(1)):null,worldUpdateCpuMs:worldCpuMs,sceneRenderSubmissionCpuMs:renderSubmitCpuMs,combinedMeasuredCpuMs:Number(measuredCpuMs.toFixed(2)),bottleneckHint:performanceBottleneck,gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'},frameTimingMs:{samples:frameTimes.length,average:frameAverage,p50:frameAt(.50),p95:frameAt(.95),p99:frameAt(.99),max:frameTimes.length?Number(frameTimes[frameTimes.length-1].toFixed(2)):null},graphicsProfile:activeGraphicsProfile,ultraLowEndProfile:isUltraLowEndMobile,galaxyA12PerformanceProfile:isGalaxyA12LowEndMobile,galaxyA12NachoPerformanceProfile:isGalaxyA12NachoPerformance,guestMode:SHARE_NEW_GAME,saveSlot:activeSaveKey,fps:Math.round(engine.getFps()),enemyAiTicks:update.enemyAiTicks||0,companionAiTicks:update.companionAiTicks||0,elapsed:Number(elapsed.toFixed(2)),meshCount:scene.meshes.length,activeMeshes:(scene.getActiveMeshes&&scene.getActiveMeshes().length)||0,totalVertices:(scene.getTotalVertices&&scene.getTotalVertices())||0,activeIndices:(scene.getActiveIndices&&scene.getActiveIndices())||0,activeBones:(scene.getActiveBones&&scene.getActiveBones())||0,drawCalls:Number(engine._drawCalls&&engine._drawCalls.current)||0,animationGroupCount:scene.animationGroups.length,worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),renderDpr:Number(qualityDprCurrent.toFixed(2)),renderWidth:engine.getRenderWidth(),renderHeight:engine.getRenderHeight(),gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,shadowCasterGroups:managedWorldShadowGroups.length,activeWorldShadowCasters:managedActiveWorldShadowCount,habitableColliderBackfillCount,activeFoamIsland:activeBeachIslandIndex,waterReflectionIsland:activeWaterReflectionIslandIndex,waterReflectionMeshes:nordicWaterMirror&&nordicWaterMirror.renderList?nordicWaterMirror.renderList.length:0,waterReflectionRefreshRate:nordicWaterMirror&&nordicWaterMirror.refreshRate||0,waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE,waterAnimatedVertices:waterLastUpdatedVertices,waterUploadedVertices:waterLastUploadedVertices,waterUploadKB:Number((waterLastUploadBytes/1024).toFixed(1)),waterUpdateMs:Number(waterLastUpdateMs.toFixed(2)),waterNormalMs:Number(waterLastNormalMs.toFixed(2)),groundRecovery:{...groundRecoveryDiagnostics,lastSearchMs:Number(groundRecoveryDiagnostics.lastSearchMs.toFixed(3)),maxSearchMs:Number(groundRecoveryDiagnostics.maxSearchMs.toFixed(3)),retryCooldownMs:GROUND_RECOVERY_RETRY_MS},terrainHashCacheEntries:terrainHashCache.size,terrainHashCacheLimit:TERRAIN_HASH_CACHE_LIMIT,groundRelaxHz:30,enemyAiRateCapHz:isConstrainedMobile?20:60,companionAiRateCapHz:isConstrainedMobile?15:60,grassInstances:grassInstanceCount,grassBatches:grassBatchCount,grassVisibleBatches:qualityGrassVisibleBatchCount,grassTotalBatches:qualityGrassLodBatches.length,grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise,builds:grassStreamBuildCount,sameIslandSkips:grassSameIslandSkipCount},grassLeavesPerClump:grassDebugLeavesPerClump,grassDistribution:grassDebugIslandStats,deviceMemory:navigator.deviceMemory||null,hardwareConcurrency:navigator.hardwareConcurrency||null,devicePixelRatio:deviceDpr,screen:{width:screen.width||null,height:screen.height||null,innerWidth:window.innerWidth||null,innerHeight:window.innerHeight||null,visibilityState:document.visibilityState},isTouchDevice,textureCount:scene.textures.length,materialCount:scene.materials.length,hardwareMaxTextureSize:engine.getCaps().maxTextureSize||null,hardwareMaxRenderbufferSize:engine.getCaps().maxRenderbufferSize||null,userAgent:navigator.userAgent},
    wildlife:ambientFauna.map(animal=>({kind:animal.kind,island:animal.homeIslandIndex,meshes:animal.meshCount,bones:animal.skeletonBoneCount,skinnedVertices:animal.skinnedVertexCount,dimensions:animal.dimensions,animation:animal.activeAnimation&&animal.activeAnimation.name||null,meshNames:animal.meshNames})),
    npcs:{enemies:enemies.length,companions:companions.length,campGuards:campGuards.length,ambientPeople:ambientPeople.length,ambientMoving:ambientPeople.filter(n=>Number(n.parts.actualMoveSpeed)>.1).length,loadedWarriorGLB:humanEnemyParts.filter(p=>p.realHuman&&p.realHuman.role==='knight').length,totalWarriors:humanEnemyParts.length,loadedCivilianGLB:humanCivilianParts.filter(p=>p.realHuman&&p.realHuman.role==='civilian').length,npcClips:humanEnemyParts.filter(p=>p.realHuman).slice(0,8).map(p=>({name:p.name,walk:p.realHuman.walk&&p.realHuman.walk.name,walkPlaying:!!(p.realHuman.walk&&p.realHuman.walk.isPlaying),current:p.realHuman.current&&p.realHuman.current.name,enabled:p.root.isEnabled()}))}
   };
@@ -11167,7 +11196,7 @@ function updateHUD(){
  function defeatGuard(e,source='combate'){
   if(!e||!e.alive)return;
   e.hp=0;e.alive=false;e.surrendered=false;e.state='dead';e.stun=0;e.parts.weapon.setEnabled(false);
-  e.healthBack.setEnabled(false);e.healthMesh.setEnabled(false);
+  e.healthBack.setEnabled(false);e.healthMesh.setEnabled(false);hideFactionBadge(e.parts);
   // El enemigo cae en varios fotogramas, sin teletransportarse ni desaparecer de golpe.
   e.deadFallT=0;e.deadSide=(!e.deadSide?1:e.deadSide)*(Math.random()<.5?-1:1);
   if(e.parts.realHuman){e.parts.realHuman.groups.forEach(g=>g.stop());e.parts.realHuman.current=null;if(e.parts.realHuman.sword)e.parts.realHuman.sword.setEnabled(false);}
@@ -12556,7 +12585,7 @@ function update(dt){
    const t=fallen.deadFallT,ease=t*t*(3-2*t),body=fallen.parts.body;
    if(body){body.rotation.z=fallen.deadSide*.96*ease;body.rotation.x=(fallen.parts.realHuman?.32:.58)*ease;body.position.y=fallen.parts.realHuman?.90-.45*ease:-.34*ease;}
    fallen.parts.root.position.y=terrainSurfaceAt(fallen.parts.root.position.x,fallen.parts.root.position.z)+actorGroundOffset(fallen.parts)-.035*ease;
-   if(fallen.deadTimer<=0){fallen.parts.root.setEnabled(false);fallenEnemies.splice(i,1);}
+   if(fallen.deadTimer<=0){hideFactionBadge(fallen.parts);if(fallen.healthBack)fallen.healthBack.setEnabled(false);if(fallen.healthMesh)fallen.healthMesh.setEnabled(false);fallen.parts.root.setEnabled(false);fallenEnemies.splice(i,1);}
   }
   update.companionAiAccumulator=(update.companionAiAccumulator||0)+dt;
   const companionAiInterval=isConstrainedMobile?.0667:(1/60);

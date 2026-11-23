@@ -67,6 +67,8 @@ assert.ok(source.includes('if(!onShip&&!playerAirborne&&recoverGroundActor(playe
 assert.ok(source.includes('groundRecovery:{...groundRecoveryDiagnostics'), 'Ground recovery search cost and retry counters must be included in runtime diagnostics.');
 assert.ok(source.includes('function updateWildlife(dt)'), 'Wildlife behavior must remain present.');
 assert.ok(source.includes('function update(dt){'), 'The full game world update must remain present.');
+assert.ok(source.includes('if(!sameIsland&&!grassStreamPromise)') && source.includes('if(sameIsland){grassSameIslandSkipCount++;return;}') && source.includes('grassStreamBuildCount++'), 'Full-island Quality ground cover must only rebuild when the active island changes, not when the player walks across it.');
+assert.ok(builder.includes('qualityGrassDensity'), 'The release must keep its full-density Quality grass field.');
 assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorldUpdatePhase(') && builder.includes('getWorldPhaseTimingSnapshot()'), 'The release must time each existing world-update phase.');
 assert.ok(builder.includes('enemy_ai_lod_marker =') && builder.includes("if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){") && builder.includes('const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);'), 'Distant touch-device enemies must use distance-based AI cadence while nearby combat remains full-rate.');
 assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
@@ -82,8 +84,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'54\',build:\'0.6.345\''), 'Release must carry the next diagnostic build id.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.345"'), 'Release validator must target version 0.6.345.');
+assert.ok(validator.includes('reportVersion:\'55\',build:\'0.6.346\''), 'Release must carry the next diagnostic build id.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.346"'), 'Release validator must target version 0.6.346.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -123,7 +125,7 @@ assert.ok(validator.includes('elapsedUpdateLastMs:Number(beachUpdateLastMs.toFix
 
 assert.ok(builder.includes('grass_stream_replacement = "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;"'), 'Destination-island grass prewarm must retain the island during a longer ship approach.');
 assert.ok(builder.includes('const centerX=island.x,centerZ=island.z;') && builder.includes('const radius=safeLandRadius;') && builder.includes('const areaFraction=1;'), 'Quality grass must cover the complete dry-land radius at the original per-area density.');
-assert.ok(builder.includes('grass_recenter_replacement = "const moved=false;"'), 'Grass must not rebuild the same island after player movement once full-island coverage exists.');
+assert.ok(builder.includes('grass_recenter_marker = "const sameIsland=currentIsland===grassStreamActiveIslandIndex;\\n  if(!sameIsland&&!grassStreamPromise){') && !builder.includes('grass_recenter_replacement = "const moved=false;"'), 'The builder must preserve island-change-only grass streaming and never restore player-distance regeneration.');
 assert.ok(builder.includes('grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"') && builder.includes('grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"'), 'Flagship Quality must exceed the former grass population while constrained mobile devices retain their prior density.');
 assert.ok(builder.includes('mineableRockPlacementStats') && builder.includes('window.__ELSN_ROCK_PLACEMENT__') && builder.includes('const acceptable=(px,pz)=>') && builder.includes('const placedRock=createRock(x,z);if(placedRock)rocks.push(placedRock);'), 'Mineable rocks must be placed only where trunk and rock clearance tests pass.');
 assert.ok(builder.includes('for(const rock of rocks){') && builder.includes('const required=(Number(rock.radius)||.7)+.9+.45;') && builder.includes('rockOverlapPairs') && builder.includes('minRockTreeClearanceMeters'), 'Tree placement must also reject rocks that were spawned earlier in the incremental forest/resource loop, and expose a symmetric overlap audit.');

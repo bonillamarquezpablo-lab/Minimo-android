@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.345"
+EXPECTED_VERSION = "0.6.346"
 
 HTML_PAGES = (
     "index.html",
@@ -513,7 +513,7 @@ def main() -> None:
         fail("index.html no referencia el entorno de iluminación local.")
     if "onShip?'sail'" not in index_html or "function updateRealRigGait" not in index_html:
         fail("Falta el controlador de postura de navegación del protagonista.")
-    if "club-world-anchor" not in index_html:
+    if "club-local-player-anchor" not in index_html:
         fail("Falta el socket visible del palo anclado a la palma en espacio del jugador.")
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
@@ -592,7 +592,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'54',build:'0.6.345'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'55',build:'0.6.346'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -861,10 +861,10 @@ def main() -> None:
         fail("Falta la detección y la gestión del agarre del palo.")
     if "rightGripBones:realRightGripBones.length" not in index_html:
         fail("Falta la telemetría de los huesos de agarre.")
-    if "club-world-anchor" not in index_html or "function syncRealWeaponAnchor(" not in index_html:
+    if "club-local-player-anchor" not in index_html or "function syncRealWeaponAnchor(" not in index_html:
         fail("Falta el anclaje del palo al jugador.")
-    if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html:
-        fail("El palo no tiene el desplazamiento frontal de visibilidad en la palma.")
+    if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html or "const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);" not in index_html or "const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();" not in index_html:
+        fail("El palo no conserva el desplazamiento frontal y el anclaje local de la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
     if "modelForward.clone().add(new B.Vector3(0,.24,0)).normalize()" not in index_html:
@@ -977,7 +977,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.345" not in index_html or "EL SIN NOMBRE 0.6.345 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.346" not in index_html or "EL SIN NOMBRE 0.6.346 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1129,7 +1129,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.345</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.346</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
@@ -1175,10 +1175,10 @@ def main() -> None:
         fail("La generación del terreno y la hierba debe reutilizar buffers compactos y hashes deterministas.")
     if "const initialGrassIslandIndex=landIslandIndex(player.root.position.x,player.root.position.z);" not in index_html or "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false)" not in index_html or "if(onlyIslandIndex!==null&&islandIndex!==onlyIslandIndex)continue;" not in index_html or "const centerX=island.x,centerZ=island.z;" not in index_html or "const radius=safeLandRadius;" not in index_html or "window.__ELSN_GRASS_WIND__" not in index_html or "mode:'gpu-vertex-displacement'" not in index_html or "class NordicGrassWindPlugin" not in index_html:
         fail("La hierba debe crear una cobertura completa, con viento por shader GPU en ambos perfiles.")
-    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "(!sameIsland||moved)&&!grassStreamPromise" not in index_html or "createRealGrass(index,focusX,focusZ,true)" not in index_html or "Visible Nordic ground cover swapped atomically" not in index_html or "GRASS_STREAM_RECENTER_DISTANCE=Number.MAX_SAFE_INTEGER;" not in index_html or "const moved=false;" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise}" not in index_html or "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1" not in index_html or "if(isPerformanceMode)return;" in index_html[ index_html.index("async function streamActiveIslandGrass"):index_html.index("function updateActiveIslandGrass") ]:
-        fail("La hierba debe seguir el área cercana y preconstruir el destino próximo sin descargas al embarcar.")
+    if "async function streamActiveIslandGrass(index,focusX,focusZ)" not in index_html or "if(!sameIsland&&!grassStreamPromise){" not in index_html or "createRealGrass(index,focusX,focusZ,true)" not in index_html or "Visible Nordic ground cover swapped atomically" not in index_html or "GRASS_STREAM_RECENTER_DISTANCE=Number.MAX_SAFE_INTEGER;" not in index_html or "grassStream:{activeIslandIndex:grassStreamActiveIslandIndex,pending:!!grassStreamPromise,builds:grassStreamBuildCount,sameIslandSkips:grassSameIslandSkipCount}" not in index_html or "if(bestRatio>(onShip?2.0:1.09))currentIsland=-1" not in index_html or "if(isPerformanceMode)return;" in index_html[index_html.index("async function streamActiveIslandGrass"):index_html.index("function updateActiveIslandGrass")]:
+        fail("La hierba de Calidad debe conservar la cobertura de la isla activa y precargar el siguiente destino sin reconstrucciones dentro de la misma isla.")
     if "leavesPerClump=isPerformanceMode?8:12" not in index_html or "const show=batch.islandIndex===visibleGrassIslandIndex;" not in index_html or "const chunkSize=56,grassBatches=new Map();" not in index_html or "const areaFraction=1;" not in index_html:
-        fail("La hierba de Calidad debe conservar el detalle y limitar la generación al área local.")
+        fail("La hierba completa de Calidad debe mantener las 12 hojas por mata, los lotes y la densidad por superficie originales.")
     if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial'" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("La hierba inicial de Calidad y los GLB de la isla inicial deben estar listos antes de entrar.")
     if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
