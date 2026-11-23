@@ -212,6 +212,7 @@ jobs:
           name: el-sin-nombre-site-${{ github.sha }}
           path: dist/
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14
 
       - name: Configure native GitHub Pages deployment
