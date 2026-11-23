@@ -7,9 +7,11 @@ from urllib.error import URLError, HTTPError
 import hashlib
 import json
 import math
+import os
 import re
 import struct
 import shutil
+import threading
 import subprocess
 import sys
 import tempfile
@@ -114,6 +116,178 @@ DOWNLOADS = {
         "https://raw.githubusercontent.com/rowink/CC0-Sounds-Web/main/public/sounds/kenney_rpgaudio/Audio/chop.ogg", 2_000, "audio"
     ),
 }
+
+
+ASSET_CACHE_SCHEMA_VERSION = 2
+ASSET_CACHE_TRANSFORM_VERSION = "procedural-vertex-coat-v2"
+_ASSET_CACHE_MANIFEST = None
+_ASSET_CACHE_MANIFEST_LOCK = threading.RLock()
+
+
+def _asset_processing_version(relative: str, kind: str) -> str:
+    if kind == "glb" and relative.startswith("assets/models/wildlife/"):
+        return ASSET_CACHE_TRANSFORM_VERSION
+    return "identity-v1"
+
+
+def _asset_spec_fingerprint(relative: str, url: str, minimum: int, kind: str) -> str:
+    payload = {
+        "schema": ASSET_CACHE_SCHEMA_VERSION,
+        "path": relative,
+        "url": url,
+        "minimumBytes": int(minimum),
+        "kind": kind,
+        "processing": _asset_processing_version(relative, kind),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def asset_cache_fingerprint() -> str:
+    """Stable identity for the complete external-asset set; excludes game-only code changes."""
+    assets = [
+        {
+            "path": relative,
+            "url": url,
+            "minimumBytes": int(minimum),
+            "kind": kind,
+            "processing": _asset_processing_version(relative, kind),
+        }
+        for relative, (url, minimum, kind) in sorted(DOWNLOADS.items())
+    ]
+    payload = {
+        "schema": ASSET_CACHE_SCHEMA_VERSION,
+        "babylon": BABYLON_VERSION,
+        "assets": assets,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()[:20]
+
+
+def _asset_cache_manifest_path() -> Path:
+    return ROOT / ".asset-cache" / "asset-cache-manifest.json"
+
+
+def _load_asset_cache_manifest() -> dict:
+    global _ASSET_CACHE_MANIFEST
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        if _ASSET_CACHE_MANIFEST is not None:
+            return _ASSET_CACHE_MANIFEST
+        manifest_path = _asset_cache_manifest_path()
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("schemaVersion") != ASSET_CACHE_SCHEMA_VERSION or not isinstance(manifest.get("entries"), dict):
+                raise ValueError("unsupported cache manifest schema")
+            _ASSET_CACHE_MANIFEST = manifest
+        except FileNotFoundError:
+            _ASSET_CACHE_MANIFEST = {"schemaVersion": ASSET_CACHE_SCHEMA_VERSION, "entries": {}}
+        except Exception as exc:
+            print(f"WARN Asset cache manifest ignored ({exc}); entries will be downloaded and re-verified.")
+            _ASSET_CACHE_MANIFEST = {"schemaVersion": ASSET_CACHE_SCHEMA_VERSION, "entries": {}}
+        return _ASSET_CACHE_MANIFEST
+
+
+def _write_asset_cache_manifest_locked() -> None:
+    manifest_path = _asset_cache_manifest_path()
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = manifest_path.with_name(manifest_path.name + ".tmp")
+    temporary.write_text(
+        json.dumps(_ASSET_CACHE_MANIFEST, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    os.replace(temporary, manifest_path)
+
+
+def _invalidate_asset_cache_entry(relative: str) -> None:
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        manifest = _load_asset_cache_manifest()
+        manifest["entries"].pop(relative, None)
+        _write_asset_cache_manifest_locked()
+    (ROOT / ".asset-cache" / relative).unlink(missing_ok=True)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validate_cached_asset(path: Path, relative: str, kind: str) -> None:
+    if kind != "glb":
+        return
+    if relative.startswith("assets/models/wildlife/"):
+        validate_rigged_animal_glb(path, relative)
+    elif path.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
+        validate_rigged_character_glb(path, relative)
+    else:
+        read_glb_document(path)
+
+
+def restore_verified_asset_cache(url: str, destination: Path, minimum: int, kind: str) -> dict | None:
+    """Restore one asset only when its spec, exact size, SHA-256 and format still match."""
+    relative = destination.relative_to(DIST).as_posix()
+    cache_file = ROOT / ".asset-cache" / relative
+    manifest = _load_asset_cache_manifest()
+    entry = manifest["entries"].get(relative)
+    expected_spec = _asset_spec_fingerprint(relative, url, minimum, kind)
+    if not isinstance(entry, dict) or entry.get("specFingerprint") != expected_spec:
+        if cache_file.exists():
+            cache_file.unlink(missing_ok=True)
+        if entry is not None:
+            _invalidate_asset_cache_entry(relative)
+        return None
+    try:
+        size = cache_file.stat().st_size
+        expected_size = int(entry.get("bytes") or 0)
+        expected_digest = str(entry.get("sha256") or "")
+        if size < minimum or size != expected_size or len(expected_digest) != 64:
+            raise ValueError("cached size or manifest metadata mismatch")
+        digest = _sha256_file(cache_file)
+        if digest != expected_digest:
+            raise ValueError("cached SHA-256 mismatch")
+        if entry.get("processing") != _asset_processing_version(relative, kind):
+            raise ValueError("cached processing version mismatch")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(cache_file, destination)
+        _validate_cached_asset(destination, relative, kind)
+        print(f"OK {relative}: {size:,} bytes (asset cache SHA-256 verified)")
+        return {"path": relative, "bytes": size, "sha256": digest, "source": "verified-asset-cache"}
+    except Exception as exc:
+        print(f"WARN {relative}: cache rejected ({exc}); downloading a clean copy.", file=sys.stderr)
+        destination.unlink(missing_ok=True)
+        _invalidate_asset_cache_entry(relative)
+        return None
+
+
+def persist_verified_asset_cache(url: str, destination: Path, minimum: int, kind: str) -> dict:
+    """Atomically save a fully processed asset and its integrity record."""
+    relative = destination.relative_to(DIST).as_posix()
+    size = destination.stat().st_size
+    if size < minimum:
+        raise RuntimeError(f"Refusing to cache undersized asset {relative}: {size} bytes")
+    digest = _sha256_file(destination)
+    cache_file = ROOT / ".asset-cache" / relative
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    temporary_asset = cache_file.with_name(cache_file.name + ".tmp")
+    shutil.copy2(destination, temporary_asset)
+    os.replace(temporary_asset, cache_file)
+    entry = {
+        "url": url,
+        "kind": kind,
+        "minimumBytes": int(minimum),
+        "specFingerprint": _asset_spec_fingerprint(relative, url, minimum, kind),
+        "processing": _asset_processing_version(relative, kind),
+        "bytes": size,
+        "sha256": digest,
+    }
+    with _ASSET_CACHE_MANIFEST_LOCK:
+        manifest = _load_asset_cache_manifest()
+        manifest["entries"][relative] = entry
+        _write_asset_cache_manifest_locked()
+    return {"path": relative, "bytes": size, "sha256": digest, "source": "downloaded-and-cached"}
+
 
 def read_glb_document(path: Path) -> dict:
     raw = path.read_bytes()
@@ -414,21 +588,9 @@ def validate_rigged_animal_glb(path: Path, label: str) -> dict:
 def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     relative = destination.relative_to(DIST).as_posix()
-    cache_file = ROOT / ".asset-cache" / relative
-    if cache_file.is_file() and cache_file.stat().st_size >= minimum:
-        shutil.copy2(cache_file, destination)
-        if kind == "glb":
-            if destination.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
-                validate_rigged_character_glb(destination, relative)
-            elif destination.parent.name == "wildlife":
-                bake_procedural_animal_vertex_colors(destination, relative)
-                validate_rigged_animal_glb(destination, relative)
-            else:
-                read_glb_document(destination)
-        digest = hashlib.sha256(destination.read_bytes()).hexdigest()
-        size = destination.stat().st_size
-        print(f"OK {relative}: {size:,} bytes (verified persistent asset cache)")
-        return {"path": relative, "bytes": size, "sha256": digest, "source": "persistent-build-cache"}
+    cached = restore_verified_asset_cache(url, destination, minimum, kind)
+    if cached is not None:
+        return cached
     last_error = None
     for attempt in range(1, 5):
         try:
@@ -470,7 +632,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     baked_vertices = bake_procedural_animal_vertex_colors(destination, relative)
                     document = validate_rigged_animal_glb(destination, relative)
                     size = destination.stat().st_size
-                    digest = hashlib.sha256(destination.read_bytes())
+                    digest = None  # The final processed file is streamed and hashed when persisted.
                     print(
                         f"OK animated animal GLB {relative}: "
                         f"{len(document.get('meshes') or [])} meshes, "
@@ -481,14 +643,7 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                     )
                 else:
                     read_glb_document(destination)
-            cache_file.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(destination, cache_file)
-            return {
-                "path": destination.relative_to(DIST).as_posix(),
-                "bytes": size,
-                "sha256": digest.hexdigest(),
-                "source": url,
-            }
+            return persist_verified_asset_cache(url, destination, minimum, kind)
         except Exception as exc:
             last_error = exc
             destination.unlink(missing_ok=True)
@@ -506,18 +661,24 @@ def fetch(url: str, destination: Path, minimum: int, kind: str) -> dict:
                 for chunk in iter(lambda: source.read(1024 * 1024), b""):
                     digest.update(chunk)
             if kind == "glb":
-                if destination.parent.name == "wildlife":
-                    bake_procedural_animal_vertex_colors(destination, destination.relative_to(DIST).as_posix())
-                    validate_rigged_animal_glb(destination, destination.relative_to(DIST).as_posix())
+                relative = destination.relative_to(DIST).as_posix()
+                if relative.startswith("assets/models/wildlife/"):
+                    existing = read_glb_document(destination)
+                    coat = ((existing.get("extras") or {}).get("elsnAnimalCoat") or {})
+                    if coat.get("algorithm") != ASSET_CACHE_TRANSFORM_VERSION or coat.get("species") != destination.stem.lower():
+                        bake_procedural_animal_vertex_colors(destination, relative)
+                    validate_rigged_animal_glb(destination, relative)
                     size = destination.stat().st_size
-                    digest = hashlib.sha256(destination.read_bytes())
+                elif destination.name in {"viking-rigged.glb", "armored-knight-rigged.glb", "man-base-character-rigged.glb"}:
+                    validate_rigged_character_glb(destination, relative)
                 else:
                     read_glb_document(destination)
+            persist_verified_asset_cache(url, destination, minimum, kind)
             print(f"OK {destination.relative_to(DIST).as_posix()}: {size:,} bytes (verified repository fallback)")
             return {
                 "path": destination.relative_to(DIST).as_posix(),
                 "bytes": size,
-                "sha256": digest.hexdigest(),
+                "sha256": _sha256_file(destination),
                 "source": "repository-fallback",
             }
     raise RuntimeError(f"Could not download {url}: {last_error}") from last_error
