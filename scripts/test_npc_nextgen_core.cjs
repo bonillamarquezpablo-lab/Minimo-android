@@ -36,8 +36,9 @@ const route=Core.chooseTraversalStep({x:0,z:0,dirX:0,dirZ:1,step:1,targetX:0,tar
 assert.ok(route&&route.x>.1,'Traversal steering must find a valid side-step around a blocked direct route.');
 
 const combat=Core.createCombatState('attack-test',2,0);
-const profile=Core.startAttack(combat,0);
-assert.equal(profile.style,'heavy');
+combat.archetype='sentinel';
+let profile=Core.startAttack(combat,0);
+assert.equal(profile.style,'quick');
 let frames=[];
 for(let i=0;i<20;i++)frames.push(Core.advanceAttack(combat,.06));
 assert.equal(frames.filter(frame=>frame&&frame.hitWindow).length,1,'One committed NPC attack must produce one hit window.');
@@ -47,6 +48,13 @@ assert.ok(frames.some(frame=>frame&&frame.recovery>0));
 Core.finishAttack(combat,1.2);
 assert.equal(combat.attack,null);
 assert.ok(combat.nextAttackAt>1.2);
+profile=Core.startAttack(combat,2.5);
+assert.equal(profile.style,'heavy','Sentinel should vary its strike rhythm with a heavier committed attack.');
+frames=[];
+for(let i=0;i<25;i++)frames.push(Core.advanceAttack(combat,.06));
+assert.equal(frames.filter(frame=>frame&&frame.hitWindow).length,1,'The heavy NPC attack must also apply damage only once.');
+assert.ok(frames.some(frame=>frame&&frame.swing>0&&frame.style==='heavy'));
+Core.finishAttack(combat,4.1);
 
 const defender=Core.createCombatState('defender',2,0);
 const defensiveAction=Core.chooseDefense({playerAttacking:true,distance:1.4,now:0},defender);
