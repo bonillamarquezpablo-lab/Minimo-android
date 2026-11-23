@@ -31,7 +31,7 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Builder is missing animal-integrity requirement: '+marker);
 assert.ok(builder.includes('def bake_procedural_animal_vertex_colors(path: Path, label: str) -> int:') &&
   builder.includes('primitive.setdefault("attributes", {})["COLOR_0"] = accessor_index') &&
-  builder.includes('coat.get("algorithm") != "procedural-vertex-coat-v3-skeleton-root-v1"') &&
+  builder.includes('coat.get("algorithm") != ASSET_CACHE_TRANSFORM_VERSION') &&
   builder.includes('coverage < 0.90'),
   'Every terrestrial animal must ship with a valid, sufficiently complete vertex-colour coat stream; a technically loaded but flat unshaded GLB must fail release validation.');
 assert.match(html,/WILDLIFE_MODEL_DEFS=\{deer:/);
