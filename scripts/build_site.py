@@ -876,7 +876,7 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.349: restore imported humanoid actor visibility after transactional GLB attachment.
+    # 0.6.350: restore imported humanoid actor visibility after transactional GLB attachment.
     warrior_mesh_visibility_marker = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
   meshes=filterResult.meshes;"""
     warrior_mesh_visibility_replacement = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
@@ -914,7 +914,7 @@ def main() -> None:
     html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.055));",1)
 
 
-    # 0.6.349: dense flagship ground cover; constrained devices retain the prior safe density.
+    # 0.6.350: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
     grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
@@ -1826,7 +1826,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.349: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.350: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -1887,7 +1887,7 @@ function setLoadingProgress(value,label){
 
     # Five birds are cheap to update every frame; generic entity LOD must not freeze the flock.
     gull_motion_marker = "ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}});"
-    gull_motion_replacement = "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);const gullClockSeconds=performance.now()*.001;if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=gullClockSeconds;const flightElapsed=Math.max(0,gullClockSeconds-b.flightClockOrigin),phase=Number(b.phase)||0,a=flightElapsed*(Number(b.speed)||.064)+phase,bank=Math.sin(a*1.2)*.12;b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;b.flightElapsed=flightElapsed;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural&&b.left&&b.right){b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;}else{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;if(flight){if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);}}});"
+    gull_motion_replacement = ""  # Flock motion is driven by Babylon render frames.
     if html.count(gull_motion_marker) != 1:
         raise SystemExit("No se encontró el bucle único de órbita de gaviotas.")
     html = html.replace(gull_motion_marker,gull_motion_replacement,1)
@@ -2829,7 +2829,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain3" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.350-npcbrain4" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -2840,27 +2840,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.349: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.350: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.349; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.350; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.349\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.350\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.349.")
-    html = html.replace("0.6.274", "0.6.349")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.350.")
+    html = html.replace("0.6.274", "0.6.350")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'58',build:'0.6.349'"
+    diagnostic_build_replacement = "reportVersion:'59',build:'0.6.350'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.349 para normalizar.")
-    game_version = "0.6.349"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.350 para normalizar.")
+    game_version = "0.6.350"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4182,6 +4182,41 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # This function is called only when the Inspector user requests a world capture.
     world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
     world_snapshot_code = r"""
+ // Independent per-frame flock motion. The world AI update is intentionally cadence-limited.
+ const gullFlightRenderObserver=scene.onBeforeRenderObservable.add(()=>{
+  const birds=ambientBirds;
+  if(!Array.isArray(birds)||!birds.length)return;
+  const now=performance.now()*.001;
+  for(const b of birds){
+   if(!b||!b.root||b.root.isDisposed?.())continue;
+   if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);
+   if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=now;
+   const flightElapsed=Math.max(0,now-b.flightClockOrigin);
+   const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
+   const radius=Number.isFinite(Number(b.radius))?Math.max(1,Number(b.radius)):18;
+   const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
+   const speed=Number.isFinite(Number(b.speed))?Math.max(.01,Number(b.speed)):.064;
+   const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
+   b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
+   b.flightElapsed=flightElapsed;
+   b.root.position.x=Math.cos(a)*radius-36;
+   b.root.position.z=Math.sin(a)*radius-18;
+   b.root.position.y=altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12;
+   b.root.rotation.y=-a+Math.PI/2;
+   b.root.rotation.z=bank;
+   if(b.procedural&&b.left&&b.right){
+    b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
+    b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;
+   }else{
+    const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;
+    if(flight){
+     if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);
+     flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);
+    }
+   }
+  }
+ });
+ window.__ELSN_GULL_FLIGHT_RENDER__={active:true,observer:gullFlightRenderObserver};
  window.getGameWorldInspectionSnapshot=(options={})=>{
   if(!window.ELSNWorldInspection||typeof window.ELSNWorldInspection.capture!=='function'){
    throw new Error('El módulo de inspección del mundo no está disponible.');

@@ -12,17 +12,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.349"
+EXPECTED_VERSION = "0.6.350"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
     "RealCastawayStickBranch",
     "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();",
-    "ambientBirds.forEach(b=>{if(!b||!b.root||b.root.isDisposed?.())return;",
+    "scene.onBeforeRenderObservable.add(()=>{",
+    "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,observer:gullFlightRenderObserver};",
+    "b.root.position.x=Math.cos(a)*radius-36;",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
     "const gullClockSeconds=performance.now()*.001;",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
-    "flightElapsed=Math.max(0,gullClockSeconds-b.flightClockOrigin)",
+    "flightElapsed=Math.max(0,now-b.flightClockOrigin)",
+    "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
 )
 
 HTML_PAGES = (
@@ -183,7 +186,7 @@ def main() -> None:
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.349-npcbrain3" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.350-npcbrain4" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -619,7 +622,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'58',build:'0.6.349'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'58',build:'0.6.350'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -1011,7 +1014,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.349" not in index_html or "EL SIN NOMBRE 0.6.349 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.350" not in index_html or "EL SIN NOMBRE 0.6.350 frame error" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1163,7 +1166,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.349</title>" not in index_html:
+    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.350</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")
