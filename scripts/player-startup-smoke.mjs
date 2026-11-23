@@ -340,6 +340,20 @@ async function main() {
     // The identity-start counter proves the input handler ran; the next wait observes the actual
     // startup recorder or an explicit boot-failed state, including browser-side long stalls.
     manifest.identityStartCount = await page.evaluate(() => window.__ELSN_IDENTITY_START_COUNT || 0);
+    // Preserve a real viewport capture of the redesigned loading HUD for CI review.
+    // Screenshot failure is diagnostic-only: it must never block the gameplay acceptance gate.
+    try {
+      await page.locator('#elsnStartupProgressPanel .elsn-sp-content').waitFor({ state: 'visible', timeout: 8000 });
+      await page.screenshot({
+        path: path.join(OUT, 'loading-screen-layout.png'),
+        fullPage: false,
+        timeout: 4000,
+        animations: 'disabled'
+      });
+      manifest.loadingScreenLayoutCapture = 'captured';
+    } catch (captureError) {
+      manifest.loadingScreenLayoutCaptureWarning = String(captureError?.message || captureError);
+    }
     manifest.menuFlowMs = Number((performance.now() - stepStartedAt).toFixed(1));
 
     stepStartedAt = performance.now();

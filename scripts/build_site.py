@@ -1279,12 +1279,12 @@ def main() -> None:
  if(!loadProgressAnimation)loadProgressAnimation=requestAnimationFrame(paintLoadingProgress);
 }"""
     progress_replacement = """const startupProgressSteps=[
- {title:'Motor 3D',short:'Motor 3D',detail:'Babylon.js, WebGL e importador GLB · 0–39%'},
- {title:'Mundo',short:'Mundo',detail:'Islas, terreno, costa y vegetación · 40–81%'},
- {title:'Personajes',short:'Personajes',detail:'Protagonista y NPC obligatorios · 82–86%'},
- {title:'Fauna',short:'Fauna',detail:'Ciervos, lobo y aves · 87–92%'},
- {title:'Gráficos',short:'Gráficos',detail:'Texturas y shaders de la primera vista · 93–99%'},
- {title:'Listo',short:'Listo',detail:'Comprobación final antes de abrir la partida · 100%'}
+ {title:'MOTOR 3D',detail:'Despertando la maquinaria del mundo…'},
+ {title:'EL MUNDO',detail:'Dando forma a las islas y a la costa…'},
+ {title:'PERSONAJES',detail:'Reuniendo guardianes y guerreros…'},
+ {title:'FAUNA',detail:'Despertando la vida de las islas…'},
+ {title:'GRÁFICOS',detail:'Encendiendo luz, agua y atmósfera…'},
+ {title:'LA PARTIDA',detail:'Todo está preparado para zarpar…'}
 ];
 let startupProgressActiveIndex=-1,startupProgressStageStartedAt=performance.now();
 function ensureStartupProgressPanel(){
@@ -1292,14 +1292,36 @@ function ensureStartupProgressPanel(){
  if(panel)return panel;
  const style=document.createElement('style');
  style.id='elsn-startup-progress-style';
- style.textContent='#elsnStartupProgressPanel{box-sizing:border-box;width:min(760px,calc(100% - 28px));margin:9px auto 0;padding:10px 12px;border:1px solid rgba(235,190,143,.3);border-radius:12px;background:rgba(5,14,22,.9);color:#f7eee4;font:500 11px/1.35 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.22)}#elsnStartupProgressPanel *{box-sizing:border-box}#elsnStartupProgressPanel .elsn-sp-head,#elsnStartupProgressPanel .elsn-sp-current{display:flex;align-items:center;justify-content:space-between;gap:10px}#elsnStartupProgressPanel .elsn-sp-head strong{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#ffd3ac}#elsnStartupProgressPanel .elsn-sp-head span{font-variant-numeric:tabular-nums;color:#fff}#elsnStartupProgressPanel .elsn-sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:8px}#elsnStartupProgressPanel .elsn-sp-step{min-width:0;padding:5px 2px;border:1px solid rgba(255,255,255,.13);border-radius:7px;color:rgba(255,255,255,.58);text-align:center;font-size:9px;white-space:nowrap}#elsnStartupProgressPanel .elsn-sp-step[aria-current=step]{border-color:#ffbd8b;background:rgba(235,153,99,.2);color:#fff;font-weight:800}#elsnStartupProgressPanel .elsn-sp-step.is-done{border-color:rgba(235,190,143,.42);color:#f0c6a2}#elsnStartupProgressPanel .elsn-sp-current{margin-top:8px;color:rgba(255,255,255,.78);font-size:10px}#elsnStartupProgressPanel #elsnStartupProgressAction{min-width:0;overflow-wrap:anywhere}#elsnStartupProgressPanel #elsnStartupProgressElapsed{flex:none;color:#ffd3ac;font-variant-numeric:tabular-nums}@media(max-width:460px){#elsnStartupProgressPanel{width:calc(100% - 22px);padding:8px 9px;margin-top:7px}#elsnStartupProgressPanel .elsn-sp-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}#elsnStartupProgressPanel .elsn-sp-step{font-size:10px;padding:5px 2px}}';
- style.textContent+='#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;margin:0!important;padding-left:clamp(24px,6.2vw,104px)!important;padding-right:clamp(24px,6.2vw,104px)!important}#loading .loadPhase{box-sizing:border-box;width:100%}#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}#elsnStartupProgressPanel{position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box;width:100vw;max-width:none;margin:0;padding:10px 14px;border-left:0;border-right:0;border-radius:0;z-index:2147482000;pointer-events:none}@media(max-width:460px){#elsnStartupProgressPanel{left:0;right:0;width:100vw;max-width:none;margin:0;padding:9px 12px calc(9px + env(safe-area-inset-bottom,0px));border-radius:0}}';
+ style.textContent=[
+  '#elsnStartupProgressPanel{position:fixed;inset:0;z-index:2147482000;pointer-events:none;color:#f4ead8;font-family:Georgia,serif}',
+  '#elsnStartupProgressPanel *{box-sizing:border-box}',
+  '#elsnStartupProgressPanel::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 17% 39%,rgba(179,137,79,.13),transparent 43%),radial-gradient(ellipse at 82% 18%,rgba(73,124,119,.23),transparent 42%),linear-gradient(180deg,rgba(2,10,13,.02) 0%,rgba(2,10,13,.03) 64%,rgba(2,9,11,.57) 82%,rgba(2,8,10,.94) 100%);pointer-events:none}',
+  '#elsnStartupProgressPanel::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(210,173,111,.5),transparent)}',
+  '#elsnStartupProgressPanel .elsn-sp-content{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(780px,100%);padding:18px clamp(22px,6vw,68px) calc(20px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(3,11,13,0) 0%,rgba(3,11,13,.46) 22%,rgba(3,11,13,.88) 100%);border-top:1px solid rgba(205,166,102,.24)}',
+  '#elsnStartupProgressPanel .elsn-sp-brand{display:flex;align-items:center;gap:9px;margin-bottom:11px;color:rgba(229,203,159,.78);font:700 9px/1.2 system-ui,sans-serif;letter-spacing:.24em;text-transform:uppercase}',
+  '#elsnStartupProgressPanel .elsn-sp-mark{display:inline-grid;place-items:center;width:20px;height:20px;border:1px solid rgba(220,181,116,.54);border-radius:50%;color:#e3c18b;font:16px/1 Georgia,serif}',
+  '#elsnStartupProgressPanel .elsn-sp-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:10px}',
+  '#elsnStartupProgressPanel .elsn-sp-stage{display:block;color:#f1dfc0;font:700 clamp(20px,4vw,29px)/1.05 Georgia,serif;letter-spacing:.075em;text-transform:uppercase;text-shadow:0 2px 18px rgba(0,0,0,.5)}',
+  '#elsnStartupProgressPanel .elsn-sp-percent{flex:none;color:#f0d5a7;font:600 20px/1 system-ui,sans-serif;font-variant-numeric:tabular-nums}',
+  '#elsnStartupProgressPanel .elsn-sp-track{height:3px;width:100%;overflow:hidden;background:rgba(255,255,255,.15);box-shadow:0 1px 8px rgba(0,0,0,.35)}',
+  '#elsnStartupProgressPanel .elsn-sp-fill{display:block;width:0;height:100%;background:linear-gradient(90deg,#9c7543,#f1d6a1);box-shadow:0 0 14px rgba(221,179,111,.55);transition:width .32s ease-out}',
+  '#elsnStartupProgressPanel .elsn-sp-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;color:rgba(244,234,216,.86);font:500 11px/1.35 system-ui,sans-serif}',
+  '#elsnStartupProgressPanel .elsn-sp-action{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:.015em}',
+  '#elsnStartupProgressPanel .elsn-sp-elapsed{flex:none;color:rgba(225,194,143,.78);font-variant-numeric:tabular-nums;letter-spacing:.08em}',
+  '#elsnStartupProgressPanel .elsn-sp-segments{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:12px}',
+  '#elsnStartupProgressPanel .elsn-sp-segment{height:2px;background:rgba(255,255,255,.15);transition:background .25s ease,box-shadow .25s ease}',
+  '#elsnStartupProgressPanel .elsn-sp-segment.is-done{background:rgba(207,171,111,.66)}',
+  '#elsnStartupProgressPanel .elsn-sp-segment.is-active{background:#efd09b;box-shadow:0 0 9px rgba(239,208,155,.45)}',
+  '#loading .loadBottom{display:none!important}',
+  '@media(max-width:480px){#elsnStartupProgressPanel .elsn-sp-content{padding:14px 22px calc(15px + env(safe-area-inset-bottom,0px))}#elsnStartupProgressPanel .elsn-sp-brand{margin-bottom:8px;font-size:8px;letter-spacing:.19em}#elsnStartupProgressPanel .elsn-sp-heading{margin-bottom:8px}#elsnStartupProgressPanel .elsn-sp-stage{font-size:23px}#elsnStartupProgressPanel .elsn-sp-percent{font-size:18px}#elsnStartupProgressPanel .elsn-sp-footer{margin-top:8px;font-size:10px}#elsnStartupProgressPanel .elsn-sp-segments{margin-top:10px;gap:4px}}',
+  '@media(prefers-reduced-motion:reduce){#elsnStartupProgressPanel .elsn-sp-fill,#elsnStartupProgressPanel .elsn-sp-segment{transition:none}}'
+ ].join('');
  document.head.appendChild(style);
  panel=document.createElement('section');
  panel.id='elsnStartupProgressPanel';
  panel.setAttribute('role','status');
  panel.setAttribute('aria-live','polite');
- panel.innerHTML='<div class="elsn-sp-head"><strong id="elsnStartupProgressStage">PASO 1/6 · MOTOR 3D</strong><span id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-grid">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-step" data-step="'+index+'">'+(index+1)+'. '+step.short+'</span>').join('')+'</div><div class="elsn-sp-current"><span id="elsnStartupProgressAction">Preparando motor 3D…</span><span id="elsnStartupProgressElapsed">En esta fase: 0 s</span></div>';
+ panel.innerHTML='<div class="elsn-sp-content"><div class="elsn-sp-brand"><span class="elsn-sp-mark" aria-hidden="true">ᚠ</span><span>EL SIN NOMBRE · SAGA DEL NORTE</span></div><div class="elsn-sp-heading"><strong class="elsn-sp-stage" id="elsnStartupProgressStage">MOTOR 3D</strong><span class="elsn-sp-percent" id="elsnStartupProgressPercent">0%</span></div><div class="elsn-sp-track" id="elsnStartupProgressTrack" role="progressbar" aria-label="Preparación de la partida" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="elsn-sp-fill" id="elsnStartupProgressFill"></span></div><div class="elsn-sp-footer"><span class="elsn-sp-action" id="elsnStartupProgressAction">Despertando la maquinaria del mundo…</span><span class="elsn-sp-elapsed" id="elsnStartupProgressElapsed">00 s</span></div><div class="elsn-sp-segments" aria-hidden="true">'+startupProgressSteps.map((step,index)=>'<span class="elsn-sp-segment" data-step="'+index+'"></span>').join('')+'</div></div>';
  document.body.appendChild(panel);
  if(!window.__ELSN_STARTUP_PROGRESS_TIMER__)window.__ELSN_STARTUP_PROGRESS_TIMER__=window.setInterval(()=>{
   const loading=document.getElementById('loading');
@@ -1310,7 +1332,7 @@ function ensureStartupProgressPanel(){
    return;
   }
   const elapsed=document.getElementById('elsnStartupProgressElapsed');
-  if(elapsed&&startupProgressActiveIndex>=0)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+  if(elapsed&&startupProgressActiveIndex>=0)elapsed.textContent=String(Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))).padStart(2,'0')+' s';
  },1000);
  return panel;
 }
@@ -1323,16 +1345,20 @@ function renderStartupProgress(value,label){
  const step=startupProgressSteps[index];
  const heading=panel.querySelector('#elsnStartupProgressStage');
  const percent=panel.querySelector('#elsnStartupProgressPercent');
+ const fill=panel.querySelector('#elsnStartupProgressFill');
+ const track=panel.querySelector('#elsnStartupProgressTrack');
  const action=panel.querySelector('#elsnStartupProgressAction');
  const elapsed=panel.querySelector('#elsnStartupProgressElapsed');
- if(heading)heading.textContent='PASO '+(index+1)+'/'+startupProgressSteps.length+' · '+step.title.toUpperCase();
+ if(heading)heading.textContent=step.title;
  if(percent)percent.textContent=Math.floor(progress)+'%';
+ if(fill)fill.style.width=progress.toFixed(2)+'%';
+ if(track)track.setAttribute('aria-valuenow',String(Math.round(progress)));
  if(action)action.textContent=label||step.detail;
- if(elapsed)elapsed.textContent='En esta fase: '+Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))+' s';
+ if(elapsed)elapsed.textContent=String(Math.max(0,Math.floor((performance.now()-startupProgressStageStartedAt)/1000))).padStart(2,'0')+' s';
  panel.querySelectorAll('[data-step]').forEach(node=>{
   const current=Number(node.getAttribute('data-step'));
   node.classList.toggle('is-done',current<index);
-  if(current===index)node.setAttribute('aria-current','step');else node.removeAttribute('aria-current');
+  node.classList.toggle('is-active',current===index);
  });
 }
 function setLoadingProgress(value,label){
@@ -4333,8 +4359,12 @@ function getWorldPhaseTimingSnapshot(){
     if(npc.pause<=0&&Number.isFinite(npc.targetX)&&Number.isFinite(npc.targetZ)){
      const targetDx=npc.targetX-oldX,targetDz=npc.targetZ-oldZ,targetDistance=Math.hypot(targetDx,targetDz);
      if(targetDistance>.42){
-      const pace=brain.mode==='flee'?1.18:(brain.mode==='social'?.72:(brain.mode==='watch'?.34:(brain.mode==='rest'?.20:npc.speed)));
-      const step=Math.min(targetDistance,Math.max(.018,pace*ambientDt));
+      const wantedHeading=Math.atan2(targetDx,targetDz);
+      const turnDelta=Math.atan2(Math.sin(wantedHeading-p.rotation.y),Math.cos(wantedHeading-p.rotation.y));
+      if(!brain.locomotionState)brain.locomotionState={speed:0};
+      const motion=npcVillageBrain.computeLocomotion({mode:brain.mode,baseSpeed:npc.speed,distance:targetDistance,dt:ambientDt,moving:true,turnAngle:turnDelta},brain.locomotionState);
+      const pace=motion.speed;
+      const step=Math.min(targetDistance,Math.max(.012,pace*ambientDt));
       const move=npcVillageBrain.chooseStep({x:oldX,z:oldZ,targetX:npc.targetX,targetZ:npc.targetZ,step,side:i%2===0?1:-1},(x,z)=>{
        if(!tryLandMove(x,z,.43,oldX,oldZ))return false;
        for(const other of ambientPeople){

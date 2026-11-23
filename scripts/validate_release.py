@@ -89,12 +89,20 @@ def main() -> None:
         fail("Hay archivos requeridos vacíos: " + ", ".join(empty))
 
     index_html = read_text("index.html")
-    if any(marker not in index_html for marker in ("elsnStartupProgressPanel", "elsnStartupProgressElapsed", "startupProgressSteps", "PASO ")):
-        fail("La pantalla de carga debe mostrar la fase numerada, la operación actual y el tiempo en la fase.")
-    if "position:fixed;left:0;right:0;bottom:env(safe-area-inset-bottom,0px)" not in index_html or "width:100vw;max-width:none" not in index_html or "document.body.appendChild(panel)" not in index_html:
-        fail("El panel de progreso debe ocupar todo el ancho del viewport y vivir fuera del contenedor estrecho de carga.")
-    if "#loading .loadBottom{position:relative;left:50%;transform:translateX(-50%);box-sizing:border-box;width:100vw!important;max-width:none!important;" not in index_html or "#loading .loadTrack{display:block;box-sizing:border-box;width:100%!important;max-width:none!important}" not in index_html:
-        fail("La barra de progreso original debe ocupar el ancho completo del viewport, no solo el panel informativo añadido.")
+    loading_markers = (
+        "elsnStartupProgressPanel",
+        "elsnStartupProgressElapsed",
+        "startupProgressSteps",
+        "elsnStartupProgressTrack",
+        "elsnStartupProgressFill",
+        "elsn-sp-segments",
+    )
+    if any(marker not in index_html for marker in loading_markers):
+        fail("La pantalla de carga debe incluir el HUD cinematográfico único, su barra real y los seis hitos.")
+    if "#elsnStartupProgressPanel{position:fixed;inset:0" not in index_html or "#loading .loadBottom{display:none!important}" not in index_html or "document.body.appendChild(panel)" not in index_html:
+        fail("El HUD debe cubrir el viewport, ocultar la interfaz antigua duplicada y vivir fuera del contenedor de carga.")
+    if any(marker in index_html for marker in (".elsn-sp-grid", ".elsn-sp-step", "En esta fase:")):
+        fail("La pantalla no debe recuperar tarjetas de fases ni duplicar el texto/temporizador antiguo.")
     atmosphere_source = read_text("scripts/nordic/atmosphere-system.js")
     world_inspection_source = read_text("scripts/nordic/world-inspection.js")
     inspector_html = (ROOT / "inspector/index.html").read_text(encoding="utf-8")
@@ -171,10 +179,12 @@ def main() -> None:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
     if "slot.texture.update(true);slot.lastUploadInvertY=true;" not in dialogue_runtime_source or "uploadInvertY:slot.lastUploadInvertY===true" not in dialogue_runtime_source:
         fail("La textura de diálogo NPC debe invertir el canvas al subirlo para mantener el texto vertical en el plano Babylon.")
-    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
-        fail("El cerebro de aldeanos debe conservar estados, decisiones, rutas y giros suaves.")
-    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
-        fail("La IA de aldeanos debe usar sus decisiones de baja frecuencia, el LOD existente y la colisión del mundo.")
+    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(", "function computeLocomotion(", "function evaluateThreat(", "function chooseCombatIntent(", "function formationOffset(", "function attackTelegraph(")):
+        fail("El cerebro NPC debe incluir locomoción avanzada, percepción de amenazas, intención táctica, formaciones y telegráficos de ataque.")
+    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "npcVillageBrain.computeLocomotion(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
+        fail("La IA NPC debe integrar locomoción con aceleración y giro, LOD existente y colisión del mundo.")
+    if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
+        fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
         fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:

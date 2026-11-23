@@ -13,9 +13,15 @@ assert.ok(build.includes("progress_replacement =") && build.includes("currentLoa
   build.includes("loadProgressLabel.textContent=Math.floor(currentLoadProgress)+'%'") &&
   build.includes("loadProgressTrack.setAttribute('aria-valuenow'"),
   'Every startup milestone must update the visible percentage and accessibility value synchronously, not only queue a future animation frame.');
-for (const marker of ['elsnStartupProgressPanel','startupProgressSteps','elsnStartupProgressElapsed','En esta fase:']) {
-  assert.ok(build.includes(marker), 'The loading screen must show the current numbered phase and time in phase: ' + marker);
+for (const marker of ['elsnStartupProgressPanel','startupProgressSteps','elsnStartupProgressElapsed','elsnStartupProgressTrack','elsnStartupProgressFill','elsn-sp-segments']) {
+  assert.ok(build.includes(marker), 'The loading screen must expose the single cinematic progress HUD: ' + marker);
 }
+assert.ok(build.includes("#loading .loadBottom{display:none!important}") && build.includes("elsn-sp-content") && build.includes("elsn-sp-track"),
+  'The obsolete loading footer must be hidden so only the new cinematic HUD remains visible.');
+assert.ok(!build.includes("En esta fase:") && !build.includes(".elsn-sp-grid") && !build.includes("elsn-sp-step"),
+  'The loading screen must not reintroduce overlapping text or boxed phase cards.');
+assert.ok(smoke.includes("loading-screen-layout.png") && smoke.includes("#elsnStartupProgressPanel .elsn-sp-content") && smoke.includes("loadingScreenLayoutCapture"),
+  'The real-player startup smoke must preserve a rendered screenshot of the loading HUD for visual review.');
 assert.ok(build.includes("await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));") &&
   build.includes("Yield once before synchronous world construction"),
   'The browser must paint the 40% world-building milestone before synchronous scene generation starts.');
