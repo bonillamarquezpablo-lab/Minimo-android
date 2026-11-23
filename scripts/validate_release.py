@@ -171,10 +171,12 @@ def main() -> None:
         fail("El núcleo de diálogos debe mantener cuatro bocadillos como máximo y un radio de 18 metros.")
     if "slot.texture.update(true);slot.lastUploadInvertY=true;" not in dialogue_runtime_source or "uploadInvertY:slot.lastUploadInvertY===true" not in dialogue_runtime_source:
         fail("La textura de diálogo NPC debe invertir el canvas al subirlo para mantener el texto vertical en el plano Babylon.")
-    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(")):
-        fail("El cerebro de aldeanos debe conservar estados, decisiones, rutas y giros suaves.")
-    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
-        fail("La IA de aldeanos debe usar sus decisiones de baja frecuencia, el LOD existente y la colisión del mundo.")
+    if "root.ELSN_NPC_VILLAGE_BRAIN=api" not in village_brain_source or any(marker not in village_brain_source for marker in ("function createState(", "function chooseMode(", "function chooseGoal(", "function chooseStep(", "function smoothAngle(", "function computeLocomotion(", "function evaluateThreat(", "function chooseCombatIntent(", "function formationOffset(", "function attackTelegraph(")):
+        fail("El cerebro NPC debe incluir locomoción avanzada, percepción de amenazas, intención táctica, formaciones y telegráficos de ataque.")
+    if any(marker not in index_html for marker in ("npcVillageBrain.chooseMode(", "npcVillageBrain.chooseGoal(", "npcVillageBrain.chooseStep(", "npcVillageBrain.computeLocomotion(", "tryLandMove(x,z,.43)", "worldEntityVisualDue(npc,npcPosition.x,npcPosition.z)")):
+        fail("La IA NPC debe integrar locomoción con aceleración y giro, LOD existente y colisión del mundo.")
+    if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
+        fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "ambientUpdateAccumulator>=(isConstrainedMobile?1/10:(isPerformanceMode?1/30:1/60))" not in index_html:
         fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
