@@ -27,6 +27,7 @@ assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
 assert.match(release, /  changes:\n[\s\S]*?outputs:\n[\s\S]*?site: \$\{\{ steps\.scope\.outputs\.site \}\}[\s\S]*?game: \$\{\{ steps\.scope\.outputs\.game \}\}[\s\S]*?fauna: \$\{\{ steps\.scope\.outputs\.fauna \}\}/, 'The pipeline must classify site, game and fauna changes.');
+assert.match(release, /A production push that changes this workflow must exercise the complete release pipeline[\s\S]*?EVENT_NAME.*?push[\s\S]*?grep -Fxq '\.github\/workflows\/deploy-pages\.yml'[\s\S]*?site=true[\s\S]*?game=true[\s\S]*?fauna=true/, 'Changing the production release workflow must force the full validation gates after merge.');
 assert.match(release, /  build:\n[\s\S]*?if: needs\.changes\.outputs\.site == 'true'[\s\S]*?needs: \[changes\]/, 'The complete build is required only when published site files change.');
 assert.match(release, /Resolve the exact Playwright version for browser-cache compatibility\n        if: needs\.changes\.outputs\.game == 'true' \|\| needs\.changes\.outputs\.fauna == 'true'/, 'Browser dependencies must not be installed for documentation or Inspector-only updates.');
 assert.match(release, /  startup:\n[\s\S]*?if: needs\.changes\.outputs\.game == 'true'[\s\S]*?needs: \[build, changes\]/, 'The gameplay/offline smoke must run whenever game runtime files change.');
