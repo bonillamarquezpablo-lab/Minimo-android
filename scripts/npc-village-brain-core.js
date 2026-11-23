@@ -108,5 +108,49 @@
   const delta=Math.atan2(Math.sin(target-current),Math.cos(target-current));
   return current+delta*Math.min(1,Math.max(0,Number(dt)||0)*Math.max(.1,Number(rate)||7));
  }
- return Object.freeze({ROLES,ROLE_IDS,roleForVariant,createState,chooseMode,goalCandidates,chooseGoal,chooseStep,smoothAngle});
+ // NPC-only locomotion profile: acceleration, braking, turn response and gait are
+ // derived from NPC intent. It never reads or writes the player controller.
+ function computeLocomotion(input,state){
+  const c=input||{},s=state||{},dt=Math.min(.12,Math.max(0,Number(c.dt)||0));
+  const mode=String(c.mode||"work"),distance=Math.max(0,Number(c.distance)||0);
+  const base=Number.isFinite(Number(c.baseSpeed))?Math.max(.05,Number(c.baseSpeed)):.78;
+  const desired=mode==="flee"?Math.max(1.25,base*1.48):mode==="social"?.72:mode==="watch"?.34:mode==="rest"?.20:base;
+  const moving=c.moving===true&&distance>.04;
+  const target=moving?desired:0,accel=target>s.speed?3.1:5.4;
+  const previous=finite(s.speed)?s.speed:0;
+  s.speed=previous+(target-previous)*Math.min(1,dt*accel);
+  const turn=Math.abs(Number(c.turnAngle)||0);
+  const turnScale=1-Math.min(.34,turn/Math.PI*.34);
+  const speed=Math.max(0,s.speed*turnScale);
+  const gait=!moving||speed<.12?"idle":mode==="flee"?"run":speed>.88?"jog":"walk";
+  return Object.freeze({speed,gait,turnRate:gait==="idle"?2.8:(gait==="run"?8.8:7.2),strideScale:gait==="run"?1.22:(gait==="jog"?1.08:1),acceleration:dt>0?(s.speed-previous)/dt:0});
+ }
+ function evaluateThreat(input){
+  const c=input||{},distance=Math.max(0,Number(c.distance)||0),facing=finite(Number(c.facingDot))?Number(c.facingDot):0;
+  const hostile=c.hostile===true,armed=c.armed===true,attacking=c.attacking===true;
+  if(!hostile)return Object.freeze({score:0,level:"none",response:"ignore"});
+  const score=(distance<3?4:distance<7?2.4:distance<13?1:0)+(armed?1.2:0)+(attacking?2.2:0)+(facing>.35?.6:0);
+  return Object.freeze({score,level:score>=5?"critical":score>=3?"high":score>=1.5?"medium":"low",response:score>=5?"evade":score>=3?"defend":score>=1.5?"watch":"monitor"});
+ }
+ function chooseCombatIntent(input,state){
+  const c=input||{},threat=evaluateThreat(c);
+  if(c.healthRatio!==undefined&&Number(c.healthRatio)<.22)return "retreat";
+  if(threat.response==="evade")return "evade";
+  if(threat.response==="defend")return "guard";
+  if(c.allyDown===true&&c.canAssist===true)return "assist";
+  if(c.targetStaggered===true&&c.inRange===true)return "punish";
+  if(c.inRange===true&&c.staminaRatio!==undefined&&Number(c.staminaRatio)>.28)return "attack";
+  if(c.targetVisible===true)return "approach";
+  return "patrol";
+ }
+ function formationOffset(index,count,spacing=1.35){
+  const total=Math.max(1,Math.floor(Number(count)||1)),slot=Math.max(0,Math.floor(Number(index)||0))%total;
+  const row=Math.floor(Math.sqrt(slot)),column=slot-row*row;
+  return Object.freeze({x:(column-row)*Math.max(.5,Number(spacing)||1.35),z:-row*Math.max(.5,Number(spacing)||1.35),row,width:row*2+1});
+ }
+ function attackTelegraph(elapsed,duration){
+  const t=Math.max(0,Number(elapsed)||0),d=Math.max(.12,Number(duration)||.9),p=Math.min(1,t/d);
+  return Object.freeze({progress:p,phase:p<.32?"anticipation":p<.58?"strike":p<.82?"recovery":"recovering",canImpact:p>=.32&&p<.58,canChain:p>=.82});
+ }
+ return Object.freeze({ROLES,ROLE_IDS,roleForVariant,createState,chooseMode,goalCandidates,chooseGoal,chooseStep,smoothAngle,computeLocomotion,evaluateThreat,chooseCombatIntent,formationOffset,attackTelegraph});
 });
