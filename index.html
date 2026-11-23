@@ -10386,7 +10386,7 @@ function createRealWeapon(type='axe'){
    else{if(parts.body){parts.body.rotation.set(0,0,0);parts.body.position.y=0;}if(parts.arms)parts.arms.forEach(node=>node.rotation.set(0,0,0));if(parts.elbows)parts.elbows.forEach(node=>node.rotation.set(0,0,0));if(parts.legs)parts.legs.forEach(node=>node.rotation.set(0,0,0));if(parts.knees)parts.knees.forEach(node=>node.rotation.set(0,0,0));}
    parts.weapon.setEnabled(false);parts.root.parent=crewman.mount;parts.root.setEnabled(true);parts.root.position.set(0,0,0);parts.root.rotation.set(0,crewman.side*Math.PI/2,0);
    if(crewman.healthBack)crewman.healthBack.setEnabled(false);if(crewman.healthMesh)crewman.healthMesh.setEnabled(false);
-   crewman.landed=false;crewman.invaderRef=null;parts.faction='enemy';setFactionBadge(parts,'enemy');
+   hideFactionBadge(parts);crewman.landed=false;crewman.invaderRef=null;parts.faction='enemy';
   }
   function invasionDisembark(ship,vl){
    if(!ship||ship.invasionPartySpawned||!vl||!vl.claimed)return false;
@@ -10770,7 +10770,7 @@ function villageHostileDefenders(vl){
    vl.guards.forEach(guard=>{
     guard.hp=100;guard.alive=true;guard.surrendered=false;guard.recruited=false;guard.state='idle';
     guard.attackT=0;guard.attackDone=false;guard.stun=0;guard.hitReact=0;guard.knockback=0;guard.deadFallT=0;guard.deadTimer=0;guard.cool=.4;
-    guard.faction='enemy';guard.parts.faction='enemy';guard.parts.root.parent=null;guard.parts.root.setEnabled(true);
+    guard.faction='enemy';guard.parts.faction='enemy';guard.parts.alive=true;guard.parts.root.parent=null;guard.parts.root.setEnabled(true);
     guard.parts.recruited=false;guard.parts.surrendered=false;
     guard.parts.root.position=v(guard.home.x,terrainSurfaceAt(guard.home.x,guard.home.z)+.08,guard.home.z);
     guard.parts.root.rotation.set(0,guard.initialYaw||0,0);guard.parts.weapon.setEnabled(true);
@@ -11071,7 +11071,7 @@ function updateHUD(){
    guard.parts.body.rotation.set(0,0,0);guard.parts.body.position.y=0;
    guard.parts.arms.forEach(a=>a.rotation.set(0,0,0));guard.parts.legs.forEach(a=>a.rotation.set(0,0,0));
   }
-  guard.parts.weapon.setEnabled(true);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);
+  guard.parts.weapon.setEnabled(true);guard.parts.alive=true;guard.parts.recruited=true;guard.parts.surrendered=false;guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);setFactionBadge(guard.parts,'friendly');
   const ally={parts:guard.parts,recruited:true,enemyRef:guard,followCooldown:.4,companionIndex:companions.length,attackAnim:0,walkPhase:0,villageIndex:vl.index,kind:'surrendered-guard'};
   companions.push(ally);
   if(!restoring){msg('¡Un guerrero enemigo se une a tu clan! Tripulación: '+companions.length+'/'+MAX_RECRUITS);recordSagaEvent('Guerrero reclutado en '+vl.name+'. Tripulación '+companions.length+'/'+MAX_RECRUITS+'.');updateHUD();saveGame(true);}
@@ -11197,7 +11197,7 @@ function updateHUD(){
  }
  function defeatGuard(e,source='combate'){
   if(!e||!e.alive)return;
-  e.hp=0;e.alive=false;e.surrendered=false;e.state='dead';e.stun=0;e.parts.weapon.setEnabled(false);
+  e.hp=0;e.alive=false;e.parts.alive=false;e.surrendered=false;e.state='dead';e.stun=0;e.parts.weapon.setEnabled(false);
   e.healthBack.setEnabled(false);e.healthMesh.setEnabled(false);hideFactionBadge(e.parts);
   // El enemigo cae en varios fotogramas, sin teletransportarse ni desaparecer de golpe.
   e.deadFallT=0;e.deadSide=(!e.deadSide?1:e.deadSide)*(Math.random()<.5?-1:1);
@@ -11804,7 +11804,7 @@ function updateHUD(){
    navalDefensePhaseUnlocked=!!d.navalDefensePhaseUnlocked;
    if(Array.isArray(d.history)){sagaHistory.splice(0,sagaHistory.length,...d.history.filter(e=>e&&typeof e.text==='string').slice(-30).map(e=>({at:num(e.at,Date.now(),0,Date.now()+86400000),text:e.text.slice(0,120)})));}
    applyBoatAppearance(boatLevel);applyWeaponAppearance(weaponLevel);equipWeapon(equippedWeapon);
-   if(Array.isArray(d.villages))d.villages.forEach((saved,i)=>{const vl=villages[i];if(!vl||!saved)return;if(Array.isArray(saved.guards))saved.guards.forEach((g,j)=>{const guard=vl.guards[j];if(!guard||!g)return;guard.hp=num(g.hp,100,0,100);if(g.alive===false||guard.hp<=0){guard.alive=false;guard.state='dead';guard.parts.root.setEnabled(false);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);}else if(g.surrendered||g.recruited)surrenderGuard(guard,true);});if(saved.claimed){claimVillage(vl,true);discoveredIslands[Number.isInteger(vl.landIndex)?vl.landIndex:i]=true;}});
+   if(Array.isArray(d.villages))d.villages.forEach((saved,i)=>{const vl=villages[i];if(!vl||!saved)return;if(Array.isArray(saved.guards))saved.guards.forEach((g,j)=>{const guard=vl.guards[j];if(!guard||!g)return;guard.hp=num(g.hp,100,0,100);if(g.alive===false||guard.hp<=0){guard.alive=false;guard.parts.alive=false;guard.state='dead';guard.parts.root.setEnabled(false);guard.healthBack.setEnabled(false);guard.healthMesh.setEnabled(false);}else if(g.surrendered||g.recruited)surrenderGuard(guard,true);});if(saved.claimed){claimVillage(vl,true);discoveredIslands[Number.isInteger(vl.landIndex)?vl.landIndex:i]=true;}});
    if(Array.isArray(d.survivorRecruits))d.survivorRecruits.forEach(i=>{const vl=villages.find(v=>v.index===Number(i));if(vl&&vl.claimed)recruitGuard(vl,true);});
    if(d.structures&&d.structures.starterShelter&&d.structures.starterShelter.built)buildPlayerShelter(true,d.structures.starterShelter);
    if(Array.isArray(d.ships))d.ships.forEach((saved,i)=>{const e=enemyShips[i];if(!e||!saved)return;e.hp=num(saved.hp,e.maxHp,0,e.maxHp);e.sunk=!!saved.sunk;e.root.position.x=num(saved.x,e.root.position.x,-450,450);e.root.position.z=num(saved.z,e.root.position.z,-450,450);e.root.rotation.y=num(saved.yaw,e.root.rotation.y,-Math.PI*20,Math.PI*20);e.root.setEnabled(!e.sunk);e.bar.setEnabled(!e.sunk);e.back.setEnabled(!e.sunk);e.bar.scaling.x=Math.max(.01,e.hp/e.maxHp);});
