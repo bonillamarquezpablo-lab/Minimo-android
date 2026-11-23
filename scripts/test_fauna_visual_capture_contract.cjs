@@ -78,7 +78,7 @@ assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wo
   'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes("mesh.skeleton?.getTransformMatrices?.(mesh)") && capture.includes("boundsBasis='babylon-bone-matrices-world'") &&
-  capture.includes("getVerticesData?.(B?.VertexBuffer?.PositionKind||'position')"),
+  capture.includes("typeof mesh.setPositionsForCPUSkinning==='function'") && capture.includes('mesh.setPositionsForCPUSkinning()'),
   'Skinned fauna acceptance must measure original vertices through Babylon bone matrices exactly once, not stale GPU bind-pose bounds or double-skinned CPU vertices.');
 assert.ok(capture.includes('Math.min(d.width,d.depth)') && capture.includes('d.height*.30') && capture.includes('minimumBodyDepth'),
   'Fauna visual acceptance must reject limb/antler-only actors with a collapsed body depth even when their maximum extent looks plausible.');
@@ -90,6 +90,14 @@ assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a 
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
+assert.ok(capture.includes("source:'actor-visible-vs-actor-hidden-raster-diff'") &&
+  capture.includes('changedPixels>=140') && capture.includes('fillRatio>=.025') &&
+  capture.includes('view.imageIntegrity?.valid===true'),
+  'Four-view fauna captures must compare actor-visible and actor-hidden pixels; a large but visually empty PNG must fail.');
+assert.ok(capture.includes('measuredBounds:animal.bounds') &&
+  capture.includes('const min=measuredBounds?.min,max=measuredBounds?.max'),
+  'The capture camera must frame the same corrected skinned world bounds as the anatomical report, not stale bind-pose AABBs.');
+
 assert.ok(capture.includes('const visualCaptureCount=manifest.captures.filter(capture=>ANGLES.some(angle=>angle.id===capture.angle)).length') &&
   capture.includes("capture.angle==='bindpose-no-skinning'"),
   'Four cardinal camera views must be counted separately from optional bind-pose diagnostic images.');
