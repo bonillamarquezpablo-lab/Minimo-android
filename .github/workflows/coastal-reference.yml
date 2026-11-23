@@ -56,7 +56,7 @@ concurrency:
 jobs:
   unified-inspector:
     name: 'Inspector único: todas las pruebas, diagnósticos y capturas'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - name: Checkout exact candidate commit
