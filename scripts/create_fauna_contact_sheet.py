@@ -13,6 +13,11 @@ captures = manifest.get("captures") or []
 columns, thumb_w, thumb_h = 4, 400, 225
 label_h, gap, header_h = 44, 10, 72
 available, missing = [], []
+visual_capture_count = sum(
+    1 for entry in captures
+    if entry.get("angle") in {"front", "left", "rear", "right"}
+)
+raster_verified_count = max(0, visual_capture_count - len(raster_invalid))
 raster_invalid = [
     {
         "file": entry.get("file"),
@@ -62,7 +67,7 @@ lines = [
     f"- Build: **{manifest.get('gameVersion') or 'no disponible'}**",
     f"- Animales: **{len(manifest.get('fauna') or [])}**",
     f"- Vistas PNG presentes: **{len(available)} / {len(captures)}**",
-    f"- Siluetas raster verificadas: **{len(captures) - len(raster_invalid)} / {len(captures)}**",
+    f"- Siluetas raster verificadas: **{raster_verified_count} / {visual_capture_count}**",
     f"- Vistas con silueta insuficiente o métrica ausente: **{len(raster_invalid)}**",
     f"- Veredicto: **{manifest.get('verdict') or 'incomplete'}**",
     "- Método: capturas reales del canvas Babylon, cuatro ángulos por actor.",
@@ -113,7 +118,8 @@ summary = {
     "verdict": manifest.get("verdict"),
     "animalCount": len(manifest.get("fauna") or []),
     "captureCount": len(available),
-    "rasterVerifiedCount": len(captures) - len(raster_invalid),
+    "rasterVerifiedCount": raster_verified_count,
+    "visualCaptureCount": visual_capture_count,
     "rasterInvalidCaptures": raster_invalid,
     "missingCaptures": missing,
     "warnings": manifest.get("warnings") or [],
