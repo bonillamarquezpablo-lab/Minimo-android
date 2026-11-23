@@ -13,7 +13,7 @@ for(const marker of [
   'const spatialActorRootPattern=',
     'const spatialVegetationMotionPattern=/^(?:treeCanopyWindPivot|fallingTree|fallingForestTree)/i;',
   'const spatialWaterMotionPattern=',
-  'const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|',
+  'const spatialEffectMotionPattern=/^(?:NorseMovingFootprints|SunHalo|SunDisc|WindborneLeaf|HearthFlame|HearthSpark|GroundSplashParticleBatch|',
   "if(/^GroundSplashParticleBatch(?:$|[_-])/i.test(name)){if(mesh)mesh.alwaysSelectAsActiveMesh=true;return 'particle-or-effect';}",
   'const spatialEffectMotionPattern=',
   'const spatialDynamicReasonForMesh=',
@@ -46,6 +46,8 @@ const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{'
 const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
 assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
 const freezeSource=builder.slice(freezeStart,freezeEnd);
+const movingVisualPattern='const spatialEffectMotionPattern=/^(?:NorseMovingFootprints|SunHalo|SunDisc|WindborneLeaf|HearthFlame|HearthSpark|GroundSplashParticleBatch|';
+assert.ok(builder.includes(movingVisualPattern), 'Footprints, moving sun sprites, windborne leaves, hearth flames and sparks must remain dynamic and must never have their world matrices frozen.');
 assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.freezeWorldMatrix()'),
   'Only spatially classified static meshes may have their world transforms frozen.');
 const dynamicPromotion=builder.indexOf('mesh.unfreezeWorldMatrix()');
