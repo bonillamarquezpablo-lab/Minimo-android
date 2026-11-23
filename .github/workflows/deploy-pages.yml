@@ -6,7 +6,14 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+  # GPU comparison is optional and only runs when explicitly requested.
   workflow_dispatch:
+    inputs:
+      run_gpu_diagnostics:
+        description: 'Ejecutar la comparación GPU opcional de fauna.'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,7 +24,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Source-only contracts run concurrently with the build and remain mandatory release gates.
+  # Fast source contracts run beside the single release build. Inspector UI checks are path-scoped in their own workflow.
   contracts:
     name: Source regression contracts — ${{ matrix.suite }}
     runs-on: ubuntu-latest
@@ -25,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [core, wildlife, inspector, world, release]
+        suite: [core, wildlife, world, release]
     steps:
       - name: Checkout exact release candidate
         uses: actions/checkout@v4
@@ -93,6 +100,8 @@ jobs:
           node scripts/test_coastal_interaction.cjs
           echo "Test 13-island campaign and naval invasion integration"
           node scripts/test_island_campaign.cjs
+          echo "Test Phase 2 builder, offline and world-inspection integration"
+          node scripts/test_phase2_build_contract.mjs
               ;;
             release)
           echo "Test release version and packaging contract"
@@ -185,11 +194,6 @@ jobs:
         run: |
           mkdir -p dist/inspector
           cp -R inspector/. dist/inspector/
-
-      - name: Verify guided Inspector experience and preserved tools
-        run: node scripts/test_inspector_workbench_contract.cjs
-      - name: Verify persistent screenshot gallery
-        run: node --check dist/inspector/phase1-live.js && node scripts/test_inspector_capture_gallery_contract.cjs
 
       - name: Verify Inspector Phase 1 dependencies are published
         run: node scripts/test_inspector_phase1_packaging.cjs
@@ -378,6 +382,7 @@ jobs:
 
   fauna-gpu-diagnostic:
     name: Optional GPU skinning comparison captures
+    if: github.event_name == 'workflow_dispatch' && inputs.run_gpu_diagnostics == true
     needs: [build]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
