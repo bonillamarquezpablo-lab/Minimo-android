@@ -375,7 +375,8 @@ jobs:
     if: needs.changes.outputs.fauna == 'true'
     needs: [build, changes]
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    # Bound the complete fauna job, including setup and artifact preservation.
+    timeout-minutes: 25
     steps:
       - name: Checkout exact release candidate for fauna acceptance
         uses: actions/checkout@v4
@@ -397,6 +398,7 @@ jobs:
       - name: Install the exact cached Playwright version
         run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
       - name: Verify cached Chromium and system dependencies
+        timeout-minutes: 8
         run: npx playwright install --with-deps chromium
       - name: Download the exact site package built and validated above
         uses: actions/download-artifact@v4
@@ -419,7 +421,8 @@ jobs:
           cat artifacts/fauna-visual-captures/https-server.log
           exit 1
       - name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish
-        timeout-minutes: 30
+        # The capture script has a 15-minute global deadline and per-evaluation watchdogs.
+        timeout-minutes: 18
         env:
           FAUNA_TEST_URL: https://localhost:4175/
           FAUNA_SKINNING_MODE: cpu
