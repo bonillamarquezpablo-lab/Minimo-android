@@ -21,7 +21,9 @@ for (const marker of [
   'World inspection runtime JavaScript syntax validation failed:'
 ]) assert.ok(build.includes(marker), 'Build step missing: ' + marker);
 
-assert.match(faunaCapture, /evaluateWithTimeout\\(page,async\\(\\{animalId,angleDegrees(?:,measuredBounds)?\\}\\)=>\\{\\s*const api=window\\.__ELSN_TEST__,scene=[\\s\\S]{0,260}const ancestorsContain=\\(node,root\\)=>/,\n\n  'The bounded fauna capture page context must define its own ancestry helper before inspecting animation tracks.');
+assert.match(faunaCapture, /evaluateWithTimeout\(page,async\(\{animalId,angleDegrees(?:,measuredBounds)?\}\)=>\{\s*const api=window\.__ELSN_TEST__,scene=[\s\S]{0,260}const ancestorsContain=\(node,root\)=>/,
+
+  'The bounded fauna capture page context must define its own ancestry helper before inspecting animation tracks.');
 assert.ok(validator.includes('"scripts/nordic/world-inspection.js"'));
 assert.ok(validator.includes('root.ELSNWorldInspection'));
 assert.ok(serviceWorker.includes('"./scripts/nordic/world-inspection.js"'));
