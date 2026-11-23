@@ -47,6 +47,50 @@ class AssetCacheIntegrityTests(unittest.TestCase):
         finally:
             build_site.DOWNLOADS = original
 
+    def test_wildlife_skin_root_is_repaired_to_structural_armature(self):
+        document = {
+            "nodes": [
+                {"name": "RootNode", "children": [1, 5]},
+                {"name": "AnimalArmature", "children": [2]},
+                {"name": "Body", "children": [3, 4]},
+                {"name": "Spine"},
+                {"name": "Head"},
+                {"name": "DeerMesh"},
+            ],
+            "skins": [{"skeleton": 2, "joints": [2, 3, 4]}],
+        }
+        repairs = build_site.repair_terrestrial_animal_skin_roots(
+            document, "assets/models/wildlife/Deer.glb"
+        )
+        self.assertEqual(document["skins"][0]["skeleton"], 1)
+        self.assertEqual(len(repairs), 1)
+        self.assertEqual(repairs[0]["originalRoot"], 2)
+        self.assertEqual(repairs[0]["repairedRootName"], "AnimalArmature")
+        self.assertEqual(document["extras"]["elsnAnimalSkinRoot"]["algorithm"], "animal-armature-root-v1")
+        self.assertEqual(document["skins"][0]["extras"]["elsnSkeletonRootRepair"]["rootNode"], 1)
+        self.assertEqual(
+            build_site.repair_terrestrial_animal_skin_roots(
+                document, "assets/models/wildlife/Deer.glb"
+            ),
+            [],
+        )
+
+    def test_wildlife_skin_root_rejects_joint_outside_armature(self):
+        document = {
+            "nodes": [
+                {"name": "RootNode", "children": [1, 4]},
+                {"name": "AnimalArmature", "children": [2]},
+                {"name": "Body", "children": [3]},
+                {"name": "Spine"},
+                {"name": "ExternalJoint"},
+            ],
+            "skins": [{"skeleton": 2, "joints": [2, 3, 4]}],
+        }
+        with self.assertRaisesRegex(RuntimeError, "does not contain every joint"):
+            build_site.repair_terrestrial_animal_skin_roots(
+                document, "assets/models/wildlife/Wolf.glb"
+            )
+
     def test_manifest_round_trip_restores_exact_verified_bytes(self):
         url = "https://example.invalid/cache-probe.ogg"
         source = self._asset()
