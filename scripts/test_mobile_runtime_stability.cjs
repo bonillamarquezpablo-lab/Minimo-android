@@ -229,3 +229,5 @@ assert.ok(builder.includes('club_shaft_replacement') && builder.includes('RealCa
 assert.ok(builder.includes('const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();') && builder.includes('gripWorld.addInPlace(modelRight.scale(.055));'), 'The equipped club must extend down beside the hand instead of being carried horizontally into the body.');
 assert.ok(builder.includes('gull_motion_replacement') && builder.includes('if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to)') && builder.includes('Math.cos(i*1.25)*(18+i*2.5)-36'), 'The five gulls must retain independent orbit positions and recover their native flight clip every frame.');
 assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.includes('visibleMeshCount') && builder.includes('flightPlaying'), 'The release must expose read-only visual proof for the club, home warriors and flying gulls.');
+
+assert.ok(builder.includes("calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'"), 'Visual diagnostics must report club calibration using the existing live weapon-anchor state.');

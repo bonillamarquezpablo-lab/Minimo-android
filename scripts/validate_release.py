@@ -897,7 +897,7 @@ def main() -> None:
         fail("El palo no conserva el desplazamiento frontal y el anclaje local de la palma.")
     if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
-    if "modelForward.clone().add(new B.Vector3(0,.24,0)).normalize()" not in index_html:
+    if "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize()" not in index_html:
         fail("El palo no conserva la orientación frontal e inclinación fijadas.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")
