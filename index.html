@@ -8416,8 +8416,69 @@ function createRealWeapon(type='axe'){
   const defaultPose=equippedWeapon==='club'?{x:.045,y:0,z:-.075}:equippedWeapon==='axe'?{x:.04,y:0,z:-.055}:equippedWeapon==='sword'?{x:.025,y:0,z:-.035}:{x:0,y:0,z:0};
   const r=realWeaponPoseOverride||defaultPose;
   const enableEquipped=()=>Object.entries(realWeaponGroups||{}).forEach(([key,node])=>{if(node)node.setEnabled(key===equippedWeapon);});
-  // El palo usa el mismo anclaje local al modelo que el resto de armas. Así sigue
-  // al jugador incluso entre actualizaciones de animación y nunca queda abandonado en el mundo.
+  if(equippedWeapon==='club'){
+   // Mantiene la calibración anatómica original de la palma, pero convierte el
+   // resultado a espacio local del modelo: el palo hereda siempre el movimiento
+   // del jugador y no puede quedarse suspendido en la última posición mundial.
+   try{
+    player.root.computeWorldMatrix(true);
+    realPlayerModelPivot.computeWorldMatrix(true);
+    const worldUp=new B.Vector3(0,1,0);
+    const modelRight=realPlayerModelPivot.getDirection(B.Axis.X).normalize();
+    const modelForward=realPlayerModelPivot.getDirection(B.Axis.Z).normalize();
+    const forwardCarryAxis=modelForward.clone().add(new B.Vector3(0,.24,0)).normalize();
+    let gripWorld=null,stickAxis=forwardCarryAxis.clone();
+    if(realHandNode){
+     realHandNode.computeWorldMatrix(true);
+     gripWorld=realHandNode.getAbsolutePosition().clone();
+     if(realForearmNode){
+      realForearmNode.computeWorldMatrix(true);
+      const distal=gripWorld.subtract(realForearmNode.getAbsolutePosition());
+      if(distal.lengthSquared()>.0001){
+       distal.normalize();
+       gripWorld.addInPlace(distal.scale(.025));
+      }
+     }
+     gripWorld.addInPlace(modelForward.scale(.075));
+     gripWorld.addInPlace(modelRight.scale(.012));
+     stickAxis=forwardCarryAxis.clone();
+    }else if(realForearmNode){
+     realForearmNode.computeWorldMatrix(true);
+     const forearmDirection=realForearmNode.getDirection(B.Axis.Y).normalize();
+     gripWorld=realForearmNode.getAbsolutePosition().clone()
+      .add(forearmDirection.scale(.24))
+      .add(modelRight.scale(.035))
+      .add(modelForward.scale(.075))
+      .add(worldUp.scale(.035));
+     stickAxis=forwardCarryAxis.clone();
+    }else{
+     gripWorld=realPlayerModelPivot.getAbsolutePosition().clone()
+      .add(modelRight.scale(.25))
+      .add(worldUp.scale(.88))
+      .add(modelForward.scale(.04));
+     stickAxis=forwardCarryAxis.clone();
+    }
+    const inverseParent=realPlayerModelPivot.getWorldMatrix().clone();
+    inverseParent.invert();
+    const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);
+    const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();
+    const poseRotation=B.Quaternion.RotationYawPitchRoll(r.y||0,r.x||0,r.z||0);
+    realWeaponHolder.position.copyFrom(localGrip);
+    realWeaponHolder.rotationQuaternion=quaternionAlignYTo(localAxis).multiply(poseRotation).normalize();
+    realWeaponHolder.setEnabled(true);
+    enableEquipped();
+    if(realWeaponGroups.club){
+     realWeaponGroups.club.getChildMeshes(false).forEach(mesh=>{
+      mesh.setEnabled(true);mesh.isVisible=true;mesh.visibility=1;mesh.isPickable=false;
+     });
+    }
+    realWeaponAnchorCalibrated=true;realWeaponAnchorType='club-local-player-anchor';
+    realWeaponHolder.computeWorldMatrix(true);
+    return;
+   }catch(err){
+    console.warn('No se pudo fijar el palo a la palma local del jugador; se usará el socket de reserva.',err);
+   }
+  }
   // Fallback original para armas distintas del palo o rigs sin hueso de mano.
   if(realWeaponHolder.parent!==realPlayerModelPivot)realWeaponHolder.parent=realPlayerModelPivot;
   try{
