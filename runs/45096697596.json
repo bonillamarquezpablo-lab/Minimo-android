@@ -57,10 +57,11 @@
       "name": "Capturas visuales y diagnóstico de fauna terrestre",
       "script": "scripts/fauna-visual-capture.mjs",
       "startedAt": "2026-11-23T02:15:25.026Z",
-      "status": "running",
-      "durationMs": null,
-      "exitCode": null,
-      "error": null
+      "status": "passed",
+      "durationMs": 573927,
+      "exitCode": 0,
+      "error": null,
+      "finishedAt": "2026-11-23T02:24:58.953Z"
     }
   ],
   "finishedAt": null
