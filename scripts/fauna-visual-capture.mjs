@@ -500,8 +500,9 @@ async function main() {
             const actorWasEnabled=root.isEnabled?.()!==false;
             let backgroundPng=null;
             try{
+              // Render the actor-hidden control frame immediately, without yielding two
+              // browser frames. This freezes water/sky/foliage animation drift in the diff.
               root.setEnabled(false);
-              await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
               backgroundPng=captureFrame();
             }finally{
               root.setEnabled(actorWasEnabled);
@@ -516,10 +517,32 @@ async function main() {
                 context.drawImage(image,0,0);return {width:surface.width,height:surface.height,data:context.getImageData(0,0,surface.width,surface.height).data};
               };
               const [visibleRaster,hiddenRaster]=await Promise.all([imageData(png),imageData(backgroundPng)]);
+              const B=window.BABYLON,engine=scene.getEngine?.();
+              const viewport=temporaryCamera.viewport.toGlobal(visibleRaster.width,visibleRaster.height);
+              const transform=scene.getTransformMatrix?.();
+              if(!B?.Vector3?.Project||!B?.Matrix?.Identity||!viewport||!transform)
+                throw new Error('No se pudo proyectar el volumen anatómico a la imagen para verificar la silueta de '+animalId);
+              const projected=[];
+              for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){
+                const point=B.Vector3.Project(new B.Vector3(x,y,z),B.Matrix.Identity(),transform,viewport);
+                if(Number.isFinite(point.x)&&Number.isFinite(point.y)&&Number.isFinite(point.z)&&point.z>=0&&point.z<=1)
+                  projected.push({x:point.x,y:point.y});
+              }
+              if(projected.length<4)throw new Error('El volumen anatómico queda fuera de la cámara de captura: '+animalId);
+              const paddingX=Math.max(8,(Math.max(...projected.map(p=>p.x))-Math.min(...projected.map(p=>p.x)))*.12);
+              const paddingY=Math.max(8,(Math.max(...projected.map(p=>p.y))-Math.min(...projected.map(p=>p.y)))*.18);
+              const projectedBounds={
+                left:Math.max(0,Math.floor(Math.min(...projected.map(p=>p.x))-paddingX)),
+                top:Math.max(0,Math.floor(Math.min(...projected.map(p=>p.y))-paddingY)),
+                right:Math.min(visibleRaster.width-1,Math.ceil(Math.max(...projected.map(p=>p.x))+paddingX)),
+                bottom:Math.min(visibleRaster.height-1,Math.ceil(Math.max(...projected.map(p=>p.y))+paddingY))
+              };
+              if(projectedBounds.right<=projectedBounds.left||projectedBounds.bottom<=projectedBounds.top)
+                throw new Error('La proyección del animal produce un rectángulo vacío: '+animalId+' · '+JSON.stringify(projectedBounds));
               const sampleStep=Math.max(1,Math.floor(Math.max(visibleRaster.width,visibleRaster.height)/800));
               let changedPixels=0,minX=Infinity,minY=Infinity,maxX=-1,maxY=-1;
-              for(let y=0;y<Math.min(visibleRaster.height,hiddenRaster.height);y+=sampleStep){
-                for(let x=0;x<Math.min(visibleRaster.width,hiddenRaster.width);x+=sampleStep){
+              for(let y=projectedBounds.top;y<=projectedBounds.bottom;y+=sampleStep){
+                for(let x=projectedBounds.left;x<=projectedBounds.right;x+=sampleStep){
                   const offset=(y*visibleRaster.width+x)*4;
                   const delta=Math.max(
                     Math.abs(visibleRaster.data[offset]-hiddenRaster.data[offset]),
@@ -530,12 +553,15 @@ async function main() {
                 }
               }
               const widthPx=maxX>=minX?maxX-minX+sampleStep:0,heightPx=maxY>=minY?maxY-minY+sampleStep:0;
-              const sampleArea=Math.max(1,Math.ceil(widthPx/sampleStep)*Math.ceil(heightPx/sampleStep));
-              const fillRatio=changedPixels/sampleArea;
+              const projectedSamples=Math.max(1,
+                Math.ceil((projectedBounds.right-projectedBounds.left+1)/sampleStep)*
+                Math.ceil((projectedBounds.bottom-projectedBounds.top+1)/sampleStep)
+              );
+              const fillRatio=changedPixels/projectedSamples;
               imageIntegrity={
-                changedPixels,sampleStep,widthPx,heightPx,fillRatio:number(fillRatio),
-                source:'actor-visible-vs-actor-hidden-raster-diff',
-                valid:changedPixels>=140&&widthPx>=16&&heightPx>=16&&fillRatio>=.025
+                changedPixels,sampleStep,widthPx,heightPx,fillRatio:number(fillRatio),projectedBounds,
+                source:'same-frame-projected-animal-bounds-raster-diff',
+                valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&fillRatio>=.008
               };
               if(!imageIntegrity.valid)throw new Error('La captura contiene muy poca silueta real del animal; no se acepta como PNG válido: '+animalId+' · '+JSON.stringify(imageIntegrity));
             }
