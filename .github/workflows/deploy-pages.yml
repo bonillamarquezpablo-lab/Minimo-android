@@ -20,7 +20,7 @@ permissions:
 
 # Publish only the validated main release; feature branches never deploy to production Pages.
 concurrency:
-  group: github-pages-${{ github.ref }}-release
+  group: github-pages-${{ github.ref }}-production
   cancel-in-progress: true
 
 jobs:
