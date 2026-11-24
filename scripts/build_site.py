@@ -876,6 +876,53 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
+    # 0.6.353: unify all humanoid overlays under one measured anchor.
+    badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
+    if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
+    html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
+    badge_create_marker = "badge.parent=root;badge.position=v(0,2.66,0);"
+    if html.count(badge_create_marker) != 1: raise SystemExit("Badge creation marker not unique")
+    html = html.replace(badge_create_marker,"badge.parent=overlayAnchor;badge.position=v(0,.34,0);",1)
+    badge_repair_marker = "}else if(parts.factionBadge.parent!==root){\n   parts.factionBadge.parent=root;parts.factionBadge.position=v(0,2.66,0);"
+    if html.count(badge_repair_marker) != 1: raise SystemExit("Badge repair marker not unique")
+    html = html.replace(badge_repair_marker,"}else if(parts.factionBadge.parent!==overlayAnchor){\n   parts.factionBadge.parent=overlayAnchor;parts.factionBadge.position=v(0,.34,0);",1)
+    village_health_marker = """   let back=B.MeshBuilder.CreatePlane('guardHealthBack',{width:1.15,height:.12},scene);back.parent=ch.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+   let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=ch.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');"""
+    village_health_replacement = """   const overlayAnchor=ensureNpcOverlayAnchor(ch)||ch.root;
+   let back=B.MeshBuilder.CreatePlane('guardHealthBack',{width:1.15,height:.12},scene);back.parent=overlayAnchor;back.position=v(0,.03,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+   let front=B.MeshBuilder.CreatePlane('guardHealth',{width:1.1,height:.09},scene);front.parent=overlayAnchor;front.position=v(0,.04,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('EnemyHealth'+index+i,'#76a75a');
+   ch.overlayHealthMeshes=[{mesh:back,y:.03,z:0},{mesh:front,y:.04,z:-.02}];"""
+    if html.count(village_health_marker) != 1: raise SystemExit("Village health marker not unique")
+    html=html.replace(village_health_marker,village_health_replacement,1)
+    island_health_marker = """  const back=B.MeshBuilder.CreatePlane('IslandGuardHealthBack_'+islandIndex,{width:1.08,height:.11},scene);
+  back.parent=parts.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+  const front=B.MeshBuilder.CreatePlane('IslandGuardHealth_'+islandIndex,{width:1.04,height:.085},scene);
+  front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandGuardHealthFront_'+islandIndex,'#76a75a');"""
+    island_health_replacement = """  const overlayAnchor=ensureNpcOverlayAnchor(parts)||parts.root;
+  const back=B.MeshBuilder.CreatePlane('IslandGuardHealthBack_'+islandIndex,{width:1.08,height:.11},scene);back.parent=overlayAnchor;back.position=v(0,.03,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=M.red;
+  const front=B.MeshBuilder.CreatePlane('IslandGuardHealth_'+islandIndex,{width:1.04,height:.085},scene);front.parent=overlayAnchor;front.position=v(0,.04,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('IslandGuardHealthFront_'+islandIndex,'#76a75a');
+  parts.overlayHealthMeshes=[{mesh:back,y:.03,z:0},{mesh:front,y:.04,z:-.02}];"""
+    if html.count(island_health_marker) != 1: raise SystemExit("Island guard health marker not unique")
+    html=html.replace(island_health_marker,island_health_replacement,1)
+    home_health_marker = """  const back=B.MeshBuilder.CreatePlane('HomeGuardHealthBack_'+i,{width:1.02,height:.105},scene);back.parent=parts.root;back.position=v(0,2.02,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=mat('HomeGuardHealthDark_'+i,'#1d3b2d');
+  const front=B.MeshBuilder.CreatePlane('HomeGuardHealth_'+i,{width:1.0,height:.078},scene);front.parent=parts.root;front.position=v(0,2.03,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('HomeGuardHealthGreen_'+i,'#86c77a');"""
+    home_health_replacement = """  const overlayAnchor=ensureNpcOverlayAnchor(parts)||parts.root;
+  const back=B.MeshBuilder.CreatePlane('HomeGuardHealthBack_'+i,{width:1.02,height:.105},scene);back.parent=overlayAnchor;back.position=v(0,.03,0);back.billboardMode=B.Mesh.BILLBOARDMODE_ALL;back.material=mat('HomeGuardHealthDark_'+i,'#1d3b2d');
+  const front=B.MeshBuilder.CreatePlane('HomeGuardHealth_'+i,{width:1.0,height:.078},scene);front.parent=overlayAnchor;front.position=v(0,.04,-.02);front.billboardMode=B.Mesh.BILLBOARDMODE_ALL;front.material=mat('HomeGuardHealthGreen_'+i,'#86c77a');
+  parts.overlayHealthMeshes=[{mesh:back,y:.03,z:0},{mesh:front,y:.04,z:-.02}];"""
+    if html.count(home_health_marker) != 1: raise SystemExit("Home guard health marker not unique")
+    html=html.replace(home_health_marker,home_health_replacement,1)
+    invasion_health_marker = "  function ensureInvasionHealthBars(ship,crewman){\n   if(!crewman.healthBack){"
+    invasion_health_replacement = "  function ensureInvasionHealthBars(ship,crewman){\n   const overlayAnchor=ensureNpcOverlayAnchor(crewman&&crewman.parts)||(crewman&&crewman.parts&&crewman.parts.root);\n   if(!crewman.healthBack){"
+    if html.count(invasion_health_marker) != 1: raise SystemExit("Invasion hp marker not unique")
+    html=html.replace(invasion_health_marker,invasion_health_replacement,1)
+    html=html.replace("crewman.healthBack.parent=crewman.parts.root;crewman.healthBack.position=v(0,2.02,0);","crewman.healthBack.parent=overlayAnchor;crewman.healthBack.position=v(0,.03,0);",1)
+    html=html.replace("crewman.healthMesh.parent=crewman.parts.root;crewman.healthMesh.position=v(0,2.03,-.02);","crewman.healthMesh.parent=overlayAnchor;crewman.healthMesh.position=v(0,.04,-.02);",1)
+    invasion_health_return = "   }\n   return {healthBack:crewman.healthBack,healthMesh:crewman.healthMesh};\n  }\n  function createIslandInvasionUnit"
+    invasion_health_return_replacement = "   }\n   if(overlayAnchor){crewman.healthBack.parent=overlayAnchor;crewman.healthBack.position=v(0,.03,0);crewman.healthMesh.parent=overlayAnchor;crewman.healthMesh.position=v(0,.04,-.02);crewman.parts.overlayHealthMeshes=[{mesh:crewman.healthBack,y:.03,z:0},{mesh:crewman.healthMesh,y:.04,z:-.02}];}\n   return {healthBack:crewman.healthBack,healthMesh:crewman.healthMesh};\n  }\n  function createIslandInvasionUnit"
+    if html.count(invasion_health_return) != 1: raise SystemExit("Invasion hp return marker not unique")
+    html=html.replace(invasion_health_return,invasion_health_return_replacement,1)
+
     # 0.6.352: stable player-model weapon parenting and defensive grip calibration.
     weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
     if html.count(weapon_parent_marker) != 1:
@@ -931,17 +978,26 @@ def main() -> None:
 
     # Make the starting club a clearly readable wooden staff while retaining its weapon system.
     club_shaft_marker = "capsule('RealCastawayStickShaft',club,[0,-.04,0],1.22,.061,M.woodDark,[.025,0,.015]);"
-    club_shaft_replacement = "capsule('RealCastawayStickShaft',club,[0,-.10,0],1.34,.078,M.woodLight,[.025,0,.015]);\n  capsule('RealCastawayStickBranch',club,[.055,.36,.008],.29,.047,M.woodDark,[0,0,-.70]);"
+    club_shaft_replacement = "capsule('RealCastawayStickShaft',club,[0,.68,0],1.34,.078,M.woodLight,[.025,0,.015]);\n  capsule('RealCastawayStickBranch',club,[.055,1.14,.008],.29,.047,M.woodDark,[0,0,-.70]);"
     if html.count(club_shaft_marker) != 1:
         raise SystemExit("No se encontró la geometría única del palo inicial.")
     html = html.replace(club_shaft_marker,club_shaft_replacement,1)
 
     club_axis_marker = "const forwardCarryAxis=modelForward.clone().add(new B.Vector3(0,.24,0)).normalize();"
-    club_axis_replacement = "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();"
+    club_axis_replacement = "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();"
     if html.count(club_axis_marker) != 1:
         raise SystemExit("No se encontró el eje único del palo equipado.")
     html = html.replace(club_axis_marker,club_axis_replacement,1)
     html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.055));",1)
+    weapon_group_marker = "const club=makeGroup('Club');club.position.y=-.20;"
+    if html.count(weapon_group_marker) != 1: raise SystemExit("Club group marker not unique")
+    html = html.replace(weapon_group_marker, "const club=makeGroup('Club');club.position.y=0;", 1)
+    weapon_grip_marker = "capsule('RealCastawayStickGrip',club,[0,.20,.025],.34,.076,M.leather);"
+    if html.count(weapon_grip_marker) != 1: raise SystemExit("Club grip marker not unique")
+    html = html.replace(weapon_grip_marker, "capsule('RealCastawayStickGrip',club,[0,0,.025],.31,.076,M.leather);", 1)
+    weapon_knot_marker = "sphere('RealCastawayStickKnot',club,[-.025,.52,.015],[.11,.12,.105],M.wood,[.15,0,.12]);"
+    if html.count(weapon_knot_marker) != 1: raise SystemExit("Club knot marker not unique")
+    html = html.replace(weapon_knot_marker, "sphere('RealCastawayStickKnot',club,[-.025,1.31,.015],[.11,.12,.105],M.wood,[.15,0,.12]);", 1)
 
 
     # 0.6.352: dense flagship ground cover; constrained devices retain the prior safe density.
@@ -2877,20 +2933,20 @@ function updateWildlife(dt){
     html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.352\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
         raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.352.")
-    html = html.replace("0.6.274", "0.6.352")
+    html = html.replace("0.6.274", "0.6.353")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'61',build:'0.6.352'"
+    diagnostic_build_replacement = "reportVersion:'62',build:'0.6.353'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
         raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.352 para normalizar.")
-    game_version = "0.6.352"
+    game_version = "0.6.353"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3133,24 +3189,25 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
  const gpuTimerQueryExtensionName=(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})();
+ const gpuTimerQueryAutoEnabled=!!gpuTimerQueryExtensionName;
  const gpuDebugRendererInfo=(()=>{try{return graphicsContext&&graphicsContext.getExtension('WEBGL_debug_renderer_info')||null;}catch(_){return null;}})();
  const readGpuLimit=(parameter)=>{try{const value=graphicsContext&&graphicsContext.getParameter(parameter);return value&&typeof value.length==='number'?Array.from(value):Number.isFinite(value)?value:null;}catch(_){return null;}};
- const gpuDeviceTelemetry=(()=>{try{return {vendor:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_VENDOR_WEBGL)||'').slice(0,120):null,renderer:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_RENDERER_WEBGL)||'').slice(0,180):null,webglVendor:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VENDOR)||'').slice(0,120):null,webglRenderer:graphicsContext?String(graphicsContext.getParameter(graphicsContext.RENDERER)||'').slice(0,180):null,maxTextureSize:readGpuLimit(graphicsContext.MAX_TEXTURE_SIZE),maxCubeMapSize:readGpuLimit(graphicsContext.MAX_CUBE_MAP_TEXTURE_SIZE),maxRenderbufferSize:readGpuLimit(graphicsContext.MAX_RENDERBUFFER_SIZE),maxViewportDims:readGpuLimit(graphicsContext.MAX_VIEWPORT_DIMS),maxSamples:graphicsContext&&graphicsContext.MAX_SAMPLES!==undefined?readGpuLimit(graphicsContext.MAX_SAMPLES):null,maxTextureImageUnits:readGpuLimit(graphicsContext.MAX_TEXTURE_IMAGE_UNITS),maxVertexTextureImageUnits:readGpuLimit(graphicsContext.MAX_VERTEX_TEXTURE_IMAGE_UNITS),maxCombinedTextureImageUnits:readGpuLimit(graphicsContext.MAX_COMBINED_TEXTURE_IMAGE_UNITS),timerQueryExtension:gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}catch(_){return {timerQueryExtension:gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}})();
+ const gpuDeviceTelemetry=(()=>{try{return {vendor:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_VENDOR_WEBGL)||'').slice(0,120):null,renderer:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_RENDERER_WEBGL)||'').slice(0,180):null,webglVendor:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VENDOR)||'').slice(0,120):null,webglRenderer:graphicsContext?String(graphicsContext.getParameter(graphicsContext.RENDERER)||'').slice(0,180):null,maxTextureSize:readGpuLimit(graphicsContext.MAX_TEXTURE_SIZE),maxCubeMapSize:readGpuLimit(graphicsContext.MAX_CUBE_MAP_TEXTURE_SIZE),maxRenderbufferSize:readGpuLimit(graphicsContext.MAX_RENDERBUFFER_SIZE),maxViewportDims:readGpuLimit(graphicsContext.MAX_VIEWPORT_DIMS),maxSamples:graphicsContext&&graphicsContext.MAX_SAMPLES!==undefined?readGpuLimit(graphicsContext.MAX_SAMPLES):null,maxVertexAttributes:readGpuLimit(graphicsContext.MAX_VERTEX_ATTRIBS),maxVertexUniformVectors:readGpuLimit(graphicsContext.MAX_VERTEX_UNIFORM_VECTORS),maxFragmentUniformVectors:readGpuLimit(graphicsContext.MAX_FRAGMENT_UNIFORM_VECTORS),maxVaryingVectors:readGpuLimit(graphicsContext.MAX_VARYING_VECTORS),webglVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VERSION)||"").slice(0,120):null,shadingLanguageVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.SHADING_LANGUAGE_VERSION)||"").slice(0,120):null,maxTextureImageUnits:readGpuLimit(graphicsContext.MAX_TEXTURE_IMAGE_UNITS),maxVertexTextureImageUnits:readGpuLimit(graphicsContext.MAX_VERTEX_TEXTURE_IMAGE_UNITS),maxCombinedTextureImageUnits:readGpuLimit(graphicsContext.MAX_COMBINED_TEXTURE_IMAGE_UNITS),timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}catch(_){return {timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}})();
  let engineInstrumentation=null,sceneInstrumentation=null;
  const safePerfCounterValue=(counter,scale=1)=>{
   // A missing profiler counter is unavailable evidence, never a measured 0 ms.
-  if(!profileDiagnosticsEnabled||!counter||counter.current===null||counter.current===undefined)return null;
+  if(!counter||counter.current===null||counter.current===undefined)return null;
   const value=Number(counter.current);
   return Number.isFinite(value)&&value>=0?Number((value/scale).toFixed(3)):null;
  };
- if(profileDiagnosticsEnabled){
+ if(profileDiagnosticsEnabled||gpuTimerQueryAutoEnabled){
   try{
-   if(B.EngineInstrumentation){
+   if(B.EngineInstrumentation&&(gpuTimerQueryAutoEnabled||profileDiagnosticsEnabled)){
     engineInstrumentation=new B.EngineInstrumentation(engine);
-    engineInstrumentation.captureGPUFrameTime=true;
-    engineInstrumentation.captureShaderCompilationTime=true;
+    engineInstrumentation.captureGPUFrameTime=gpuTimerQueryAutoEnabled;
+    engineInstrumentation.captureShaderCompilationTime=profileDiagnosticsEnabled;
    }
-   if(B.SceneInstrumentation){
+   if(profileDiagnosticsEnabled&&B.SceneInstrumentation){
     sceneInstrumentation=new B.SceneInstrumentation(scene);
     sceneInstrumentation.captureActiveMeshesEvaluationTime=true;
     sceneInstrumentation.captureRenderTargetsRenderTime=true;
@@ -3347,12 +3404,44 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  }
 
 """
+    const npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
+    const npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
+ const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:""};
+ function ensureNpcOverlayAnchor(parts,force=false){
+  const root=parts&&parts.root;if(!root||root.isDisposed?.()){npcOverlayAnchorStats.invalid++;return null;}
+  try{
+   if(typeof root.getScene==="function"&&root.getScene()!==scene){npcOverlayAnchorStats.invalid++;return null;}
+   let anchor=parts.overlayAnchor;
+   if(!anchor||anchor.isDisposed?.()){anchor=new B.TransformNode("NPCOverlayAnchor_"+String(parts.name||root.name||npcOverlayAnchorActors.size),scene);anchor.parent=root;anchor.position.set(0,1.92,0);parts.overlayAnchor=anchor;npcOverlayAnchorStats.created++;}
+   else if(anchor.parent!==root){anchor.parent=root;npcOverlayAnchorStats.repaired++;}
+   const real=parts.realHuman||null,visual=real&&(real.visualBody||real.modelRoot)||parts.body||null;
+   if(force||anchor.__elsnVisualRef!==visual||!anchor.__elsnMeasuredAt){
+    let top=-Infinity,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
+    if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")meshes=visual.getChildMeshes(false);
+    for(let i=0;i<meshes.length;i++){const m=meshes[i];if(!m||m.isDisposed?.())continue;try{m.computeWorldMatrix?.(true);const y=m.getBoundingInfo?.()?.boundingBox?.maximumWorld?.y;if(Number.isFinite(y))top=Math.max(top,y);}catch(_){}}
+    let h=1.92;try{root.computeWorldMatrix?.(true);const base=root.getAbsolutePosition?.();if(Number.isFinite(top)&&base&&Number.isFinite(base.y))h=(top-base.y)/Math.max(.1,Math.abs(Number(root.scaling&&root.scaling.y)||1));}catch(_){}
+    if(!Number.isFinite(h)||h<1.35||h>2.8){h=1.92;npcOverlayAnchorStats.measurementFallbacks++;}
+    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));
+   }
+   if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()&&parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;parts.factionBadge.position.set(0,.34,0);npcOverlayAnchorStats.badgeReattachments++;}
+   const overlays=Array.isArray(parts.overlayHealthMeshes)?parts.overlayHealthMeshes:[];
+   for(let i=0;i<overlays.length;i++){const e=overlays[i],m=e&&e.mesh;if(!m||m.isDisposed?.())continue;if(m.parent!==anchor){m.parent=anchor;npcOverlayAnchorStats.healthReattachments++;}m.position.set(0,Number(e.y)||0,Number(e.z)||0);}
+   parts.overlayAnchor=anchor;npcOverlayAnchorActors.add(parts);return anchor;
+  }catch(e){npcOverlayAnchorStats.lastError=String(e&&e.message||e).slice(0,180);return null;}
+ }
+ function maintainNpcOverlayAnchors(nowMs){if(!gameStarted)return;const now=performance.now();if(now-(npcOverlayAnchorStats.lastSweepAt||0)<500)return;npcOverlayAnchorStats.lastSweepAt=now;let count=0;for(const p of npcOverlayAnchorActors){const r=p&&p.root;if(!r||r.isDisposed?.()){npcOverlayAnchorActors.delete(p);continue;}if(p.alive===false||p.recruited===true)continue;ensureNpcOverlayAnchor(p);count++;}npcOverlayAnchorStats.lastSweepCount=count;}
+ window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__=p=>ensureNpcOverlayAnchor(p);
+ window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__=()=>({...npcOverlayAnchorStats,registeredActors:npcOverlayAnchorActors.size});
+"""
+    if scene_profile_code.count(npc_overlay_anchor_marker) != 1: raise SystemExit("NPC anchor insertion point not unique")
+    scene_profile_code = scene_profile_code.replace(npc_overlay_anchor_marker, "\n" + npc_overlay_anchor_code + "\n" + npc_overlay_anchor_marker, 1)
+
     if html.count(scene_marker) != 1:
         raise SystemExit("No se encontró exactamente una construcción de escena Babylon.")
     html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6),gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(gpuTimerQueryExtensionName&&engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':gpuTimerQueryExtensionName?'extension-present-counter-unavailable':'unsupported'),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':(profileDiagnosticsEnabled?'extension-present-counter-unavailable':'available-not-initialized')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
@@ -3840,7 +3929,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
     # the display's actual refresh rate. Only measure rendered frames for diagnostics.
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);\n  maintainActiveEnemyVisuals(now);"
+    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);\n  maintainActiveEnemyVisuals(now);\n  maintainNpcOverlayAnchors(now);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)

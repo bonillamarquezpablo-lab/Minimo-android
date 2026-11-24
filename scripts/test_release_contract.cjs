@@ -107,9 +107,9 @@ const npcDialogueRuntime=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8
 assert.ok(buildSite.includes('occluders:trees,naturalOccluders:naturalShrubs'),"The dialogue bridge must supply tree and shrub occluders.");
 assert.ok(npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
   npcDialogueRuntime.includes('new BABYLON.DynamicTexture') &&
-  npcDialogueRuntime.includes('slot.mesh.parent=root') &&
+  npcDialogueRuntime.includes('slot.mesh.parent=overlayAnchor') &&
   npcDialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL') &&
-  npcDialogueRuntime.includes('slot.mesh.position.set(0,2.48+slot.index*.42,0)') &&
+  npcDialogueRuntime.includes('slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)') &&
   !npcDialogueRuntime.includes('BABYLON.Vector3.Project') &&
   !npcDialogueRuntime.includes('Core.isSegmentOccluded'),
   "NPC dialogue must be a distance-scheduled world-space billboard attached to the NPC root, with no fragile screen-projection gate.");
@@ -122,11 +122,11 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
-assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.352-npcbrain4"') &&
-  buildSite.includes('npc-village-brain-core.js?v=0.6.352-npcbrain4'),
+assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5"') &&
+  buildSite.includes('npc-village-brain-core.js?v=0.6.353-npcbrain5'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.352"\)/,"The build must promote every visible source version to 0.6.352.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.353"\)/,"The build must promote every visible source version to 0.6.352.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
 assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
@@ -247,4 +247,4 @@ console.log('OK: release validator, HUD, service worker, build and deployment us
 assert.ok(expectedVersion==="0.6.352" && buildSite.includes('html = html.replace("0.6.274", "0.6.352")'), "The correction package must be release 0.6.352.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now*.001);'), "The flock must be updated by the actual engine render-loop callback on every frame.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.352-npcbrain4") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.352-npcbrain4"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.353-npcbrain5") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.353-npcbrain5"), "The new shell cache must not reuse the previous NPC brain module entry.");

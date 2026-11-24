@@ -372,6 +372,12 @@
           bridgeActive: state.bridgeActive === true,
           worldPeopleCount: number(state.worldPeopleCount),
           nearbyCount: number(state.nearbyCount),
+          disabledNearbyRootCount: number(state.disabledNearbyRootCount),
+          recoveredNearbyRootCount: number(state.recoveredNearbyRootCount),
+          invalidSceneRootCount: number(state.invalidSceneRootCount),
+          overlayAnchorCount: number(state.overlayAnchorCount),
+          overlayAnchorDiagnostics: state.overlayAnchorDiagnostics && typeof state.overlayAnchorDiagnostics === "object" ? state.overlayAnchorDiagnostics : null,
+          lastAttachment: state.lastAttachment && typeof state.lastAttachment === "object" ? state.lastAttachment : null,
           bubblesStarted: number(state.bubblesStarted),
           projectionAttempts: number(state.projectionAttempts),
           projectionSuccesses: number(state.projectionSuccesses),
@@ -446,6 +452,9 @@
         sceneRenderMs: number(runtime.sceneRenderMs),
         timerQueryStatus: text(runtime.gpuTimerQueryStatus, 48),
         timerQueryExtension: text(runtime.gpuTimerQueryExtension, 48),
+        timerQuerySupported: runtime.gpuTimerQueryStatus === "supported",
+        sceneRenderMeasurement: "CPU-side Babylon instrumentation; not GPU elapsed time",
+        detailedProfileEnabled: runtime.profileDiagnosticsEnabled === true,
         device: runtime.gpuDeviceTelemetry && typeof runtime.gpuDeviceTelemetry === "object" ? runtime.gpuDeviceTelemetry : null
       },
       sceneTimings: {
@@ -979,7 +988,7 @@
       }))
       .filter(item => item.meanMs !== null || item.lastMs !== null || item.maxMs !== null)
       .sort((a, b) => (b.meanMs || b.maxMs || 0) - (a.meanMs || a.maxMs || 0));
-    const gpuProfilerEnabled = samples.some(sample => sample.scene && sample.scene.profileDiagnosticsEnabled === true);
+    const gpuProfilerEnabled = samples.some(sample => sample.gpu && sample.gpu.timerQueryStatus === "supported" && sample.gpu.frameMs !== null);
     const stageRows = [
       { id: "world-update", label: "Actualización del mundo", source: "CPU del juego", list: world },
       { id: "render-preparation", label: "Preparación de gráficos", source: "CPU del motor", list: render },
@@ -1260,6 +1269,9 @@
       },
       gpu: {
         timerQueryStatus: gpuTimerQueryStatus,
+        timerQuerySupported: gpuTimerQueryStatus === "supported",
+        measurementType: gpu.length ? "driver-timer-query" : "unavailable",
+        sceneRenderMeasurement: "CPU-side Babylon instrumentation; not GPU elapsed time",
         p95Ms: gpuP95Ms,
         p99Ms: percentile(gpu,.99),
         validTimerQuerySamples: gpu.length,

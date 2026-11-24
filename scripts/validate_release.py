@@ -12,12 +12,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.352"
+EXPECTED_VERSION = "0.6.353"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
     "RealCastawayStickBranch",
-    "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize();",
+    "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();",\n    "RealCastawayStickShaft',club,[0,.68,0]",\n    "function ensureNpcOverlayAnchor(parts,force=false){",\n    "parts.overlayHealthMeshes=[",\n    "maintainNpcOverlayAnchors(now);",,
     "function updateAmbientGullFlight(nowSeconds){",
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
@@ -216,10 +216,10 @@ def main() -> None:
     for marker in ("slot.mesh.parent=root", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToNpcRoot": "slot.mesh.parent=root" in dialogue_runtime_source, "stableRootOffset": "slot.mesh.position.set(0,2.48+slot.index*.42,0)" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
-    for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=root", "slot.mesh.position.set(0,2.48+slot.index*.42,0)", "Core.selectVisibleBubbles(nearby.map"):
+    for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=overlayAnchor", "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)", "restoreNearbyNpcVisibility", "Core.selectVisibleBubbles(nearby.map"):
         if marker not in dialogue_runtime_source:
             fail("Los diálogos deben permanecer anclados al NPC y quedar ocluidos por el bosque: " + marker)
     if "occluders:trees,naturalOccluders:naturalShrubs" not in index_html:
@@ -627,7 +627,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'61',build:'0.6.352'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'62',build:'0.6.353'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -907,9 +907,9 @@ def main() -> None:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html or "const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);" not in index_html or "const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();" not in index_html or "B.Vector3.Distance(gripWorld,pivotPosition)>2.25" not in index_html:
         fail("El palo no conserva el desplazamiento frontal y el anclaje local de la palma.")
-    if "RealCastawayStickGrip',club,[0,.20,.025]" not in index_html:
+    if "RealCastawayStickGrip',club,[0,0,.025]" not in index_html:
         fail("La empuñadura del palo no está centrada en la palma.")
-    if "const forwardCarryAxis=worldUp.clone().add(modelForward.scale(.18)).normalize()" not in index_html:
+    if "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize()" not in index_html:
         fail("El palo no conserva la orientación frontal e inclinación fijadas.")
     if "distal.scale(.025)" not in index_html:
         fail("El anclaje del palo no sigue el eje muñeca-palma.")

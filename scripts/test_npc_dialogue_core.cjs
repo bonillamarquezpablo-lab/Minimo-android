@@ -73,10 +73,11 @@ assert.match(runtime,/lastScheduleDueCount=due\.length/,"Dialogue scheduling mus
 assert.ok(runtime.includes("VillageGuard)(\\d+)_"),"Village IDs must parse numeric suffixes for NPC conversations.");
 assert.match(runtime,/Core\.selectVisibleBubbles\(nearby\.map/);
 assert.match(runtime,/function updateWorldBubble\(slot,s\)/);
-assert.ok(runtime.includes('function registeredNpc(npc,s)') && runtime.includes('root.isDisposed()') && runtime.includes('root.getScene()!==s.scene'), 'A dialogue billboard must verify that its exact NPC root is still alive and registered in the active scene.');
+assert.ok(runtime.includes('function registeredNpc(npc,s)') && runtime.includes('isDisposed(root)') && runtime.includes('typeof root.getScene==="function"&&root.getScene()!==s.scene'), 'A dialogue billboard must verify its root remains registered without confusing temporary LOD disablement with deletion.');
 assert.ok(runtime.includes('function pruneStaleSlots(s)') && runtime.includes('diagnostics.staleBubbleSlotsCleared') && runtime.includes('slot.mesh.parent=null'), 'A dialogue slot must be detached and reusable as soon as its NPC disappears or leaves range.');
-assert.match(runtime,/slot\.mesh\.parent=root/);
-assert.match(runtime,/slot\.mesh\.position\.set\(0,2\.48\+slot\.index\*\.42,0\)/);
+assert.match(runtime,/slot\.mesh\.parent=overlayAnchor/);
+assert.match(runtime,/slot\.mesh\.position\.set\(0,\(overlayAnchor===root\?2\.48:\.66\)\+slot\.index\*\.42,0\)/);
+assert.ok(runtime.includes("restoreNearbyNpcVisibility") && runtime.includes("disabledNearbyRootCount") && runtime.includes("overlayAnchorDiagnostics"),"Nearby LOD-hidden actors recover and anchor diagnostics persist.");
 assert.match(runtime,/BABYLON\.MeshBuilder\.CreatePlane/);
 assert.match(runtime,/new BABYLON\.DynamicTexture/);
 assert.match(runtime,/BABYLON\.Mesh\.BILLBOARDMODE_ALL/);
