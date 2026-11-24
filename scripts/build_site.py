@@ -938,6 +938,7 @@ def main() -> None:
      gripWorld=pivotPosition.add(modelRight.scale(.29)).add(worldUp.scale(.92)).add(modelForward.scale(.06));
      stickAxis=forwardCarryAxis.clone();
     }
+    if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;
     holderParent.computeWorldMatrix(true);
     const inverseParent=holderParent.getWorldMatrix().clone();"""
     if html.count(weapon_grip_guard_marker) != 1:
@@ -3406,7 +3407,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 """
     npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
     npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
- const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:""};
+ const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:"",zeroVisibleActors:0,recoveredActors:0,recoveredMeshes:0};
  function ensureNpcOverlayAnchor(parts,force=false){
   const root=parts&&parts.root;if(!root||root.isDisposed?.()){npcOverlayAnchorStats.invalid++;return null;}
   try{
@@ -3416,12 +3417,31 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    else if(anchor.parent!==root){anchor.parent=root;npcOverlayAnchorStats.repaired++;}
    const real=parts.realHuman||null,visual=real&&(real.visualBody||real.modelRoot)||parts.body||null;
    if(force||anchor.__elsnVisualRef!==visual||!anchor.__elsnMeasuredAt){
-    let top=-Infinity,topWorld=null,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
+    let localTopY=-Infinity,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
     if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")meshes=visual.getChildMeshes(false);
-    for(let i=0;i<meshes.length;i++){const m=meshes[i];if(!m||m.isDisposed?.())continue;try{m.computeWorldMatrix?.(true);const maximum=m.getBoundingInfo?.()?.boundingBox?.maximumWorld;if(maximum&&Number.isFinite(maximum.y)&&maximum.y>top){top=maximum.y;topWorld=maximum.clone?maximum.clone():new B.Vector3(maximum.x,maximum.y,maximum.z);}}catch(_){}}
-    let h=1.92;try{root.computeWorldMatrix?.(true);const base=root.getAbsolutePosition?.();if(topWorld&&base&&Number.isFinite(base.y)){const inverse=root.getWorldMatrix().clone();inverse.invert();const localTop=B.Vector3.TransformCoordinates(topWorld,inverse);if(Number.isFinite(localTop.y))h=localTop.y;else throw new Error("NPC overlay local-top transform is not finite");}}catch(_){npcOverlayAnchorStats.transformFallbacks=(npcOverlayAnchorStats.transformFallbacks||0)+1;}
+    try{
+     root.computeWorldMatrix?.(true);
+     const inverse=root.getWorldMatrix().clone();inverse.invert();
+     for(let i=0;i<meshes.length;i++){
+      const m=meshes[i];if(!m||m.isDisposed?.())continue;
+      try{
+       m.computeWorldMatrix?.(true);
+       const bounds=m.getBoundingInfo?.()?.boundingBox;
+       const min=bounds&&bounds.minimum,max=bounds&&bounds.maximum;
+       if(!min||!max)continue;
+       const meshWorld=m.getWorldMatrix();
+       for(let corner=0;corner<8;corner++){
+        const point=new B.Vector3(corner&1?max.x:min.x,corner&2?max.y:min.y,corner&4?max.z:min.z);
+        const worldPoint=B.Vector3.TransformCoordinates(point,meshWorld);
+        const rootPoint=B.Vector3.TransformCoordinates(worldPoint,inverse);
+        if(Number.isFinite(rootPoint.y))localTopY=Math.max(localTopY,rootPoint.y);
+       }
+      }catch(_){}
+     }
+    }catch(_){npcOverlayAnchorStats.transformFallbacks=(npcOverlayAnchorStats.transformFallbacks||0)+1;}
+    let h=Number.isFinite(localTopY)?localTopY:1.92;
     if(!Number.isFinite(h)||h<1.35||h>2.8){h=1.92;npcOverlayAnchorStats.measurementFallbacks++;}
-    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastAnchorLocalHeight=Number(h.toFixed(3));
+    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastAnchorLocalHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastBoundsLocalHeight=Number.isFinite(localTopY)?Number(localTopY.toFixed(3)):null;
    }
    if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()){if(parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;npcOverlayAnchorStats.badgeReattachments++;}parts.factionBadge.position.set(0,.34,0);}
    const overlays=Array.isArray(parts.overlayHealthMeshes)?parts.overlayHealthMeshes:[];
@@ -3429,7 +3449,52 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    parts.overlayAnchor=anchor;npcOverlayAnchorActors.add(parts);return anchor;
   }catch(e){npcOverlayAnchorStats.lastError=String(e&&e.message||e).slice(0,180);return null;}
  }
- function maintainNpcOverlayAnchors(nowMs){if(!gameStarted)return;const now=performance.now();if(now-(npcOverlayAnchorStats.lastSweepAt||0)<500)return;npcOverlayAnchorStats.lastSweepAt=now;let count=0;for(const p of npcOverlayAnchorActors){const r=p&&p.root;if(!r||r.isDisposed?.()){npcOverlayAnchorActors.delete(p);continue;}if(p.alive===false||p.recruited===true)continue;ensureNpcOverlayAnchor(p);count++;}npcOverlayAnchorStats.lastSweepCount=count;}
+ function recoverNpcActorVisuals(parts){
+  const real=parts&&parts.realHuman;if(!real)return{visible:0,repaired:0};
+  let meshes=Array.isArray(real.meshes)?real.meshes:[],visual=real.visualBody||real.modelRoot||parts.body||null;
+  if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")try{meshes=visual.getChildMeshes(false);}catch(_){}
+  const isVisible=mesh=>!!mesh&&!mesh.isDisposed?.()&&(typeof mesh.isEnabled!=="function"||mesh.isEnabled())&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.001;
+  let visible=0;for(const mesh of meshes)if(isVisible(mesh))visible++;
+  if(visible>0){const fallback=parts.proceduralFallbackBody;if(fallback&&!fallback.isDisposed?.()&&typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);return{visible,repaired:0};}
+  npcOverlayAnchorStats.zeroVisibleActors++;
+  let repaired=0;
+  for(const node of [real.visualBody,real.modelRoot,...(Array.isArray(real.roots)?real.roots:[])]){
+   if(!node||node.isDisposed?.())continue;
+   try{if(typeof node.setEnabled==="function"&&!node.isEnabled()){node.setEnabled(true);repaired++;}}catch(_){}
+  }
+  for(const mesh of meshes){
+   if(!mesh||mesh.isDisposed?.())continue;
+   try{if(typeof mesh.setEnabled==="function"&&!mesh.isEnabled()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.001){mesh.isVisible=true;mesh.visibility=1;repaired++;}}catch(_){}
+  }
+  visible=0;for(const mesh of meshes)if(isVisible(mesh))visible++;
+  const fallback=parts.proceduralFallbackBody;
+  if(visible===0&&fallback&&!fallback.isDisposed?.()){
+   try{if(typeof fallback.setEnabled==="function"&&!fallback.isEnabled()){fallback.setEnabled(true);repaired++;}}catch(_){}
+  }else if(visible>0&&fallback&&!fallback.isDisposed?.()){
+   try{if(typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);}catch(_){}
+  }
+  if(repaired>0)npcOverlayAnchorStats.recoveredActors++;
+  npcOverlayAnchorStats.recoveredMeshes+=repaired;
+  return{visible,repaired};
+ }
+ function maintainNpcOverlayAnchors(nowMs){
+  if(!gameStarted)return;const now=performance.now();if(now-(npcOverlayAnchorStats.lastSweepAt||0)<500)return;npcOverlayAnchorStats.lastSweepAt=now;
+  let count=0,recoveredActors=0,recoveredMeshes=0,zeroVisible=0;
+  const focus=player&&player.root&&player.root.position?player.root.position:null;
+  for(const p of npcOverlayAnchorActors){
+   const r=p&&p.root;if(!r||r.isDisposed?.()){npcOverlayAnchorActors.delete(p);continue;}
+   if(p.alive===false||p.recruited===true||p.surrendered===true)continue;
+   if(focus){
+    let position=null;try{position=r.getAbsolutePosition?.()||r.position||null;}catch(_){}
+    if(position){const dx=position.x-focus.x,dz=position.z-focus.z;if(dx*dx+dz*dz<=5184){
+     try{if(typeof r.setEnabled==="function"&&!r.isEnabled())r.setEnabled(true);}catch(_){}
+     const repair=recoverNpcActorVisuals(p);if(repair.visible===0)zeroVisible++;if(repair.repaired>0){recoveredActors++;recoveredMeshes+=repair.repaired;}
+    }}
+   }
+   ensureNpcOverlayAnchor(p);count++;
+  }
+  npcOverlayAnchorStats.lastSweepCount=count;npcOverlayAnchorStats.lastVisualRecoveryActors=recoveredActors;npcOverlayAnchorStats.lastVisualRecoveryMeshes=recoveredMeshes;npcOverlayAnchorStats.lastZeroVisibleActors=zeroVisible;
+ }
  window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__=p=>ensureNpcOverlayAnchor(p);
  window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__=()=>({...npcOverlayAnchorStats,registeredActors:npcOverlayAnchorActors.size});
 """
