@@ -927,7 +927,7 @@ def main() -> None:
     weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
     if html.count(weapon_parent_marker) != 1:
         raise SystemExit("No se encontró la asignación única del anclaje del arma.")
-    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=realPlayerModelPivot||socket;", 1)
+    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=socket||realPlayerModelPivot;", 1)
     weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
