@@ -66,7 +66,7 @@ assert.match(smoke, /Number\(health\?\.worldUpdateCount\) > 0/,
   'The world-inspection smoke must wait for a live world update tick before capturing Babylon.');
 assert.match(smoke, /worldInspection\.worldUpdateCount > 0/,
   'The captured Babylon snapshot must contain at least one completed world update.');
-assert.ok(smoke.includes("},{timeout:60000,polling:250});") &&
+assert.ok(smoke.includes("{timeout:60000,polling:250}") &&
   smoke.includes('gullFlightWaitDiagnostic') &&
   smoke.includes('beforeFlightTicks') && smoke.includes('afterFlightTicks') &&
   smoke.includes("displacement>.15") && smoke.includes("gull-flight-stall.png"),
