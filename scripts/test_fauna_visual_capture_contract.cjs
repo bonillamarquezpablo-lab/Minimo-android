@@ -20,11 +20,11 @@ assert.ok(runner.includes('scripts/create_fauna_contact_sheet.py'));
 assert.ok(runner.includes('results:{player,texture,grounding,coastal,custom,fauna,beforeAfter}'));
 const primaryFaunaStart=releaseWorkflow.indexOf('- name: Verify mobile fauna rigs on CPU skinning, animations, textures and four-view visuals before publish');
 const primaryFaunaEnd=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback',primaryFaunaStart);
-assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 18') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
+assert.ok(primaryFaunaStart>=0&&primaryFaunaEnd>primaryFaunaStart&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('FAUNA_SKINNING_MODE: cpu')&&releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('timeout-minutes: 25') && releaseWorkflow.slice(primaryFaunaStart,primaryFaunaEnd).includes('python scripts/create_fauna_contact_sheet.py'),
   'Release acceptance must validate all fauna using the stable CPU skinning path with enough time for the full four-view capture.');
-assert.ok(releaseWorkflow.includes('timeout-minutes: 25') && releaseWorkflow.includes('# The capture script has a 15-minute global deadline and per-evaluation watchdogs.'),
+assert.ok(releaseWorkflow.includes('timeout-minutes: 30') && releaseWorkflow.includes('# The capture script has a 22-minute global deadline and per-evaluation watchdogs.'),
   'The complete fauna job and its main capture step must have hard upper time bounds.');
-assert.ok(capture.includes('const FAUNA_CAPTURE_MAX_RUNTIME_MS = 15 * 60 * 1000') &&
+assert.ok(capture.includes('const FAUNA_CAPTURE_MAX_RUNTIME_MS = 22 * 60 * 1000') &&
   capture.includes('async function evaluateWithTimeout') && capture.includes('[FAUNA_EVALUATE_TIMEOUT]') &&
   capture.includes('[FAUNA_PROGRESS]') && capture.includes('manifest.currentCapture'),
   'Fauna capture must publish incremental progress and fail with a diagnostic instead of waiting indefinitely in a Playwright evaluation.');
