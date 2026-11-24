@@ -10,8 +10,8 @@ const OUT = path.resolve(process.env.FAUNA_CAPTURE_OUTPUT || 'artifacts/fauna-vi
 const VIEWPORT = { width: 1600, height: 900 };
 const FAUNA_ROSTER_TIMEOUT_MS = 240000;
 const FAUNA_CAPTURE_MAX_RUNTIME_MS = 22 * 60 * 1000;
-const FAUNA_PAGE_EVALUATE_TIMEOUT_MS = 90000;
-const FAUNA_HEAVY_EVALUATION_TIMEOUT_MS = 120000;
+const FAUNA_PAGE_EVALUATE_TIMEOUT_MS = 150000;
+const FAUNA_HEAVY_EVALUATION_TIMEOUT_MS = 150000;
 const captureStartedAt = Date.now();
 const ANGLES = [
   { id: 'front', degrees: 0 },
@@ -486,11 +486,18 @@ async function main() {
             z:target.z+Math.cos(radians)*radius,
             targetX:target.x,targetY:target.y,targetZ:target.z
           };
-          const hidden=[];
-          for(const other of scene.transformNodes||[]){
-            if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\d+|RealSeagullActor_\d+)$/.test(String(other?.name||'')))){
-              const wasEnabled=other.isEnabled?.()!==false;
-              if(wasEnabled){other.setEnabled(false);hidden.push(other);}
+          // Diagnostic-only isolated render: retain every game resource, but draw only
+          // the target animal. Rendering the entire 13-island world and its 57,200 grass
+          // clumps with CPU skinning + SwiftShader makes each screenshot needlessly costly.
+          // Restore every mesh flag before returning to the real game scene.
+          const subjectMeshes=new Set(meshes);
+          const sceneMeshVisibility=(scene.meshes||[]).map(mesh=>({
+            mesh,isVisible:mesh.isVisible,visibility:mesh.visibility
+          }));
+          for(const entry of sceneMeshVisibility){
+            if(!subjectMeshes.has(entry.mesh)){
+              entry.mesh.isVisible=false;
+              entry.mesh.visibility=0;
             }
           }
           let readback=null,cameraVerified=false,png=null,bindPosePng=null,imageIntegrity=null,temporaryCamera=null,previousCamera=null,previousActiveCameras=null;
@@ -636,13 +643,18 @@ async function main() {
               }
             }
           }finally{
-            for(const other of hidden)other.setEnabled(true);
+            for(const entry of sceneMeshVisibility){
+              if(!entry.mesh.isDisposed?.()){
+                entry.mesh.isVisible=entry.isVisible;
+                entry.mesh.visibility=entry.visibility;
+              }
+            }
             if(temporaryCamera){
               scene.activeCamera=previousCamera;
               if(previousActiveCameras!==null&&previousActiveCameras!==undefined)scene.activeCameras=previousActiveCameras;
               temporaryCamera.dispose();
-              // The next camera setup renders the restored scene. Avoid an additional
-              // full SwiftShader frame solely for cleanup on every one of four views.
+              // The next capture renders the restored subject and world. Avoid an
+              // additional full SwiftShader frame solely for cleanup on every one of four views.
             }
           }
           return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng};
