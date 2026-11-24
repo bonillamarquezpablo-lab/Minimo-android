@@ -72,7 +72,7 @@ jobs:
             echo "fauna=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|fauna-visual-capture\.mjs|test_phase2_build_contract\.mjs|nordic/))' <<<"$changed"; then
+          if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_phase2_build_contract\.mjs|nordic/))' <<<"$changed"; then
             echo "site=true" >> "$GITHUB_OUTPUT"
           else
             echo "site=false" >> "$GITHUB_OUTPUT"
