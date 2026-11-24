@@ -876,7 +876,37 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.351: restore imported humanoid actor visibility after transactional GLB attachment.
+    # 0.6.352: stable player-model weapon parenting and defensive grip calibration.
+    weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
+    if html.count(weapon_parent_marker) != 1:
+        raise SystemExit("No se encontró la asignación única del anclaje del arma.")
+    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=realPlayerModelPivot;", 1)
+    weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
+    if html.count(weapon_sync_parent_marker) != 1:
+        raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
+    html = html.replace(weapon_sync_parent_marker, "const holderParent=realPlayerModelPivot;", 1)
+    weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\\n    const inverseParent=holderParent.getWorldMatrix().clone();"
+    weapon_grip_guard_replacement = """    const pivotPosition=realPlayerModelPivot.getAbsolutePosition();
+    if(!gripWorld||!Number.isFinite(gripWorld.x)||B.Vector3.Distance(gripWorld,pivotPosition)<.25||B.Vector3.Distance(gripWorld,pivotPosition)>2.25){
+     gripWorld=pivotPosition.add(modelRight.scale(.29)).add(worldUp.scale(.92)).add(modelForward.scale(.06));
+     stickAxis=forwardCarryAxis.clone();
+    }
+    holderParent.computeWorldMatrix(true);
+    const inverseParent=holderParent.getWorldMatrix().clone();"""
+    if html.count(weapon_grip_guard_marker) != 1:
+        raise SystemExit("No se encontró el bloque único para validar la posición mundial de la empuñadura.")
+    html = html.replace(weapon_grip_guard_marker, weapon_grip_guard_replacement, 1)
+    fallback_body_marker = "parts.body.setEnabled(false);parts.body=visualBody;parts.head=rig.head||null;"
+    fallback_body_replacement = "parts.proceduralFallbackBody=parts.body;parts.body.setEnabled(false);parts.body=visualBody;parts.head=rig.head||null;"
+    if html.count(fallback_body_marker) != 1:
+        raise SystemExit("No se encontró la sustitución visual transaccional del NPC.")
+    html = html.replace(fallback_body_marker, fallback_body_replacement, 1)
+    gull_speed_marker = "speed:.064+i*.006"
+    if html.count(gull_speed_marker) != 1:
+        raise SystemExit("No se encontró la velocidad inicial única de la bandada.")
+    html = html.replace(gull_speed_marker, "speed:.18+i*.014", 1)
+
+    # 0.6.352: restore imported humanoid actor visibility after transactional GLB attachment.
     warrior_mesh_visibility_marker = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
   meshes=filterResult.meshes;"""
     warrior_mesh_visibility_replacement = """  const filterResult=filterNpcEquipmentMeshes(meshes,isCivilian);
@@ -914,7 +944,7 @@ def main() -> None:
     html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.055));",1)
 
 
-    # 0.6.351: dense flagship ground cover; constrained devices retain the prior safe density.
+    # 0.6.352: dense flagship ground cover; constrained devices retain the prior safe density.
     grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"
     grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"
     if html.count(grass_density_marker) != 1:
@@ -1826,7 +1856,7 @@ function setLoadingProgress(value,label){
     if html.count(grass_stream_marker) != 1:
         raise SystemExit("No se encontró la condición única de descarga de hierba al embarcar.")
     html = html.replace(grass_stream_marker, grass_stream_replacement, 1)
-    # 0.6.351: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
+    # 0.6.352: Quality grass is a persistent full-island field, not a 92 m player-centred patch.
     # Build each island around its stable centre and keep its original per-area density.
     grass_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=Number.isFinite(focusX)?focusX:island.x,centerZ=Number.isFinite(focusZ)?focusZ:island.z;\n   const radius=Math.min(92,safeLandRadius);\n   const areaFraction=Math.min(1,(radius*radius)/(safeLandRadius*safeLandRadius));"
     grass_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
@@ -1887,7 +1917,7 @@ function setLoadingProgress(value,label){
 
     # Five birds are cheap to update every frame; generic entity LOD must not freeze the flock.
     gull_motion_marker = "ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;const a=elapsed*b.speed+b.phase,bank=Math.sin(a*1.2)*.12;b.root.position.x=Math.cos(a)*b.radius-36;b.root.position.z=Math.sin(a)*b.radius-18;b.root.position.y=b.alt+Math.sin(a*2+b.phase)*.72+Math.sin(elapsed*.41+b.phase)*.12;b.root.rotation.y=-a+Math.PI/2;b.root.rotation.z=bank;if(b.procedural){b.left.rotation.z=-.10-Math.sin(elapsed*10.5+b.phase)*.38;b.right.rotation.z=.10+Math.sin(elapsed*10.5+b.phase)*.38;}else if(b.flightRig&&b.flightRig.animationGroup){b.flightRig.animationGroup.speedRatio=.96+.08*Math.sin(elapsed*.7+b.phase);}});"
-    gull_motion_replacement = ""  # 0.6.351: engine render-loop callback owns per-frame gull flight independently of entity LOD.
+    gull_motion_replacement = ""  # 0.6.352: engine render-loop callback owns per-frame gull flight independently of entity LOD.
     if html.count(gull_motion_marker) != 1:
         raise SystemExit("No se encontró el bucle único de órbita de gaviotas.")
     html = html.replace(gull_motion_marker,gull_motion_replacement,1)
@@ -2829,7 +2859,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.351-npcbrain4" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.352-npcbrain4" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -2840,27 +2870,27 @@ function updateWildlife(dt){
                 raise SystemExit("No se encontró </body> para instalar los diálogos NPC.")
             html = html.replace("</body>", dialogue_tag + chr(10) + "</body>", 1)
 
-    # Release candidate 0.6.351: execute Babylon and its GLTF importer from native same-origin script URLs.
+    # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.351; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.352; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.351\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.352\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.351.")
-    html = html.replace("0.6.274", "0.6.351")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.352.")
+    html = html.replace("0.6.274", "0.6.352")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'60',build:'0.6.351'"
+    diagnostic_build_replacement = "reportVersion:'61',build:'0.6.352'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.351 para normalizar.")
-    game_version = "0.6.351"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.352 para normalizar.")
+    game_version = "0.6.352"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3810,7 +3840,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
     # the display's actual refresh rate. Only measure rendered frames for diagnostics.
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);"
+    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);\n  maintainActiveEnemyVisuals(now);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
@@ -4181,7 +4211,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Expose a read-only, on-demand snapshot from the same lexical scope as the Babylon scene.
     # This function is called only when the Inspector user requests a world capture.
     world_snapshot_marker = " window.copyGameHealthDebug=()=>{"
-    # 0.6.351 release gate: render-loop changes require a fresh build and real-gameplay acceptance.
+    # 0.6.352 release gate: render-loop changes require a fresh build and real-gameplay acceptance.
     # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
  // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
@@ -4201,7 +4231,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
     const radius=Number.isFinite(Number(b.radius))?Math.max(1,Number(b.radius)):18;
     const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
-    const speed=Number.isFinite(Number(b.speed))&&Number(b.speed)>.001?Number(b.speed):.064;
+    const speed=Number.isFinite(Number(b.speed))?Math.max(.18,Number(b.speed)):.18;
     const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
     b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
     b.flightElapsed=flightElapsed;
@@ -4228,6 +4258,59 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   }
   gullFlightRenderState.updatedBirds=updated;
  }
+ const gullWingBindPose=new WeakMap();
+ const gullWingFlapObserver=scene.onBeforeRenderObservable.add(()=>{
+  const now=performance.now()*.001;
+  for(const bird of ambientBirds||[]){
+   const rig=bird&&bird.flightRig,flight=rig&&rig.animationGroup;if(!rig)continue;
+   const targets=flight&&Array.isArray(flight.targetedAnimations)?flight.targetedAnimations:[];
+   for(const item of [{key:'leftWing',sign:1},{key:'rightWing',sign:-1}]){
+    const node=rig[item.key]&&rig[item.key].node;if(!node||node.isDisposed?.())continue;
+    let state=gullWingBindPose.get(node);
+    const rotation=node.rotationQuaternion?{kind:'q',x:node.rotationQuaternion.x,y:node.rotationQuaternion.y,z:node.rotationQuaternion.z,w:node.rotationQuaternion.w}:{kind:'e',x:node.rotation?.x||0,y:node.rotation?.y||0,z:node.rotation?.z||0};
+    if(!state){state={kind:rotation.kind,baseQuaternion:node.rotationQuaternion?node.rotationQuaternion.clone():null,baseRotation:node.rotation?node.rotation.clone():null,last:rotation,lastMotionAt:now,fallback:false};gullWingBindPose.set(node,state);}
+    if(!state.fallback){
+     const delta=rotation.kind==='q'?Math.abs(rotation.x-state.last.x)+Math.abs(rotation.y-state.last.y)+Math.abs(rotation.z-state.last.z)+Math.abs(rotation.w-state.last.w):Math.abs(rotation.x-state.last.x)+Math.abs(rotation.y-state.last.y)+Math.abs(rotation.z-state.last.z);
+     if(delta>.00035)state.lastMotionAt=now;state.last=rotation;
+     const nativeTarget=targets.some(track=>track&&track.target===node);
+     if(nativeTarget&&now-state.lastMotionAt<.85)continue;state.fallback=true;
+    }
+    const flap=Math.sin(now*7.1+(Number(bird.phase)||0))*.42*item.sign;
+    if(state.kind==='q'&&state.baseQuaternion){const d=B.Quaternion.RotationAxis(B.Axis.Z,flap);node.rotationQuaternion=state.baseQuaternion.multiply(d);}
+    else if(state.baseRotation){node.rotation.copyFrom(state.baseRotation);node.rotation.z=state.baseRotation.z+flap;}
+    try{node.computeWorldMatrix(true);}catch(_){}
+   }
+  }
+ });
+ let enemyVisualRecoveryAt=0;
+ window.__ELSN_ENEMY_VISUAL_REPAIR__={lastAt:0,scanned:0,repaired:0,fallbackBodies:0,nearbyHostiles:0};
+ function maintainActiveEnemyVisuals(nowMs){
+  if(!gameStarted||nowMs-enemyVisualRecoveryAt<350)return;
+  enemyVisualRecoveryAt=nowMs;
+  const diagnostics=window.__ELSN_ENEMY_VISUAL_REPAIR__,focus=player.root&&player.root.position;
+  let scanned=0,repaired=0,fallbackBodies=0,nearbyHostiles=0;if(!focus)return;
+  for(const actor of enemies||[]){
+   const parts=actor&&actor.parts,root=parts&&parts.root;
+   if(!parts||!root||root.isDisposed?.()||actor.alive===false||parts.alive===false||actor.recruited===true||actor.surrendered===true||parts.recruited===true||parts.surrendered===true||actor.faction==='player'||parts.faction==='player')continue;
+   scanned++;let position=root.position;try{if(root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){}
+   const dx=position.x-focus.x,dz=position.z-focus.z;if(dx*dx+dz*dz>72*72)continue;nearbyHostiles++;
+   if(typeof root.isEnabled==='function'&&!root.isEnabled()){root.setEnabled(true);repaired++;}
+   const real=parts.realHuman||null;
+   if(real){
+    for(const node of [real.visualBody,real.modelRoot,...(real.roots||[])]){if(!node||node.isDisposed?.())continue;if(typeof node.isEnabled==='function'&&!node.isEnabled()){node.setEnabled(true);repaired++;}}
+    const meshes=Array.isArray(real.meshes)?real.meshes:[];let visibleCount=0;
+    for(const mesh of meshes){if(!mesh||mesh.isDisposed?.())continue;if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled?.()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){mesh.isVisible=true;mesh.visibility=1;repaired++;}if((!mesh.isEnabled||mesh.isEnabled())&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01)visibleCount++;}
+    const fallback=parts.proceduralFallbackBody;
+    if(fallback&&!fallback.isDisposed?.()){const useFallback=visibleCount===0;if(typeof fallback.setEnabled==='function'&&fallback.isEnabled()!==useFallback)fallback.setEnabled(useFallback);if(useFallback)fallbackBodies++;}
+   }else if(parts.body&&!parts.body.isDisposed?.()){
+    if(typeof parts.body.setEnabled==='function'&&!parts.body.isEnabled()){parts.body.setEnabled(true);repaired++;}
+    const meshes=parts.body.getChildMeshes?parts.body.getChildMeshes(false):[];
+    for(const mesh of meshes){if(!mesh||mesh.isDisposed?.())continue;if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled?.()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){mesh.isVisible=true;mesh.visibility=1;repaired++;}}
+   }
+   if(parts.factionBadge&&typeof parts.factionBadge.setEnabled==='function'&&!parts.factionBadge.isEnabled?.())parts.factionBadge.setEnabled(true);
+  }
+  diagnostics.lastAt=nowMs;diagnostics.scanned=scanned;diagnostics.repaired=repaired;diagnostics.fallbackBodies=fallbackBodies;diagnostics.nearbyHostiles=nearbyHostiles;
+ }
  window.getGameWorldInspectionSnapshot=(options={})=>{
   if(!window.ELSNWorldInspection||typeof window.ELSNWorldInspection.capture!=='function'){
    throw new Error('El módulo de inspección del mundo no está disponible.');
@@ -4250,11 +4333,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    const real=parts.realHuman,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
    return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
   });
-  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{
-   const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position;
-   return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!b.flightRig};
-  });
-  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls};
+  const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
+  const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body),visibleMeshCount:(meshes||[]).filter(visible).length,meshCount:(meshes||[]).length,hasRealHuman:!!real};});
+  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
     if html.count(world_snapshot_marker) != 1:
