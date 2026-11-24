@@ -46,8 +46,10 @@ for(const marker of [
 ]) assert.ok(dialogue.includes(marker),'Dialogue profiler/anchor diagnostics are missing: '+marker);
 
 const anchorBuilder=builder.slice(builder.indexOf('const npc_overlay_anchor_code ='),builder.indexOf('if (scene_profile_code.count(npc_overlay_anchor_marker)'));
-assert.ok(anchorBuilder.includes('maximumWorld') && anchorBuilder.includes('TransformCoordinates(topWorld,inverse)') && anchorBuilder.includes('inverse.invert()'),
-  'NPC overlay height must be transformed from world space into root-local space using the full inverse world matrix, including inherited rotation and scale.');
+assert.ok(anchorBuilder.includes('boundingBox') && anchorBuilder.includes('for(let corner=0;corner<8;corner++)') && anchorBuilder.includes('TransformCoordinates(worldPoint,inverse)') && anchorBuilder.includes('inverse.invert()'),
+  'NPC overlay height must use all eight mesh-bound corners transformed through complete mesh and root world matrices, including inherited rotation and scale.');
+assert.ok(anchorBuilder.includes('function recoverNpcActorVisuals(parts)') && anchorBuilder.includes('lastVisualRecoveryMeshes') && anchorBuilder.includes('proceduralFallbackBody'),
+  'Nearby NPCs with zero renderable imported meshes must recover their visual hierarchy or use the existing fallback until the rig is visible.');
 assert.ok(anchorBuilder.includes('parts.factionBadge.position.set(0,.34,0)') && anchorBuilder.includes('m.position.set(0,Number.isFinite(Number(e.y))'),
   'Faction emblems and health bars must have their local offsets reasserted on every anchor maintenance pass.');
 assert.ok(anchorBuilder.includes('transformFallbacks') && anchorBuilder.includes('healthReattachments'),
