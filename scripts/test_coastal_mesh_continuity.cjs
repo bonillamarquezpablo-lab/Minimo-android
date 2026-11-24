@@ -30,7 +30,7 @@ assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?32:48)'),
   'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
 assert.ok(build.includes('html = html.replace("0.6.274", "0.6.353")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I'));
-assert.ok(release.includes('Capítulo I: Un hombre sin tierra · 0.6.353'));
+assert.ok(release.includes('if f"<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · {EXPECTED_VERSION}</title>" not in index_html:'));
 
 assert.ok(release.includes('function auditCoastalMeshContinuity(onlyIslandIndex=null)'));
 assert.ok(runner.includes("auditCoastalMeshContinuity()"));
