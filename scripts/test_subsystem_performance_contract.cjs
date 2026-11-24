@@ -45,7 +45,7 @@ for(const marker of [
   'positioningP99Ms:at(.99)'
 ]) assert.ok(dialogue.includes(marker),'Dialogue profiler/anchor diagnostics are missing: '+marker);
 
-const anchorBuilder=builder.slice(builder.indexOf('const npc_overlay_anchor_code ='),builder.indexOf('if (scene_profile_code.count(npc_overlay_anchor_marker)'));
+const anchorBuilder=builder.slice(builder.indexOf('npc_overlay_anchor_code = r"""'),builder.indexOf('if (scene_profile_code.count(npc_overlay_anchor_marker)'));
 assert.ok(anchorBuilder.includes('boundingBox') && anchorBuilder.includes('for(let corner=0;corner<8;corner++)') && anchorBuilder.includes('TransformCoordinates(worldPoint,inverse)') && anchorBuilder.includes('inverse.invert()'),
   'NPC overlay height must use all eight mesh-bound corners transformed through complete mesh and root world matrices, including inherited rotation and scale.');
 assert.ok(anchorBuilder.includes('function recoverNpcActorVisuals(parts)') && anchorBuilder.includes('lastVisualRecoveryMeshes') && anchorBuilder.includes('proceduralFallbackBody'),
