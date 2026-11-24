@@ -45,6 +45,14 @@ for(const marker of [
   'positioningP99Ms:at(.99)'
 ]) assert.ok(dialogue.includes(marker),'Dialogue profiler/anchor diagnostics are missing: '+marker);
 
+const anchorBuilder=builder.slice(builder.indexOf('const npc_overlay_anchor_code ='),builder.indexOf('if (scene_profile_code.count(npc_overlay_anchor_marker)'));
+assert.ok(anchorBuilder.includes('maximumWorld') && anchorBuilder.includes('TransformCoordinates(topWorld,inverse)') && anchorBuilder.includes('inverse.invert()'),
+  'NPC overlay height must be transformed from world space into root-local space using the full inverse world matrix, including inherited rotation and scale.');
+assert.ok(anchorBuilder.includes('parts.factionBadge.position.set(0,.34,0)') && anchorBuilder.includes('m.position.set(0,Number.isFinite(Number(e.y))'),
+  'Faction emblems and health bars must have their local offsets reasserted on every anchor maintenance pass.');
+assert.ok(anchorBuilder.includes('transformFallbacks') && anchorBuilder.includes('healthReattachments'),
+  'NPC overlay anchor recovery must expose transform fallback and health-bar reattachment diagnostics.');
+
 assert.ok(dialogue.includes('lastPositioningMs') &&
   dialogue.includes('maxPositioningMs') &&
   dialogue.includes('lastProjection'),
