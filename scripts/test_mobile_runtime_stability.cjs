@@ -206,7 +206,7 @@ assert.ok(builder.includes("fps_title_replacement = fps_title_marker") && builde
 assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
   dialogueRuntime.includes('slot.texture.update(true);slot.lastUploadInvertY=true;'),
   'NPC world-dialogue canvas uploads must flip the top-origin canvas for upright text on Babylon planes.');
-assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('2.48+slot.index*.42'),
+assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('(overlayAnchor===root?2.48:.66)+slot.index*.42') && dialogueRuntime.includes('slot.mesh.parent=overlayAnchor'),
   'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
   dialogueRuntime.includes('{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
