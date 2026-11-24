@@ -27,7 +27,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
     "const holderParent=socket||realPlayerModelPivot;",
-    "realWeaponHolder.parent=realPlayerModelPivot||socket;",
+    "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now*.001);",
     "b.root.position.x=Math.cos(a)*radius-36;",
@@ -220,7 +220,7 @@ def main() -> None:
     for marker in ("slot.mesh.parent=overlayAnchor", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "fullLocalBounds": "for(let corner=0;corner<8;corner++)" in index_html and "B.Vector3.TransformCoordinates(worldPoint,inverse)" in index_html, "nearbyInvisibleActorRecovery": "function recoverNpcActorVisuals(parts)" in index_html and "lastVisualRecoveryMeshes" in index_html, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
     for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=overlayAnchor", "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)", "restoreNearbyNpcVisibility", "Core.selectVisibleBubbles(nearby.map"):
@@ -905,7 +905,7 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=realPlayerModelPivot;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
         fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
