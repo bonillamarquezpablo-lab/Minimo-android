@@ -3405,7 +3405,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
 """
     npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
-    const npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
+    npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
  const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:""};
  function ensureNpcOverlayAnchor(parts,force=false){
   const root=parts&&parts.root;if(!root||root.isDisposed?.()){npcOverlayAnchorStats.invalid++;return null;}
