@@ -9,7 +9,7 @@ if (!['cpu', 'gpu'].includes(SKINNING_MODE)) throw new Error('FAUNA_SKINNING_MOD
 const OUT = path.resolve(process.env.FAUNA_CAPTURE_OUTPUT || 'artifacts/fauna-visual-captures');
 const VIEWPORT = { width: 1600, height: 900 };
 const FAUNA_ROSTER_TIMEOUT_MS = 240000;
-const FAUNA_CAPTURE_MAX_RUNTIME_MS = 15 * 60 * 1000;
+const FAUNA_CAPTURE_MAX_RUNTIME_MS = 22 * 60 * 1000;
 const FAUNA_PAGE_EVALUATE_TIMEOUT_MS = 90000;
 const FAUNA_HEAVY_EVALUATION_TIMEOUT_MS = 120000;
 const captureStartedAt = Date.now();
