@@ -736,15 +736,45 @@ async function main() {
     const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
     const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
-    await page.waitForFunction(({beforeTicks,birds})=>{
-      const render=window.__ELSN_GULL_FLIGHT_RENDER__,after=window.getGameVisualActorDiagnostics?.()?.gulls||[];
-      if(!render||Number(render.frameTicks)<=beforeTicks||after.length!==5)return false;
-      return after.every((bird,index)=>{
-        const before=birds[index],a=before?.position,b=bird?.position;
-        const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
-        return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>.15;
-      });
-    },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:8000,polling:100});
+    const gullFlightWaitStartedAt=performance.now();
+    try{
+      await page.waitForFunction(({beforeTicks,birds})=>{
+        const render=window.__ELSN_GULL_FLIGHT_RENDER__,after=window.getGameVisualActorDiagnostics?.()?.gulls||[];
+        if(!render||Number(render.frameTicks)<=beforeTicks||Number(render.updatedBirds)<5||
+          Number(render.updateErrors)!==0||after.length!==5)return false;
+        return after.every((bird,index)=>{
+          const before=birds[index],a=before?.position,b=bird?.position;
+          const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>.15;
+        });
+      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
+    }catch(error){
+      const gullFlightWaitDiagnostic=await page.evaluate(({beforeTicks,birds})=>{
+        const render=window.__ELSN_GULL_FLIGHT_RENDER__||null;
+        const after=window.getGameVisualActorDiagnostics?.()?.gulls||[];
+        return {
+          beforeTicks,render,
+          birds:after.map((bird,index)=>{
+            const before=birds[index],a=before?.position,b=bird?.position;
+            return {
+              name:bird?.name||bird?.rootName||bird?.flightName||String(index),
+              beforePosition:a||null,afterPosition:b||null,
+              beforeFlightTicks:Number(before?.flightUpdateTicks)||0,
+              afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
+              beforeFlightElapsed:Number(before?.flightElapsed)||0,
+              afterFlightElapsed:Number(bird?.flightElapsed)||0,
+              displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0
+            };
+          })
+        };
+      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls});
+      manifest.gullFlightWaitDiagnostic=gullFlightWaitDiagnostic;
+      manifest.gullFlightWaitMs=Number((performance.now()-gullFlightWaitStartedAt).toFixed(1));
+      await page.screenshot({path:path.join(OUT,'gull-flight-stall.png'),fullPage:true}).catch(()=>{});
+      throw new Error('La prueba esperó 60 s y no confirmó desplazamiento de las cinco gaviotas desde el bucle real. Diagnóstico: '+
+        JSON.stringify(gullFlightWaitDiagnostic)+' · '+String(error?.message||error));
+    }
+    manifest.gullFlightWaitMs=Number((performance.now()-gullFlightWaitStartedAt).toFixed(1));
     const gullRenderStateAfter=await page.evaluate(()=>window.__ELSN_GULL_FLIGHT_RENDER__||null);
     assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
