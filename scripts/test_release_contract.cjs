@@ -244,7 +244,7 @@ new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.352" && buildSite.includes('html = html.replace("0.6.274", "0.6.352")'), "The correction package must be release 0.6.352.");
+assert.ok(expectedVersion==="0.6.353" && buildSite.includes('html = html.replace("0.6.274", "0.6.353")'), "The correction package must be release 0.6.353.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now*.001);'), "The flock must be updated by the actual engine render-loop callback on every frame.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
 assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.353-npcbrain5") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.353-npcbrain5"), "The new shell cache must not reuse the previous NPC brain module entry.");
