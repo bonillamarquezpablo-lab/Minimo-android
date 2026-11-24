@@ -3416,16 +3416,16 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    else if(anchor.parent!==root){anchor.parent=root;npcOverlayAnchorStats.repaired++;}
    const real=parts.realHuman||null,visual=real&&(real.visualBody||real.modelRoot)||parts.body||null;
    if(force||anchor.__elsnVisualRef!==visual||!anchor.__elsnMeasuredAt){
-    let top=-Infinity,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
+    let top=-Infinity,topWorld=null,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
     if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")meshes=visual.getChildMeshes(false);
-    for(let i=0;i<meshes.length;i++){const m=meshes[i];if(!m||m.isDisposed?.())continue;try{m.computeWorldMatrix?.(true);const y=m.getBoundingInfo?.()?.boundingBox?.maximumWorld?.y;if(Number.isFinite(y))top=Math.max(top,y);}catch(_){}}
-    let h=1.92;try{root.computeWorldMatrix?.(true);const base=root.getAbsolutePosition?.();if(Number.isFinite(top)&&base&&Number.isFinite(base.y))h=(top-base.y)/Math.max(.1,Math.abs(Number(root.scaling&&root.scaling.y)||1));}catch(_){}
+    for(let i=0;i<meshes.length;i++){const m=meshes[i];if(!m||m.isDisposed?.())continue;try{m.computeWorldMatrix?.(true);const maximum=m.getBoundingInfo?.()?.boundingBox?.maximumWorld;if(maximum&&Number.isFinite(maximum.y)&&maximum.y>top){top=maximum.y;topWorld=maximum.clone?maximum.clone():new B.Vector3(maximum.x,maximum.y,maximum.z);}}catch(_){}}
+    let h=1.92;try{root.computeWorldMatrix?.(true);const base=root.getAbsolutePosition?.();if(topWorld&&base&&Number.isFinite(base.y)){const inverse=root.getWorldMatrix().clone();inverse.invert();const localTop=B.Vector3.TransformCoordinates(topWorld,inverse);if(Number.isFinite(localTop.y))h=localTop.y;else throw new Error("NPC overlay local-top transform is not finite");}}catch(_){npcOverlayAnchorStats.transformFallbacks=(npcOverlayAnchorStats.transformFallbacks||0)+1;}
     if(!Number.isFinite(h)||h<1.35||h>2.8){h=1.92;npcOverlayAnchorStats.measurementFallbacks++;}
-    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));
+    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastAnchorLocalHeight=Number(h.toFixed(3));
    }
-   if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()&&parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;parts.factionBadge.position.set(0,.34,0);npcOverlayAnchorStats.badgeReattachments++;}
+   if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()){if(parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;npcOverlayAnchorStats.badgeReattachments++;}parts.factionBadge.position.set(0,.34,0);}
    const overlays=Array.isArray(parts.overlayHealthMeshes)?parts.overlayHealthMeshes:[];
-   for(let i=0;i<overlays.length;i++){const e=overlays[i],m=e&&e.mesh;if(!m||m.isDisposed?.())continue;if(m.parent!==anchor){m.parent=anchor;npcOverlayAnchorStats.healthReattachments++;}m.position.set(0,Number(e.y)||0,Number(e.z)||0);}
+   for(let i=0;i<overlays.length;i++){const e=overlays[i],m=e&&e.mesh;if(!m||m.isDisposed?.())continue;if(typeof m.getScene==="function"&&m.getScene()!==scene){npcOverlayAnchorStats.invalid++;continue;}if(m.parent!==anchor){m.parent=anchor;npcOverlayAnchorStats.healthReattachments++;}m.position.set(0,Number.isFinite(Number(e.y))?Number(e.y):0,Number.isFinite(Number(e.z))?Number(e.z):0);}
    parts.overlayAnchor=anchor;npcOverlayAnchorActors.add(parts);return anchor;
   }catch(e){npcOverlayAnchorStats.lastError=String(e&&e.message||e).slice(0,180);return null;}
  }
