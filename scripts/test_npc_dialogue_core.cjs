@@ -158,7 +158,7 @@ assert.match(builder,/fallbackComputeLocomotion/,"A missing locomotion method mu
 assert.match(builder,/if\(npcBrainMissingMethods\.length===0\)ambientPeople\.forEach/,"An incompatible brain must be isolated to ambient NPC movement, not abort the world update.");
 assert.match(builder,/npcBrainDiagnostics\.lastProblemKey/,"NPC compatibility telemetry must log once per distinct API mismatch rather than once per frame.");
 assert.doesNotMatch(builder,/if\(!npcVillageBrain\)throw new Error\('El núcleo de comportamiento de aldeanos no está disponible\.'/,"An unavailable NPC module must not throw repeatedly from the per-frame update.");
-assert.ok(worker.includes('./scripts/npc-village-brain-core.js?v=0.6.352-npcbrain4'),"The service worker must pre-cache the versioned NPC brain URL.");
+assert.ok(worker.includes('./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5'),"The service worker must pre-cache the versioned NPC brain URL.");
 assert.match(builder,/npc_behavior_pattern =/,"NPC behavior integration must remain isolated to its NPC-specific build transform.");
 assert.doesNotMatch(builder,/player\.root\.position\s*=|player\.speed\s*=|animateViking\(player/,"The NPC upgrade must not alter player position, speed or animation.");
 console.log("NPC systems contract: PASS (NPC-only locomotion, threat assessment, combat intent, formations and attack telegraphs).");
