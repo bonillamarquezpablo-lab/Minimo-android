@@ -28,6 +28,12 @@ assert.ok(capture.includes('const FAUNA_CAPTURE_MAX_RUNTIME_MS = 22 * 60 * 1000'
   capture.includes('async function evaluateWithTimeout') && capture.includes('[FAUNA_EVALUATE_TIMEOUT]') &&
   capture.includes('[FAUNA_PROGRESS]') && capture.includes('manifest.currentCapture'),
   'Fauna capture must publish incremental progress and fail with a diagnostic instead of waiting indefinitely in a Playwright evaluation.');
+assert.ok(capture.includes('const FAUNA_PAGE_EVALUATE_TIMEOUT_MS = 150000') &&
+  capture.includes('const sceneMeshVisibility=(scene.meshes||[]).map(mesh=>({') &&
+  capture.includes('const subjectMeshes=new Set(meshes)') &&
+  capture.includes('entry.mesh.isVisible=false') && capture.includes('entry.mesh.visibility=0') &&
+  capture.includes('entry.mesh.isVisible=entry.isVisible') && capture.includes('entry.mesh.visibility=entry.visibility'),
+  'Each fauna view must render only the target animal and restore every original scene-mesh visibility flag afterwards.');
 const cpuDiagnosticStart=releaseWorkflow.indexOf('- name: Diagnostic A/B capture with GPU skinning fallback');
 const cpuDiagnosticEnd=releaseWorkflow.indexOf('- name: Preserve GPU skinning fallback diagnostic evidence',cpuDiagnosticStart);
 assert.ok(releaseWorkflow.includes("id: playwright_install"), 'Playwright installation must be identifiable before optional diagnostic captures.');
