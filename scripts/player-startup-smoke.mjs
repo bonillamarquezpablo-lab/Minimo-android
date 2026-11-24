@@ -731,6 +731,8 @@ async function main() {
     assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
+    const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
+    assert.ok(closeHostiles.every(actor=>actor.rootEnabled&&actor.bodyEnabled&&actor.visibleMeshCount>0),'Hay un enemigo cercano con HUD/IA pero sin cuerpo 3D visible: '+JSON.stringify(closeHostiles));
     assert.equal(visualActorsBefore.gulls.length,5,'Calidad debe cargar las cinco gaviotas 3D: '+JSON.stringify(visualActorsBefore.gulls));
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
     const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
@@ -742,12 +744,19 @@ async function main() {
         const render=window.__ELSN_GULL_FLIGHT_RENDER__,after=window.getGameVisualActorDiagnostics?.()?.gulls||[];
         if(!render||Number(render.frameTicks)<=beforeTicks||Number(render.updatedBirds)<5||
           Number(render.updateErrors)!==0||after.length!==5)return false;
+        const poseDelta=(a,b)=>{
+          if(!a||!b||a.kind!==b.kind)return 0;
+          if(a.kind==='q')return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z)+Math.abs(a.w-b.w);
+          return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
+        };
         return after.every((bird,index)=>{
           const before=birds[index],a=before?.position,b=bird?.position;
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>.15;
+          const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
+          const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
         });
-      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
+      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:12000,polling:250});
     }catch(error){
       const gullFlightWaitDiagnostic=await page.evaluate(({beforeTicks,birds})=>{
         const render=window.__ELSN_GULL_FLIGHT_RENDER__||null;
