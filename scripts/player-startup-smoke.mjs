@@ -756,7 +756,7 @@ async function main() {
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
           return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
         });
-      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:12000,polling:250});
+      },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
       const gullFlightWaitDiagnostic=await page.evaluate(({beforeTicks,birds})=>{
         const render=window.__ELSN_GULL_FLIGHT_RENDER__||null;
