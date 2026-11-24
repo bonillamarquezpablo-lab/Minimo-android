@@ -97,7 +97,7 @@ assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyR
 assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSource.includes("imageConfig.contrast = 1.10") &&
   !atmosphereSource.includes("this.scene.imageProcessingConfiguration.exposure = lighting.exposure"),
   "Dusk must not rewrite shared image-processing settings on every visual update.");
-assert.ok(indexHtml.includes('realWeaponHolder.parent=realPlayerModelPivot;') && indexHtml.includes('const holderParent=realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
+assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
   'The equipped club must stay under the moving player model hierarchy rather than a detached world-space anchor.');
 assert.ok(indexHtml.includes('function hideFactionBadge(parts)') && indexHtml.includes('hideFactionBadge(e.parts)') && indexHtml.includes('hideFactionBadge(fallen.parts)'),
   'Faction markers and health overlays must be cleaned when a guard dies or its corpse is retired.');
