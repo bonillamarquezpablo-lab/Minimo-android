@@ -885,7 +885,7 @@ def main() -> None:
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
     html = html.replace(weapon_sync_parent_marker, "const holderParent=realPlayerModelPivot;", 1)
-    weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\\n    const inverseParent=holderParent.getWorldMatrix().clone();"
+    weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\n    const inverseParent=holderParent.getWorldMatrix().clone();"
     weapon_grip_guard_replacement = """    const pivotPosition=realPlayerModelPivot.getAbsolutePosition();
     if(!gripWorld||!Number.isFinite(gripWorld.x)||B.Vector3.Distance(gripWorld,pivotPosition)<.25||B.Vector3.Distance(gripWorld,pivotPosition)>2.25){
      gripWorld=pivotPosition.add(modelRight.scale(.29)).add(worldUp.scale(.92)).add(modelForward.scale(.06));
