@@ -216,7 +216,7 @@ const weaponAnchorStart=source.indexOf('function syncRealWeaponAnchor(');
 const weaponAnchorEnd=source.indexOf('function updateRealWeaponPose(',weaponAnchorStart);
 const weaponAnchorSource=source.slice(weaponAnchorStart,weaponAnchorEnd);
 assert.ok(weaponAnchorStart>=0&&weaponAnchorEnd>weaponAnchorStart,'The real weapon anchor implementation must remain present.');
-assert.ok(weaponAnchorSource.includes('const holderParent=realPlayerModelPivot;')&&weaponAnchorSource.includes('holderParent.getWorldMatrix().clone()'),'All weapons must use the player-model hierarchy while the live hand is sampled only for its world-space grip point.');
+assert.ok(builder.includes('weapon_parent_marker')&&builder.includes('realWeaponHolder.parent=realPlayerModelPivot;')&&builder.includes('weapon_sync_parent_marker')&&builder.includes('const holderParent=realPlayerModelPivot;'),'All weapons must be generated under the player-model hierarchy while the live hand is sampled only for its world-space grip point.');
 assert.ok(builder.includes('weapon_grip_guard_marker')&&builder.includes('B.Vector3.Distance(gripWorld,pivotPosition)>2.25'),'The grip must be range-checked and recalibrated if the skeleton socket produces a bad world-space position.');
 assert.ok(source.includes("e.parts.alive=false;")&&source.includes("guard.parts.alive=true;"),'Dead and reset guards must synchronize their renderable actor lifecycle state.');
 assert.ok(source.includes("setFactionBadge(guard.parts,'friendly');"),'A recruited guard must switch its faction indicator to friendly.');
