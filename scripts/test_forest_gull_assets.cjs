@@ -45,7 +45,9 @@ assert.ok(html.includes("const conifer=kind==='pine'||kind==='spruce'") && html.
 assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html.includes('overlapPairs'),
   'Forest placement must use a wider relocation search and expose overlap diagnostics.');
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
-  'The imported skeleton animation must not be overridden by synthetic per-bone wing rotations.');
+  'The imported skeleton animation must not be overridden by legacy synthetic wing rotations.');
+assert.ok(html.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add') && html.includes('nativeTarget&&now-state.lastMotionAt<.85') && html.includes('const flap=Math.sin(now*7.1+(Number(bird.phase)||0))*.42*item.sign'), 'When native Fly stops moving a wing pivot, an articulated fallback must flap both wings.');
+assert.ok(html.includes('Math.max(.18,Number(b.speed))') && html.includes('speed:.18+i*.014'), 'Gull motion must stay perceptible rather than almost static.');
 assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
   html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
   html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
