@@ -58,7 +58,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.352","The release validator must target the packaged 0.6.352 release.");
+assert.equal(expectedVersion,"0.6.353","The release validator must target the packaged 0.6.353 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
