@@ -89,8 +89,14 @@ assert.ok(capture.includes("previousActiveCameras=scene.activeCameras") &&
 assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.includes('timeout:FAUNA_ROSTER_TIMEOUT_MS'),
   'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
-assert.ok(capture.includes("if(other!==root&&(/^(?:WildlifeActor_(?:deer|stag|wolf)_\\d+|RealSeagullActor_\\d+)$/.test"),
-  'Per-animal captures must hide every other wildlife actor using digit-matching IDs, not a literal backslash sequence.');
+assert.ok(capture.includes('const subjectMeshes=new Set(meshes)') &&
+  capture.includes('const sceneMeshVisibility=(scene.meshes||[]).map(mesh=>({') &&
+  capture.includes('if(!subjectMeshes.has(entry.mesh))') &&
+  capture.includes('entry.mesh.isVisible=false') &&
+  capture.includes('entry.mesh.visibility=0') &&
+  capture.includes('entry.mesh.isVisible=entry.isVisible') &&
+  capture.includes('entry.mesh.visibility=entry.visibility'),
+  'Per-animal captures must isolate only the target meshes and restore all other scene meshes exactly after each view.');
 assert.ok(capture.includes('minimumWorld') || capture.includes('maximumWorld'));
 assert.ok(capture.includes("mesh.skeleton?.getTransformMatrices?.(mesh)") && capture.includes("boundsBasis='babylon-bone-matrices-world'") &&
   capture.includes("typeof mesh.setPositionsForCPUSkinning==='function'") && capture.includes('mesh.setPositionsForCPUSkinning()'),
