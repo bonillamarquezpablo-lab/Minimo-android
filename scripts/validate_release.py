@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.355"
+EXPECTED_VERSION = "0.6.356"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
@@ -31,6 +31,13 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now*.001);",
     "b.root.position.x=Math.cos(a)*radius-36;",
+    "function prepareGullWorldNodes(root){",
+    "node.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixUnfreezes++;",
+    "root.markAsDirty?.('position');root.computeWorldMatrix(true);gullFlightRenderState.worldMatrixRefreshes++;",
+    "b.root.position.set(Math.cos(a)*radius-36,",
+    "const speed=Number.isFinite(Number(b.speed))?Math.max(.26,Number(b.speed)):.26;",
+    "worldPosition:wp?{x:wp.x,y:wp.y,z:wp.z}:null,",
+    "flightWorldMotionTicks:Number(b.flightWorldMotionTicks)||0",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
     "const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
@@ -195,7 +202,7 @@ def main() -> None:
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.355-npcbrain7" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain8" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -658,7 +665,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'63',build:'0.6.355'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'64',build:'0.6.356'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -1060,7 +1067,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'63',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'64',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
