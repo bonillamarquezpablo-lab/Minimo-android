@@ -4728,7 +4728,10 @@ function getFrameMaintenanceTimingSnapshot(){
    }
    if(!measured||!Number.isFinite(min.x)||!Number.isFinite(max.x))return null;
    const size=max.subtract(min),center=min.add(max).scale(.5),playerPosition=player.root?.getAbsolutePosition?.()||player.root?.position||B.Vector3.Zero();
-   return {min:{x:min.x,y:min.y,z:min.z},max:{x:max.x,y:max.y,z:max.z},center:{x:center.x,y:center.y,z:center.z},size:{x:size.x,y:size.y,z:size.z},diagonal:size.length(),distanceToPlayer:B.Vector3.Distance(center,playerPosition),distanceToHand:handWorld?B.Vector3.Distance(center,handWorld):null,handWorldPosition:handWorld?{x:handWorld.x,y:handWorld.y,z:handWorld.z}:null,holderWorldPosition:holderWorld?{x:holderWorld.x,y:holderWorld.y,z:holderWorld.z}:null,pivotWorldPosition:pivotWorld?{x:pivotWorld.x,y:pivotWorld.y,z:pivotWorld.z}:null,measuredMeshes:measured};
+   const rightAxis=realPlayerModelPivot?.getDirection?realPlayerModelPivot.getDirection(B.Axis.X).normalize():null;
+   const handOffset=handWorld&&pivotWorld?handWorld.subtract(pivotWorld):null,clubOffset=pivotWorld?center.subtract(pivotWorld):null;
+   const handRightSideMeters=rightAxis&&handOffset?B.Vector3.Dot(handOffset,rightAxis):null,clubRightSideMeters=rightAxis&&clubOffset?B.Vector3.Dot(clubOffset,rightAxis):null;
+   return {min:{x:min.x,y:min.y,z:min.z},max:{x:max.x,y:max.y,z:max.z},center:{x:center.x,y:center.y,z:center.z},size:{x:size.x,y:size.y,z:size.z},diagonal:size.length(),distanceToPlayer:B.Vector3.Distance(center,playerPosition),distanceToHand:handWorld?B.Vector3.Distance(center,handWorld):null,handRightSideMeters,clubRightSideMeters,handWorldPosition:handWorld?{x:handWorld.x,y:handWorld.y,z:handWorld.z}:null,holderWorldPosition:holderWorld?{x:holderWorld.x,y:holderWorld.y,z:holderWorld.z}:null,pivotWorldPosition:pivotWorld?{x:pivotWorld.x,y:pivotWorld.y,z:pivotWorld.z}:null,measuredMeshes:measured};
   })();
   const guards=(humanEnemyParts||[]).filter(parts=>/^VillageGuard0_/.test(String(parts&&parts.name||'')));
   const homeWarriors=guards.map(parts=>{
