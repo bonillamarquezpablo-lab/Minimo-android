@@ -35,6 +35,12 @@ assert.match(release, /  fauna:\n[\s\S]*?if: needs\.changes\.outputs\.fauna == '
 assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
+assert.match(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'/,
+  'Release may skip the duplicate online warm boot, but must keep the offline Service Worker restart.');
+assert.match(release, /fauna_diff=\$\(git diff --unified=0 \"\$base\" \"\$HEAD_SHA\" -- scripts\/build_site\\.py\)/,
+  'The monolithic builder must be scoped by its changed lines before running the expensive fauna visual gate.');
+assert.match(release, /updateAmbientGullFlight\|gull\|wildlife\|fauna\|deer\|stag\|wolf\|bird/,
+  'Gull, wildlife, rig and animation changes must continue to trigger full fauna visual acceptance.');
 assert.match(release, /openssl req -x509/);
 assert.match(release, /needs: \[build, contracts, startup, fauna, changes\]/, 'Pages must wait for the build, source contracts, scope detection and applicable acceptance gates.');
 assert.match(release, /needs\.startup\.result == 'success' \|\| needs\.startup\.result == 'skipped'/, 'A skipped startup gate is accepted only when no game runtime files changed.');
@@ -102,6 +108,9 @@ assert.match(smoke, /campaignButton\.evaluate\(button => button\.click\(\)\)/,
   'Campaign entry must not hang on Playwright bounding-box stability while the intro is continuously animated.');
 assert.doesNotMatch(smoke, /campaignButton\.click\(\{\s*force:\s*true/,
   'Do not rely on Playwright force-click stability semantics for the animated campaign card.');
+assert.match(smoke, /SKIP_WARM_ONLINE_RESTART/);
+assert.match(smoke, /context\.setOffline\(true\)/,
+  'Skipping the redundant online warm boot must not skip the offline Service Worker restart.');
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
 assert.match(smoke, /function waitForWorldReadyWithRecovery/);
 assert.match(smoke, /cachedStartupWaitRecoveredAfterRendererStall/);
