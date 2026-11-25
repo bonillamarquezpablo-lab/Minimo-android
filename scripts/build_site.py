@@ -2162,8 +2162,8 @@ function updateWildlife(dt){
         raise SystemExit("No se encontró el marcador único del estado de carga de fauna en el informe de arranque.")
     html = html.replace(fauna_telemetry_marker, fauna_telemetry_required, 1)
  
-    # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
-    # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
+    # Soundtracks remain native HTMLAudio streams; audio readiness is measured asynchronously.
+    # The first playable scene does not wait for media preload or decoding.
     audio_helper_anchor = " const MenuMusic=(()=>{"
     audio_helper = """ function waitForPlayableAudio(track,label,timeoutMs=45000){
   if(!track||typeof track.load!=='function')return Promise.reject(new Error('No existe el reproductor de '+label+'.'));
@@ -2215,7 +2215,21 @@ function updateWildlife(dt){
     audio_result_declaration = " let audioPreloadResult={total:0,ready:0,failed:0,pending:0,status:'pending'};"
     if html.count(audio_result_declaration) != 1:
         raise SystemExit("No se encontró el estado de la precarga de efectos de sonido.")
-    html = html.replace(audio_result_declaration, audio_result_declaration+"let startupMusicPreloadResult=null;", 1)
+    html = html.replace(audio_result_declaration, audio_result_declaration+"""let startupMusicPreloadResult=null;
+ function publishStartupAudioReadiness(){
+  const effects=audioPreloadResult&&typeof audioPreloadResult==='object'?audioPreloadResult:{total:0,ready:0,failed:0,pending:0};
+  const effectsReady=Number(effects.total)>0&&Number(effects.pending)===0&&Number(effects.failed)===0&&Number(effects.ready)===Number(effects.total);
+  const soundEffects={...effects,status:effectsReady?'ready':(effects.status==='pending'||effects.status==='loading'?'loading':'incomplete'),requiredForEntry:false};
+  const musicResults=Array.isArray(startupMusicPreloadResult)?startupMusicPreloadResult:[];
+  const menuReady=!!(musicResults[0]&&musicResults[0].ready&&musicResults[0].readyState>=2);
+  const gameplayReady=!!(musicResults[1]&&musicResults[1].ready&&musicResults[1].readyState>=2);
+  const music={results:musicResults,menuReady,gameplayReady,status:menuReady&&gameplayReady?'ready':musicResults.length?'incomplete':'loading',streaming:true,decodedToAudioBuffer:false,requiredForEntry:false};
+  const readiness={soundEffects,music,updatedAt:new Date().toISOString()};
+  window.__ELSN_AUDIO_READINESS__=readiness;
+  const gate=window.__ELSN_STARTUP_RESOURCE_GATE__;
+  if(gate&&gate.resources){gate.resources.soundEffects=soundEffects;gate.resources.music=music;gate.startupTimeline=getStartupTimelineSnapshot();}
+  return readiness;
+ }""", 1)
 
     effects_ready_marker = "recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);"
     music_ready_code = """recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
@@ -2233,6 +2247,43 @@ function updateWildlife(dt){
         raise SystemExit("No se encontró el error de audio obligatorio.")
     html = html.replace(old_audio_error, new_audio_error, 1)
 
+    # Audio is prepared in parallel with the world, but it must never hold the first playable scene.
+    audio_gate_start = " startupAudioPreload.then(result=>{"
+    audio_gate_end = " // Protagonista y NPC obligatorios ya han sido validados."
+    audio_gate_start_at = html.find(audio_gate_start)
+    audio_gate_end_at = html.find(audio_gate_end, audio_gate_start_at)
+    if audio_gate_start_at < 0 or audio_gate_end_at <= audio_gate_start_at:
+        raise SystemExit("No se encontró el bloque único de audio que debe pasar a segundo plano.")
+    audio_gate_replacement = """ setLoadingProgress(85,'Preparando el audio en segundo plano…');
+ startupAudioPreload.then(async result=>{
+  if(result&&result.pending&&!result.failed){
+   console.info('La precarga inicial de sonido continúa; se reintenta sin bloquear la entrada.',result);
+   result=await NorseAudio.preloadAll(30000);
+  }
+  audioPreloadResult={...(result||{}),status:result&&result.pending>0?'incomplete':(result&&result.failed>0?'incomplete':'ready')};
+  recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),audioPreloadResult.status==='ready'?'ready':'partial',audioPreloadResult);
+  publishStartupAudioReadiness();
+  console.info('Estado de efectos de sonido:',audioPreloadResult);
+ }).catch(audioError=>{
+  audioPreloadResult={total:0,ready:0,failed:1,pending:0,status:'incomplete',message:String(audioError&&audioError.message||audioError)};
+  recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'partial',{message:audioPreloadResult.message});
+  publishStartupAudioReadiness();
+  console.warn('La precarga de audio continúa no disponible; la escena seguirá operativa:',audioError);
+ });
+ const startupMusicStartedAt=performance.now();
+ startupMusicPreload.then(outcome=>{
+  if(outcome&&outcome.error){
+   const message=String(outcome.error&&outcome.error.message||outcome.error);
+   startupMusicPreloadResult=[
+    {label:'música del menú',ready:false,readyState:0,error:message},
+    {label:'música de partida',ready:false,readyState:0,error:message}
+   ];
+  }else startupMusicPreloadResult=Array.isArray(outcome&&outcome.results)?outcome.results:[];
+  const musicReady=startupMusicPreloadResult.length===2&&startupMusicPreloadResult.every(item=>item&&item.ready&&item.readyState>=2);
+  recordStartupTask('Bandas sonoras streaming',startupMusicStartedAt,performance.now(),musicReady?'ready':'partial',{results:startupMusicPreloadResult,decodedToAudioBuffer:false});
+  publishStartupAudioReadiness();
+ });
+ publishStartupAudioReadiness();
     startup_gate_marker = " setLoadingProgress(98,'Comprobando que todo está listo…');"
     startup_gate_code = """ const startupResourceSnapshot={
   engineReady:!!(window.BABYLON&&window.BABYLON.Engine),
@@ -2267,6 +2318,43 @@ function updateWildlife(dt){
  if(startupResourceFailures.length)throw new Error('RECURSO OBLIGATORIO: barrera final de carga · '+startupResourceFailures.join(' · '));
  recordStartupTask('Barrera final de recursos',performance.now(),performance.now(),'ready',startupResourceSnapshot);
 """
+    startup_gate_code = startup_gate_code.replace(
+        " const startupResourceSnapshot={",
+        " const audioReadiness=publishStartupAudioReadiness();\n const startupResourceSnapshot={",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  soundEffects:audioPreloadResult,",
+        "  soundEffects:audioReadiness.soundEffects,",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},",
+        "  music:audioReadiness.music,",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}\n };",
+        "  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile},\n  audioRequiredForEntry:false\n };",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');\n",
+        "",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');\n",
+        "",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode};",
+        "window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode,startupTimeline:getStartupTimelineSnapshot()};",
+        1,
+    )
+    if "audioRequiredForEntry:false" not in startup_gate_code or "startupTimeline:getStartupTimelineSnapshot()" not in startup_gate_code or "soundEffects:audioReadiness.soundEffects" not in startup_gate_code or "music:audioReadiness.music" not in startup_gate_code:
+        raise SystemExit("No se pudo preparar la telemetría de arranque y el audio no bloqueante.")
     if html.count(startup_gate_marker) != 1:
         raise SystemExit("No se encontró el punto único para la barrera final de recursos.")
     html = html.replace(startup_gate_marker, startup_gate_code+startup_gate_marker, 1)
