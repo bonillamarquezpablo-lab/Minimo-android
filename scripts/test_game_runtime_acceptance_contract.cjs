@@ -37,9 +37,9 @@ assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'/,
   'Release may skip the duplicate online warm boot, but must keep the offline Service Worker restart.');
-assert.match(release, /fauna_diff=\$\(git diff --unified=0 \"\$base\" \"\$HEAD_SHA\" -- scripts\/build_site\\.py\)/,
+assert.ok(release.includes('fauna_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"'),
   'The monolithic builder must be scoped by its changed lines before running the expensive fauna visual gate.');
-assert.match(release, /updateAmbientGullFlight\|gull\|wildlife\|fauna\|deer\|stag\|wolf\|bird/,
+assert.ok(release.includes('updateAmbientGullFlight|gull|wildlife|fauna|deer|stag|wolf|bird'),
   'Gull, wildlife, rig and animation changes must continue to trigger full fauna visual acceptance.');
 assert.match(release, /openssl req -x509/);
 assert.match(release, /needs: \[build, contracts, startup, fauna, changes\]/, 'Pages must wait for the build, source contracts, scope detection and applicable acceptance gates.');
