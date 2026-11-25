@@ -477,7 +477,7 @@ async function main() {
           const target={x:(min.x+max.x)/2,y:(min.y+max.y)/2,z:(min.z+max.z)/2};
           const width=max.x-min.x,depth=max.z-min.z,height=max.y-min.y;
           const isBird=/^RealSeagullActor_\d+$/.test(animalId);
-          const radius=Math.max(isBird?1.15:2.8,width*1.8,depth*1.8,height*2.0);
+          const radius=Math.max(2.8,width*1.8,depth*1.8,height*2.0);
           const yaw=Number(root.rotation?.y)||0;
           const radians=yaw+angleDegrees*Math.PI/180;
           const camera={
