@@ -4074,7 +4074,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
@@ -4083,8 +4083,27 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
     # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
     # the display's actual refresh rate. Only measure rendered frames for diagnostics.
+    frame_maintenance_timing_code = r"""let lastPreWorldMaintenanceMs=0;
+const frameMaintenanceTimingStats=Object.create(null);
+function recordFrameMaintenanceTiming(kind,startedAt){
+ const duration=Math.max(0,performance.now()-startedAt);
+ let row=frameMaintenanceTimingStats[kind];
+ if(!row)row=frameMaintenanceTimingStats[kind]={samples:0,lastMs:0,totalMs:0,maxMs:0,samplesMs:new Float32Array(120),cursor:0,count:0};
+ row.samples++;row.lastMs=duration;row.totalMs+=duration;row.maxMs=Math.max(row.maxMs,duration);
+ row.samplesMs[row.cursor]=duration;row.cursor=(row.cursor+1)%row.samplesMs.length;row.count=Math.min(row.samplesMs.length,row.count+1);
+}
+function getFrameMaintenanceTimingSnapshot(){
+ const snapshot={};
+ for(const [kind,row] of Object.entries(frameMaintenanceTimingStats)){
+  const values=Array.from(row.samplesMs).slice(0,row.count).sort((a,b)=>a-b);
+  const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+  snapshot[kind]={samples:row.samples,lastMs:Number(row.lastMs.toFixed(3)),meanMs:Number((row.totalMs/Math.max(1,row.samples)).toFixed(3)),p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(row.maxMs.toFixed(3))};
+ }
+ return snapshot;
+}
+"""
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);\n  maintainActiveEnemyVisuals(now);\n  maintainNpcOverlayAnchors(now);"
+    frame_loop_replacement = frame_maintenance_timing_code + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  updateAmbientGullFlight(now*.001);recordFrameMaintenanceTiming('gullFlight',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
@@ -4640,7 +4659,7 @@ function getWorldPhaseTimingSnapshot(){
     html = html[:phase_update_start] + phase_update_source + html[phase_update_end:]
 
     performance_report_marker = "waterVertices:waterPositions.length/3}};"
-    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
+    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{preWorldMaintenance:getFrameMaintenanceTimingSnapshot(),worldPhases:getWorldPhaseTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
     if html.count(performance_report_marker) != 1:
         raise SystemExit("No se encontró el objeto único del informe de rendimiento para añadir métricas por subsistema.")
     html = html.replace(performance_report_marker, performance_report_replacement, 1)
@@ -4651,7 +4670,7 @@ function getWorldPhaseTimingSnapshot(){
     html = html.replace(phase_flush_marker, "  finishWorldPhaseTiming();\n" + phase_flush_marker, 1)
 
     health_phase_marker = "worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),"
-    health_phase_replacement = health_phase_marker + "worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,habitableAuditMs:Number(habitableAuditLastMs.toFixed(3)),habitableAuditMaxMs:Number(habitableAuditMaxMs.toFixed(3)),habitableAuditCount,habitableAuditLastCacheHits,habitableAuditLastCacheMisses,"
+    health_phase_replacement = health_phase_marker + "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3)),preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot(),worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,habitableAuditMs:Number(habitableAuditLastMs.toFixed(3)),habitableAuditMaxMs:Number(habitableAuditMaxMs.toFixed(3)),habitableAuditCount,habitableAuditLastCacheHits,habitableAuditLastCacheMisses,"
     if html.count(health_phase_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)
