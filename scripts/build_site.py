@@ -4720,17 +4720,17 @@ function getWorldPhaseTimingSnapshot(){
     # Split the broad environment/water bucket into its real owners without
     # changing execution order, cadence, quality or the amount of simulation.
     environment_phase_replacements = (
-        ("worldUpdateCount++;setWorldUpdatePhase('environment / water');\\n  updatePerformanceIslandStreaming(dt);\\n  updateActiveIslandGrass(dt);\\n  updateManagedWorldShadowCasters();",
-         "worldUpdateCount++;setWorldUpdatePhase('environment / island streaming');\\n  updatePerformanceIslandStreaming(dt);\\n  setWorldUpdatePhase('environment / grass streaming');\\n  updateActiveIslandGrass(dt);\\n  setWorldUpdatePhase('environment / shadow caster maintenance');\\n  updateManagedWorldShadowCasters();",
+        ("worldUpdateCount++;setWorldUpdatePhase('environment / water');\n  updatePerformanceIslandStreaming(dt);\n  updateActiveIslandGrass(dt);\n  updateManagedWorldShadowCasters();",
+         "worldUpdateCount++;setWorldUpdatePhase('environment / island streaming');\n  updatePerformanceIslandStreaming(dt);\n  setWorldUpdatePhase('environment / grass streaming');\n  updateActiveIslandGrass(dt);\n  setWorldUpdatePhase('environment / shadow caster maintenance');\n  updateManagedWorldShadowCasters();",
          "separate island streaming, full-density grass and shadow-caster maintenance"),
         ("habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
-         "setWorldUpdatePhase('environment / settlement integrity');\\n  habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
+         "setWorldUpdatePhase('environment / settlement integrity');\n  habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
          "measure settlement integrity audit separately"),
         ("  if(atmosphereSystem)atmosphereSystem.update(dt);",
-         "  setWorldUpdatePhase('environment / atmosphere');\\n  if(atmosphereSystem)atmosphereSystem.update(dt);",
+         "  setWorldUpdatePhase('environment / atmosphere');\n  if(atmosphereSystem)atmosphereSystem.update(dt);",
          "measure atmosphere separately"),
-        ("  animateWater(dt);\\n  updateWildlife(dt);",
-         "  setWorldUpdatePhase('environment / water simulation');\\n  animateWater(dt);\\n  setWorldUpdatePhase('environment / wildlife simulation');\\n  updateWildlife(dt);",
+        ("  animateWater(dt);\n  updateWildlife(dt);",
+         "  setWorldUpdatePhase('environment / water simulation');\n  animateWater(dt);\n  setWorldUpdatePhase('environment / wildlife simulation');\n  updateWildlife(dt);",
          "separate water simulation from wildlife"),
     )
     for old_phase_code, new_phase_code, phase_label in environment_phase_replacements:
