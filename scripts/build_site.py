@@ -1000,7 +1000,7 @@ def main() -> None:
     if html.count(club_axis_marker) != 1:
         raise SystemExit("No se encontró el eje único del palo equipado.")
     html = html.replace(club_axis_marker,club_axis_replacement,1)
-    html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.055));",1)
+    html = html.replace("gripWorld.addInPlace(modelRight.scale(.012));","gripWorld.addInPlace(modelRight.scale(.12));",1)
     weapon_group_marker = "const club=makeGroup('Club');club.position.y=-.20;"
     if html.count(weapon_group_marker) != 1: raise SystemExit("Club group marker not unique")
     html = html.replace(weapon_group_marker, "const club=makeGroup('Club');club.position.y=0;", 1)
@@ -4560,8 +4560,20 @@ function getFrameMaintenanceTimingSnapshot(){
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
     if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);
     if(!Array.isArray(b.flightTransformNodes)){
-     const descendants=typeof b.root.getDescendants==='function'?b.root.getDescendants(false):[];
-     b.flightTransformNodes=descendants.filter(node=>node&&typeof node.computeWorldMatrix==='function');
+     const meshes=typeof b.root.getChildMeshes==='function'?b.root.getChildMeshes(false):[];
+     const chain=[],seen=new Set();
+     for(const mesh of meshes){
+      const path=[];let node=mesh;
+      while(node&&node!==b.root){
+       if(typeof node.computeWorldMatrix==='function')path.push(node);
+       node=node.parent;
+      }
+      for(let index=path.length-1;index>=0;index--){
+       const ancestor=path[index];
+       if(!seen.has(ancestor)){seen.add(ancestor);chain.push(ancestor);}
+      }
+     }
+     b.flightTransformNodes=chain;
     }
     const flightHierarchy=[b.root,...b.flightTransformNodes];
     for(const node of flightHierarchy){
@@ -4701,6 +4713,12 @@ function getFrameMaintenanceTimingSnapshot(){
   const clubWorldBounds=(()=>{
    if(!clubMeshes.length)return null;
    const min=new B.Vector3(Infinity,Infinity,Infinity),max=new B.Vector3(-Infinity,-Infinity,-Infinity);
+   if(realHandNode)realHandNode.computeWorldMatrix(true);
+   if(realPlayerModelPivot)realPlayerModelPivot.computeWorldMatrix(true);
+   if(realWeaponHolder)realWeaponHolder.computeWorldMatrix(true);
+   const handWorld=realHandNode&&realHandNode.getAbsolutePosition?realHandNode.getAbsolutePosition():null;
+   const holderWorld=realWeaponHolder&&realWeaponHolder.getAbsolutePosition?realWeaponHolder.getAbsolutePosition():null;
+   const pivotWorld=realPlayerModelPivot&&realPlayerModelPivot.getAbsolutePosition?realPlayerModelPivot.getAbsolutePosition():null;
    let measured=0;
    for(const mesh of clubMeshes){
     if(!mesh||mesh.isDisposed?.())continue;
@@ -4710,7 +4728,7 @@ function getFrameMaintenanceTimingSnapshot(){
    }
    if(!measured||!Number.isFinite(min.x)||!Number.isFinite(max.x))return null;
    const size=max.subtract(min),center=min.add(max).scale(.5),playerPosition=player.root?.getAbsolutePosition?.()||player.root?.position||B.Vector3.Zero();
-   return {min:{x:min.x,y:min.y,z:min.z},max:{x:max.x,y:max.y,z:max.z},center:{x:center.x,y:center.y,z:center.z},size:{x:size.x,y:size.y,z:size.z},diagonal:size.length(),distanceToPlayer:B.Vector3.Distance(center,playerPosition),measuredMeshes:measured};
+   return {min:{x:min.x,y:min.y,z:min.z},max:{x:max.x,y:max.y,z:max.z},center:{x:center.x,y:center.y,z:center.z},size:{x:size.x,y:size.y,z:size.z},diagonal:size.length(),distanceToPlayer:B.Vector3.Distance(center,playerPosition),distanceToHand:handWorld?B.Vector3.Distance(center,handWorld):null,handWorldPosition:handWorld?{x:handWorld.x,y:handWorld.y,z:handWorld.z}:null,holderWorldPosition:holderWorld?{x:holderWorld.x,y:holderWorld.y,z:holderWorld.z}:null,pivotWorldPosition:pivotWorld?{x:pivotWorld.x,y:pivotWorld.y,z:pivotWorld.z}:null,measuredMeshes:measured};
   })();
   const guards=(humanEnemyParts||[]).filter(parts=>/^VillageGuard0_/.test(String(parts&&parts.name||'')));
   const homeWarriors=guards.map(parts=>{
@@ -4720,7 +4738,7 @@ function getFrameMaintenanceTimingSnapshot(){
   const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
   const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig,nodes=b.flightTransformNodes||[],visualRoot=nodes.find(node=>/^GullVisualCenter_/.test(String(node.name||'')))||b.root,world=visualRoot&&visualRoot.getAbsolutePosition?visualRoot.getAbsolutePosition():null;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,worldPosition:world?{x:world.x,y:world.y,z:world.z}:null,frozenDescendantCount:nodes.filter(node=>node&&node._isWorldMatrixFrozen).length,hierarchyNodeCount:nodes.length,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
   const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
-  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),holderParent:String(realWeaponHolder?.parent?.name||''),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,worldBounds:clubWorldBounds,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
+  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),holderParent:String(realWeaponHolder?.parent?.name||''),holderLocalPosition:realWeaponHolder?.position?{x:realWeaponHolder.position.x,y:realWeaponHolder.position.y,z:realWeaponHolder.position.z}:null,groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,worldBounds:clubWorldBounds,handNode:String(realHandNode?.name||''),anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
     if html.count(world_snapshot_marker) != 1:
