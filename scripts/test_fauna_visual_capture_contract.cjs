@@ -53,6 +53,8 @@ assert.ok(capture.indexOf('window.__ELSN_FORCE_GPU_SKINNING__=mode===\'gpu\'')<c
   'Both skinning overrides must be set before the game loads.');
 assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
+assert.ok(capture.includes('const radius=Math.max(2.8,width*1.8,depth*1.8,height*2.0);'),
+  'Gull captures must keep the camera outside the tiny skinned bird mesh so the raster-diff tests the animal rather than clipping from an overly close camera.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
 assert.ok(capture.includes('gull-flight-rig-incomplete') && capture.includes('gull-flight-animation-stopped'));
 assert.ok(capture.includes('gull-native-flight-clip-missing') && capture.includes('gull-native-flight-tracks-incomplete'),
