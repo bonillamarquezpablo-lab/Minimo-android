@@ -245,7 +245,7 @@ new (require('node:vm').Script)(unifiedInspector,{filename:'inspector/unified-wo
 new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-recorder.js'});
 
 assert.ok(dialogueRuntime.includes('function dialogueEligibleNpc(npc)') && dialogueRuntime.includes('role==="warrior"') && dialogueRuntime.includes('parts.faction==="enemy"'), 'Dialogue runtime rejects hostile and warrior identities before rendering or queuing cards.');
-assert.ok(buildSite.includes('const match=/^Villager_') && !buildSite.includes('VillageGuard(\\\\d+)_(\\\\d+)'), 'Generated bridge enumerates civilian villagers only and never VillageGuard combat actors.');
+assert.ok(buildSite.includes('const match=/^Villager_') && !buildSite.includes(String.raw\`VillageGuard(\d+)_(\d+)\`), 'Generated bridge enumerates civilian villagers only and never VillageGuard combat actors.');
 assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone()') && buildSite.includes('modelRootLocalPosition:modelRoot.position.clone()') && buildSite.includes('rootDetachRepairs') && buildSite.includes('visualParentRepairs') && buildSite.includes('importedRootRepairs'), 'Generated runtime restores combat root, visual pivot, GLB model root and imported roots as one entity.');
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
