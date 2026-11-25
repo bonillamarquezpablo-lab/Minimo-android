@@ -760,10 +760,20 @@ def main() -> None:
         fail("La barrera de Calidad debe validar los tres animales y las cinco gaviotas.")
     if "sceneReadyTasks=[waitForInitialViewReadiness()]" not in index_html or "scene.whenReadyAsync()" in index_html or "scene.compileMaterialsAsync()" in index_html or "getWaitingItemsCount" not in index_html or "mesh.isReady(true)" not in index_html or "stableReadySamples" not in index_html or "readinessSampleIntervalMs:250" not in index_html or "activeData[index]" not in index_html or "activeData.slice(0,active.length)" in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
-    if "publishStartupAudioReadiness" not in index_html or "startupAudioPreload.then(async result=>" not in index_html or "startupMusicPreload.then(outcome=>" not in index_html or "audioRequiredForEntry:false" not in index_html or "await startupAudioPreload" in index_html or "RECURSO OBLIGATORIO: efectos de sonido" in index_html:
-        fail("Los efectos y bandas sonoras deben prepararse y medirse en segundo plano, sin bloquear el acceso a la escena jugable.")
-    if "result=await NorseAudio.preloadAll(30000)" not in index_html or "window.__ELSN_AUDIO_READINESS__" not in index_html:
-        fail("La precarga de sonido debe reintentarse de forma no bloqueante y publicar su estado final.")
+    audio_gate_checks = {
+        "readiness-publisher": "publishStartupAudioReadiness" in index_html,
+        "async-sfx": "startupAudioPreload.then(async result=>" in index_html,
+        "async-music": "startupMusicPreload.then(outcome=>" in index_html,
+        "entry-does-not-require-audio": "audioRequiredForEntry:false" in index_html,
+        "no-awaited-audio-promise": "await startupAudioPreload" not in index_html,
+        "no-audio-fatal-error": "RECURSO OBLIGATORIO: efectos de sonido" not in index_html,
+        "background-retry": "result=await NorseAudio.preloadAll(30000)" in index_html,
+        "global-audio-readiness": "window.__ELSN_AUDIO_READINESS__" in index_html,
+    }
+    if not all(audio_gate_checks.values()):
+        missing_audio_checks = [name for name, passed in audio_gate_checks.items() if not passed]
+        fail("Precarga de audio no bloqueante incompleta; comprobaciones fallidas: " + ", ".join(missing_audio_checks))
+
     if "RECURSO OBLIGATORIO: Vikingo protagonista" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El GLB protagonista no puede sustituirse por un cuerpo provisional para entrar.")
     if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
