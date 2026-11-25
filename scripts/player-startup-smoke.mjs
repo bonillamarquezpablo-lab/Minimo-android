@@ -776,7 +776,7 @@ async function main() {
           if(a.kind==='q')return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z)+Math.abs(a.w-b.w);
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
-        const visibleWorldPosition=bird=>bird?.visualMeshWorldPosition||bird?.visualRootWorldPosition||bird?.absolutePosition||null;
+        const visibleWorldPosition=bird=>bird?.visualMeshWorldPosition||null;
         return after.every((bird,index)=>{
           const before=birds[index],a=before?.position,b=bird?.position,aw=visibleWorldPosition(before),bw=visibleWorldPosition(bird);
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
@@ -826,8 +826,8 @@ async function main() {
     assertClubMounted(visualActorsAfter,'Después del movimiento');
     for(let index=0;index<5;index++){
       const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
-      const beforeVisual=before?.visualMeshWorldPosition||before?.visualRootWorldPosition||before?.absolutePosition;
-      const afterVisual=after?.visualMeshWorldPosition||after?.visualRootWorldPosition||after?.absolutePosition;
+      const beforeVisual=before?.visualMeshWorldPosition||null;
+      const afterVisual=after?.visualMeshWorldPosition||null;
       const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
       const renderedDisplacement=beforeVisual&&afterVisual?Math.hypot(afterVisual.x-beforeVisual.x,afterVisual.y-beforeVisual.y,afterVisual.z-beforeVisual.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
