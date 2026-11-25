@@ -16,11 +16,11 @@ assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head
 assert.ok(html.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
   html.includes("if(group!==nativeFlightClip)group.stop();") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
+  html.includes("flightRig={actor,visualRoot,roots,rigNodes,recoveredFrozenNodes,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
   html.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
 const nativeClipIndex=html.indexOf("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;");
-const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'");
+const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,roots,rigNodes,recoveredFrozenNodes,bodyAxis,alignment:{source:'native-Fly-midpoint'");
 const nativeClipStartIndex=html.indexOf("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);");
 const nativeFlightPoseIndex=html.indexOf("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);");
 assert.ok(nativeClipIndex>=0&&nativeClipIndex<nativeClipStartIndex&&nativeClipStartIndex<nativeFlightPoseIndex&&nativeFlightPoseIndex<flightRigIndex,
@@ -48,8 +48,8 @@ assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.include
   'The imported skeleton animation must not be overridden by legacy synthetic wing rotations.');
 assert.ok(html.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add') && html.includes('nativeTarget&&now-state.lastMotionAt<.85') && html.includes('const flap=Math.sin(now*7.1+(Number(bird.phase)||0))*.42*item.sign'), 'When native Fly stops moving a wing pivot, an articulated fallback must flap both wings.');
 assert.ok(html.includes('Math.max(.18,Number(b.speed))') && html.includes('speed:.18+i*.014'), 'Gull motion must stay perceptible rather than almost static.');
-assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
+assert.ok(html.includes("flightRig={actor,visualRoot,roots,rigNodes,recoveredFrozenNodes,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
+  html.includes("flightRig={actor,visualRoot,roots,rigNodes,recoveredFrozenNodes,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
   html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
   'The live gull diagnostic rig must expose the two wings, tail, head, neck and both articulated legs.');
 assert.ok(html.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
