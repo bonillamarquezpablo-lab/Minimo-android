@@ -748,6 +748,10 @@ async function main() {
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
     assert.equal(visualActorsBefore.playerClub.holderEnabled,true,'El anclaje del palo no está activo.');
     assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.worldBounds&&visualActorsBefore.playerClub.worldBounds.diagonal>.75,
+      'El palo debe ocupar volumen visible real en el mundo, no solo tener mallas marcadas como visibles: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.worldBounds.distanceToPlayer<2.5,
+      'El palo debe permanecer anclado cerca de la mano del jugador, no perdido fuera de la escena: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
@@ -769,7 +773,7 @@ async function main() {
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.position,b=bird?.position;
+          const before=birds[index],a=before?.worldPosition||before?.position,b=bird?.worldPosition||bird?.position;
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
@@ -783,7 +787,7 @@ async function main() {
         return {
           beforeTicks,render,
           birds:after.map((bird,index)=>{
-            const before=birds[index],a=before?.position,b=bird?.position;
+            const before=birds[index],a=before?.worldPosition||before?.position,b=bird?.worldPosition||bird?.position;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
               beforePosition:a||null,afterPosition:b||null,
@@ -808,7 +812,7 @@ async function main() {
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.worldPosition||before?.position,afterPosition=after?.worldPosition||after?.position;
       const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
       assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
