@@ -26,14 +26,19 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
-    "const holderParent=socket||realPlayerModelPivot;",
-    "realWeaponHolder.parent=socket||realPlayerModelPivot;",
+    "const holderParent=realPlayerModelPivot||socket;",
+    "realWeaponHolder.parent=realPlayerModelPivot||socket;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now*.001);",
-    "b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);",
-    "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}",
+    "b.root.position.copyFromFloats(flightX,flightY,flightZ);",
+    "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
     "const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
+    "b.root.getDescendants(false)",
+    "b.flightTransformNodes=descendants.filter(node=>node&&typeof node.computeWorldMatrix==='function')",
+    "for(const node of b.flightTransformNodes)node.computeWorldMatrix(true);",
+    "worldPosition:world?{x:world.x,y:world.y,z:world.z}:null",
+    "worldBounds:clubWorldBounds",
     "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
 )
 
@@ -942,7 +947,7 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=realPlayerModelPivot||socket;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
         fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
