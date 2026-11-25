@@ -804,7 +804,7 @@ async function main() {
     }
     manifest.gullFlightWaitMs=Number((performance.now()-gullFlightWaitStartedAt).toFixed(1));
     const gullRenderStateAfter=await page.evaluate(()=>window.__ELSN_GULL_FLIGHT_RENDER__||null);
-    assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
+    assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updatedBirds)>=5&&Number(gullRenderStateAfter.worldMatrixRefreshes)>0&&Number(gullRenderStateAfter.worldMotionSamples)>0&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando las cinco matrices mundiales de la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
