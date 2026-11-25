@@ -28,7 +28,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "maintainActiveEnemyVisuals(now);",
     "const holderParent=socket||realPlayerModelPivot;",
     "realWeaponHolder.parent=socket||realPlayerModelPivot;",
-    "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};",
+    "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null,worldMatrixUnfreezes:0,worldMatrixRefreshes:0,worldMotionSamples:0};",
     "updateAmbientGullFlight(now*.001);",
     "b.root.position.x=Math.cos(a)*radius-36;",
     "function prepareGullWorldNodes(root){",
