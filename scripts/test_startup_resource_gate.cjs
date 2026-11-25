@@ -61,7 +61,13 @@ assert.ok(html.includes("const animalCount=idx===0?3:0;"),
   'The runtime must spawn the same three terrestrial animal instances in both profiles.');
 assert.ok(html.includes('waitForPlayableAudio') &&
   html.includes('MenuMusic.preload()') && html.includes('GameplayMusic.preload()'),
-  'Both native HTMLAudio soundtracks must reach a playable state before entry.');
+  'Both native HTMLAudio soundtracks must remain scheduled for asynchronous preload.');
+assert.ok(html.includes('publishStartupAudioReadiness') &&
+  html.includes('audioRequiredForEntry:false') &&
+  html.includes('startupTimeline:getStartupTimelineSnapshot()'),
+  'Audio readiness must be reported after entry and startup phase timings must remain inspectable.');
+assert.doesNotMatch(html,/await startupAudioPreload|RECURSO OBLIGATORIO: efectos de sonido/,
+  'Audio availability must not block a visually complete playable world.');
 assert.ok(html.includes('decodedToAudioBuffer:false'),
   'Menu and gameplay music must remain streamed, not decoded into WebAudio AudioBuffers.');
 assert.ok(html.indexOf("Preparando fauna de la isla inicial") < html.indexOf("Preparando texturas y shaders de la zona inicial"),
