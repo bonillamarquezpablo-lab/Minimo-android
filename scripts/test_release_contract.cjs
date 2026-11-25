@@ -58,7 +58,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.353","The release validator must target the packaged 0.6.353 release.");
+assert.equal(expectedVersion,"0.6.354","The release validator must target the packaged 0.6.354 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -122,11 +122,11 @@ for(const [source,version] of Object.entries({sourceHtml:htmlVersion,sourceTitle
   assert.equal(version,sourceVersion,`The source ${source} must remain the 0.6.274 input that build_site upgrades deterministically.`);
 }
 assert.ok(shellVersion===expectedVersion||shellVersion.startsWith(expectedVersion+"-"),"The service-worker cache must be synchronized with the packaged release while allowing cache-only revisions.");
-assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5"') &&
-  buildSite.includes('npc-village-brain-core.js?v=0.6.353-npcbrain5'),
+assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.354-npcbrain6"') &&
+  buildSite.includes('npc-village-brain-core.js?v=0.6.354-npcbrain6'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.353"\)/,"The build must promote every visible source version to 0.6.352.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.354"\)/,"The build must promote every visible source version to 0.6.352.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleLockedForSession:true") && buildSite.includes("qualityScaleAdaptive:false") && buildSite.includes("nativeResolutionPreserved:true"),"Quality must keep its native render scale fixed for the session.");
 assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?1.80:1.45"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
@@ -159,7 +159,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.353")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.353.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.354")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.354.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -189,7 +189,8 @@ assert.ok(!npcRuntime.includes("eval(") && !npcRuntime.includes("new Function(")
 const sessionRecorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && sessionRecorder.includes('meshSelectionDynamicFrustumEnabled: runtime.meshSelectionDynamicFrustumEnabled === true'),"The published match report must state whether dynamic frustum filtering is genuinely enabled.");
 assert.ok(buildSite.includes('meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason') && sessionRecorder.includes('meshSelectionDynamicSamplesByReason: runtime.meshSelectionDynamicSamplesByReason || null'),"Reports must preserve the reason and parent-chain evidence for dynamic selection.");
-assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && buildSite.includes('spatialSelectionStats.dynamicFilterEnabled=false;'),"The release must not claim dynamic frustum culling until Babylon's dynamicContent path has a supported integration.");
+assert.ok(buildSite.includes('meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled') && buildSite.includes('scene.getActiveMeshCandidates=()=>{') && buildSite.includes('spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();'),"The release must publish the supported scene candidate-provider integration and its live status.");
+assert.ok(buildSite.includes('mesh.computeWorldMatrix()') && buildSite.includes('mesh.isInFrustum(scene.frustumPlanes)') && buildSite.includes('mesh.alwaysSelectAsActiveMesh'),"Dynamic culling must update world bounds, honor forced-active meshes and retain fail-open safeguards.");
 assert.ok(sessionRecorder.includes('meshSelectionDynamicFilterCulledPeak: number(runtime.meshSelectionDynamicFilterCulledPeak)') && sessionRecorder.includes('meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs)'),"Saved match reports must expose filter effectiveness and CPU cost.");
 const sessionIdleTest=fs.readFileSync('scripts/test_session_recorder_idle_contract.cjs','utf8');
 assert.ok(sessionRecorder.includes('elsn-game-session-recovery-v1') && sessionRecorder.includes('writeRecoverySnapshot(current)'),"Mobile sessions must have a synchronous emergency report before asynchronous pagehide persistence.");
@@ -199,6 +200,7 @@ assert.ok(npcRuntime.includes("function isInspectorCenterPath()") && npcRuntime.
 assert.ok(!npcRuntime.includes("context.getCivilianRoster") && !npcRuntime.includes("npc.aiAgent"),"The game runtime must not attach specialist metadata to civilian actors.");
 assert.ok(sessionRecorder.includes("elsn-game-session-reports") && sessionRecorder.includes("MAX_SAMPLES_PER_SESSION = 1440"),"Session reports must be stored locally with bounded samples.");
 assert.ok(buildSite.includes("phase_timing_helpers") && buildSite.includes("phase_assignment_count != 20") && buildSite.includes("finishWorldPhaseTiming();") && buildSite.includes("worldPhaseTimings:getWorldPhaseTimingSnapshot()"), "The game must report the cost of each existing world-update phase.");
+for(const phase of ["environment / island streaming","environment / grass streaming","environment / shadow caster maintenance","environment / settlement integrity","environment / atmosphere","environment / water simulation","environment / wildlife simulation"]) assert.ok(buildSite.includes(phase), "The build must keep a separate timer for "+phase+".");
 assert.ok(buildSite.includes("window.__elSinNombreWaterTelemetrySnapshot=()=>({") && sessionRecorder.includes("readWaterDiagnostics(health)") && sessionRecorder.includes("window.__elSinNombreWaterTelemetrySnapshot()"), "Session telemetry must use lightweight water timings and reuse its single health snapshot.");
 assert.ok(buildSite.includes("auditHabitableStructures.discoveryQueue") && buildSite.includes("evaluateHabitableStructureCached") && buildSite.includes("habitableAuditLastMs") && sessionRecorder.includes("habitableStructureAudit"), "Structural audits must retain coverage while caching unchanged ground checks and reporting their CPU cost.");
 assert.ok(sessionRecorder.includes("worldPhaseHotspots") && sessionRecorder.includes("projectionAttemptsDelta") && !sessionRecorder.includes("projectionAttempts: dialogueSamples.reduce"), "Reports must rank world phase costs and must not sum cumulative dialogue counters repeatedly.");
@@ -244,7 +246,7 @@ new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.353" && buildSite.includes('html = html.replace("0.6.274", "0.6.353")'), "The correction package must be release 0.6.353.");
+assert.ok(expectedVersion==="0.6.354" && buildSite.includes('html = html.replace("0.6.274", "0.6.354")'), "The correction package must be release 0.6.354.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now*.001);'), "The flock must be updated by the actual engine render-loop callback on every frame.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.353-npcbrain5") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.353-npcbrain5"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.354-npcbrain6") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.354-npcbrain6"), "The new shell cache must not reuse the previous NPC brain module entry.");

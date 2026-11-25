@@ -150,6 +150,7 @@ export function normalizeGameTelemetry(health, browser = {}, options = {}) {
   });
   const measurements = {
     fps: reportedFps,
+    preWorldMaintenanceMs: nonNegativeOrNull(runtime.preWorldMaintenanceMs),
     worldUpdateMs: nonNegativeOrNull(runtime.worldUpdateMs),
     renderCpuMs: nonNegativeOrNull(runtime.renderCpuMs),
     gpuFrameMs: nonNegativeOrNull(runtime.engineGpuFrameMs),

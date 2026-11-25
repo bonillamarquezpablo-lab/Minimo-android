@@ -8,6 +8,7 @@ const dialogue=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
 const recorder=fs.readFileSync('scripts/game-session-recorder.js','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameHtml=fs.readFileSync('index.html','utf8');
+const diagnosticsCore=fs.readFileSync('scripts/phase1-diagnostics-core.mjs','utf8');
 
 assert.ok(builder.includes('map_clock_pattern = r"let last=performance\\.now\\(\\),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;"') &&
   builder.includes('map_clock_replacement = "let last=performance.now(),mapClock=0,progressClock=0,fpsHudTime=0,fpsHudFrames=0;') &&
@@ -94,6 +95,16 @@ assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
   builder.includes('smokeDx*smokeDx+smokeDz*smokeDz>180*180'),
   'Distant embers and smoke must be culled outside the local visual field while nearby effects remain intact.');
 
+for(const phase of [
+  'environment / island streaming',
+  'environment / grass streaming',
+  'environment / shadow caster maintenance',
+  'environment / settlement integrity',
+  'environment / atmosphere',
+  'environment / water simulation',
+  'environment / wildlife simulation'
+]) assert.ok(builder.includes(phase), 'Environment profiling must split the measured water/world hotspot: '+phase);
+
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 
@@ -114,4 +125,7 @@ assert.ok(builder.includes('distanceSquared=dx*dx+dz*dz;') &&
   !builder.includes('dist=Math.sqrt(distanceSquared)'),
   'Wildlife decision cadence must use squared-distance thresholds and avoid a per-decision square root without changing flee or far-distance ranges.');
 
-console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
+for(const marker of ['frameMaintenanceTimingStats=Object.create(null)','getFrameMaintenanceTimingSnapshot()', "recordFrameMaintenanceTiming('gullFlight'", "recordFrameMaintenanceTiming('enemyVisualRecovery'", "recordFrameMaintenanceTiming('npcOverlayMaintenance'", 'preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()']) assert.ok(builder.includes(marker),'Missing pre-world frame timing marker: '+marker);
+assert.ok(recorder.includes('preWorldMaintenanceMs') && recorder.includes('cpuPreWorldP95Ms'),'Session recorder must include pre-world CPU in its bottleneck diagnosis.');
+assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
+console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');

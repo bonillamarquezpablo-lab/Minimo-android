@@ -90,8 +90,13 @@ assert.match(html,/preflightMenuMusic\.preload='none'/);
 
 assert.doesNotMatch(html,/rel="preload" as="audio"/,'Music must not be preloaded as a full audio resource.');
 assert.match(html,/let startupAudioPreload=NorseAudio\.preloadAll\(new URLSearchParams\(window\.location\.search\)\.get\('test'\)==='1'\?30000:6500\)/);
-assert.match(html,/if\(audioPreloadResult\.pending&&!audioPreloadResult\.failed\)[\s\S]*?audioPreloadResult=await NorseAudio\.preloadAll\(30000\)/,
-  'A pending early preload must be retried at the blocking entry barrier, after the user has interacted with the page.');
+assert.ok(builder.includes('startupAudioPreload.then(async result=>{') &&
+  builder.includes('result=await NorseAudio.preloadAll(30000)') &&
+  builder.includes('publishStartupAudioReadiness()'),
+  'Sound effects must retry asynchronously and publish their eventual readiness.');
+assert.ok(builder.includes('audioRequiredForEntry:false') &&
+  !builder.includes('audioPreloadResult=await startupAudioPreload'),
+  'Sound effects and music must not block the playable scene.');
 assert.match(html,/Math\.min\(30000,Number\(maxWaitMs\)\|\|6000\)/,
   'The patrol-only audio preload budget may increase, but normal gameplay must retain its 6500 ms argument.');
 assert.doesNotMatch(html,/decodeAudioData\([^)]*menu|decodeAudioData\([^)]*gameplay/i);
@@ -151,7 +156,7 @@ assert.match(sw,/contentType\.includes\("text\/html"\)/);
  }
  assert.ok(sw.includes('url.pathname.includes("/assets/")'),
   'El manifiesto debe quedar atendido por la caché de recursos del service worker.');
- assert.ok(sw.includes('./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5')&&sw.includes('url.pathname.endsWith("/scripts/npc-village-brain-core.js")')&&
+ assert.ok(sw.includes('./scripts/npc-village-brain-core.js?v=0.6.354-npcbrain6')&&sw.includes('url.pathname.endsWith("/scripts/npc-village-brain-core.js")')&&
   sw.includes('url.pathname.endsWith("/scripts/npc-dialogue.css")'),
   'Los módulos ligeros precargados deben servirse desde SHELL_CACHE, no solo figurar en la lista de instalación.');
 

@@ -876,7 +876,7 @@ def main() -> None:
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
 
-    # 0.6.353: unify all humanoid overlays under one measured anchor.
+    # 0.6.354: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -2162,8 +2162,8 @@ function updateWildlife(dt){
         raise SystemExit("No se encontró el marcador único del estado de carga de fauna en el informe de arranque.")
     html = html.replace(fauna_telemetry_marker, fauna_telemetry_required, 1)
  
-    # The two soundtracks remain native HTMLAudio streams. Wait for media readiness
-    # before entry, without decoding full MP3 tracks into WebAudio AudioBuffers.
+    # Soundtracks remain native HTMLAudio streams; audio readiness is measured asynchronously.
+    # The first playable scene does not wait for media preload or decoding.
     audio_helper_anchor = " const MenuMusic=(()=>{"
     audio_helper = """ function waitForPlayableAudio(track,label,timeoutMs=45000){
   if(!track||typeof track.load!=='function')return Promise.reject(new Error('No existe el reproductor de '+label+'.'));
@@ -2215,7 +2215,21 @@ function updateWildlife(dt){
     audio_result_declaration = " let audioPreloadResult={total:0,ready:0,failed:0,pending:0,status:'pending'};"
     if html.count(audio_result_declaration) != 1:
         raise SystemExit("No se encontró el estado de la precarga de efectos de sonido.")
-    html = html.replace(audio_result_declaration, audio_result_declaration+"let startupMusicPreloadResult=null;", 1)
+    html = html.replace(audio_result_declaration, audio_result_declaration+"""let startupMusicPreloadResult=null;
+ function publishStartupAudioReadiness(){
+  const effects=audioPreloadResult&&typeof audioPreloadResult==='object'?audioPreloadResult:{total:0,ready:0,failed:0,pending:0};
+  const effectsReady=Number(effects.total)>0&&Number(effects.pending)===0&&Number(effects.failed)===0&&Number(effects.ready)===Number(effects.total);
+  const soundEffects={...effects,status:effectsReady?'ready':(effects.status==='pending'||effects.status==='loading'?'loading':'incomplete'),requiredForEntry:false};
+  const musicResults=Array.isArray(startupMusicPreloadResult)?startupMusicPreloadResult:[];
+  const menuReady=!!(musicResults[0]&&musicResults[0].ready&&musicResults[0].readyState>=2);
+  const gameplayReady=!!(musicResults[1]&&musicResults[1].ready&&musicResults[1].readyState>=2);
+  const music={results:musicResults,menuReady,gameplayReady,status:menuReady&&gameplayReady?'ready':musicResults.length?'incomplete':'loading',streaming:true,decodedToAudioBuffer:false,requiredForEntry:false};
+  const readiness={soundEffects,music,updatedAt:new Date().toISOString()};
+  window.__ELSN_AUDIO_READINESS__=readiness;
+  const gate=window.__ELSN_STARTUP_RESOURCE_GATE__;
+  if(gate&&gate.resources){gate.resources.soundEffects=soundEffects;gate.resources.music=music;gate.startupTimeline=getStartupTimelineSnapshot();}
+  return readiness;
+ }""", 1)
 
     effects_ready_marker = "recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);"
     music_ready_code = """recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'ready',audioPreloadResult);
@@ -2228,11 +2242,50 @@ function updateWildlife(dt){
         raise SystemExit("No se encontró el registro de efectos de sonido listos.")
     html = html.replace(effects_ready_marker, music_ready_code, 1)
     old_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
-    new_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido y música · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    new_audio_error = "console.warn('Audio no disponible al inicio; se mantendrá la carga en segundo plano:',audioRequiredError);"
     if html.count(old_audio_error) != 1:
         raise SystemExit("No se encontró el error de audio obligatorio.")
     html = html.replace(old_audio_error, new_audio_error, 1)
 
+    # Audio is prepared in parallel with the world, but it must never hold the first playable scene.
+    audio_gate_start = " startupAudioPreload.then(result=>{"
+    audio_gate_end = " // Protagonista y NPC obligatorios ya han sido validados."
+    audio_gate_start_at = html.find(audio_gate_start)
+    audio_gate_end_at = html.find(audio_gate_end, audio_gate_start_at)
+    if audio_gate_start_at < 0 or audio_gate_end_at <= audio_gate_start_at:
+        raise SystemExit("No se encontró el bloque único de audio que debe pasar a segundo plano.")
+    audio_gate_replacement = """ setLoadingProgress(85,'Preparando el audio en segundo plano…');
+ startupAudioPreload.then(async result=>{
+  if(result&&result.pending&&!result.failed){
+   console.info('La precarga inicial de sonido continúa; se reintenta sin bloquear la entrada.',result);
+   result=await NorseAudio.preloadAll(30000);
+  }
+  audioPreloadResult={...(result||{}),status:result&&result.pending>0?'incomplete':(result&&result.failed>0?'incomplete':'ready')};
+  recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),audioPreloadResult.status==='ready'?'ready':'partial',audioPreloadResult);
+  publishStartupAudioReadiness();
+  console.info('Estado de efectos de sonido:',audioPreloadResult);
+ }).catch(audioError=>{
+  audioPreloadResult={total:0,ready:0,failed:1,pending:0,status:'incomplete',message:String(audioError&&audioError.message||audioError)};
+  recordStartupTask('Efectos de sonido',audioLoadStarted,performance.now(),'partial',{message:audioPreloadResult.message});
+  publishStartupAudioReadiness();
+  console.warn('La precarga de audio continúa no disponible; la escena seguirá operativa:',audioError);
+ });
+ const startupMusicStartedAt=performance.now();
+ startupMusicPreload.then(outcome=>{
+  if(outcome&&outcome.error){
+   const message=String(outcome.error&&outcome.error.message||outcome.error);
+   startupMusicPreloadResult=[
+    {label:'música del menú',ready:false,readyState:0,error:message},
+    {label:'música de partida',ready:false,readyState:0,error:message}
+   ];
+  }else startupMusicPreloadResult=Array.isArray(outcome&&outcome.results)?outcome.results:[];
+  const musicReady=startupMusicPreloadResult.length===2&&startupMusicPreloadResult.every(item=>item&&item.ready&&item.readyState>=2);
+  recordStartupTask('Bandas sonoras streaming',startupMusicStartedAt,performance.now(),musicReady?'ready':'partial',{results:startupMusicPreloadResult,decodedToAudioBuffer:false});
+  publishStartupAudioReadiness();
+ });
+ publishStartupAudioReadiness();
+"""
+    html = html[:audio_gate_start_at] + audio_gate_replacement + html[audio_gate_end_at:]
     startup_gate_marker = " setLoadingProgress(98,'Comprobando que todo está listo…');"
     startup_gate_code = """ const startupResourceSnapshot={
   engineReady:!!(window.BABYLON&&window.BABYLON.Engine),
@@ -2267,6 +2320,43 @@ function updateWildlife(dt){
  if(startupResourceFailures.length)throw new Error('RECURSO OBLIGATORIO: barrera final de carga · '+startupResourceFailures.join(' · '));
  recordStartupTask('Barrera final de recursos',performance.now(),performance.now(),'ready',startupResourceSnapshot);
 """
+    startup_gate_code = startup_gate_code.replace(
+        " const startupResourceSnapshot={",
+        " const audioReadiness=publishStartupAudioReadiness();\n const startupResourceSnapshot={",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  soundEffects:audioPreloadResult,",
+        "  soundEffects:audioReadiness.soundEffects,",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},",
+        "  music:audioReadiness.music,",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}\n };",
+        "  world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile},\n  audioRequiredForEntry:false\n };",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');\n",
+        "",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "  if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');\n",
+        "",
+        1,
+    )
+    startup_gate_code = startup_gate_code.replace(
+        "window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode};",
+        "window.__ELSN_STARTUP_RESOURCE_GATE__={ready:startupResourceFailures.length===0,checkedAt:new Date().toISOString(),resources:startupResourceSnapshot,failures:startupResourceFailures,coastalReferenceMode:!!coastalReferenceMode,startupTimeline:getStartupTimelineSnapshot()};",
+        1,
+    )
+    if "audioRequiredForEntry:false" not in startup_gate_code or "startupTimeline:getStartupTimelineSnapshot()" not in startup_gate_code or "soundEffects:audioReadiness.soundEffects" not in startup_gate_code or "music:audioReadiness.music" not in startup_gate_code:
+        raise SystemExit("No se pudo preparar la telemetría de arranque y el audio no bloqueante.")
     if html.count(startup_gate_marker) != 1:
         raise SystemExit("No se encontró el punto único para la barrera final de recursos.")
     html = html.replace(startup_gate_marker, startup_gate_code+startup_gate_marker, 1)
@@ -2916,7 +3006,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.354-npcbrain6" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -2929,25 +3019,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.353; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.354; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.353\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.354\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.353.")
-    html = html.replace("0.6.274", "0.6.353")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.354.")
+    html = html.replace("0.6.274", "0.6.354")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'62',build:'0.6.353'"
+    diagnostic_build_replacement = "reportVersion:'62',build:'0.6.354'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.353 para normalizar.")
-    game_version = "0.6.353"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.354 para normalizar.")
+    game_version = "0.6.354"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3228,7 +3318,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Static scene meshes stay indexed; moving actors/effects and every later-created mesh
  // are registered as dynamic content so movement, animation and gameplay remain intact.
  // Only known moving roots, animated rigs and live water/effect meshes stay dynamic; static foliage, rocks and structures remain in the octree.
- const spatialActorRootPattern=/^(?:PabloTheNameless|RealHumanVikingRoot|EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villager_\\d+_\\d+|RaiderLongship_\\d+|Drakkar|Wildlife(?:Root)?_?\\d*|Deer(?:Root)?_?\\d*|Wolf(?:Root)?_?\\d*|Stag(?:Root)?_?\\d*|AmbientPerson_?\\d*|AmbientBird_?\\d*)$/i;
+ const spatialActorRootPattern=/^(?:PabloTheNameless|RealHumanVikingRoot|EnemyHumanFallPivot_\d+|VillageGuard\d+_\d+|Villager_\d+_\d+|RaiderLongship_\d+|Drakkar|Wildlife(?:Root)?_?\d*|Deer(?:Root)?_?\d*|Wolf(?:Root)?_?\d*|Stag(?:Root)?_?\d*|AmbientPerson_?\d*|AmbientBird_?\d*)$/i;
  const spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i;
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
@@ -3343,7 +3433,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
   // Meshes born after the index is built cannot be assumed static: constructions,
   // actors, equipment, effects and streamed objects stay in Babylon's dynamic list.
-  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});
+  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,spatialDynamicReasonForMesh(mesh)||'created-after-octree',true);});
  }
  if(scene.onMeshRemovedObservable&&typeof scene.onMeshRemovedObservable.add==='function'){
   scene.onMeshRemovedObservable.add(removeSpatialDynamicMesh);
@@ -3362,17 +3452,75 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Keep Babylon's own overflow/out-of-bounds dynamic entries tracked for safe removal.
    for(const mesh of Array.from(octree.dynamicContent))if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
-    mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason='octree-initial-dynamic';
+    mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic';
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
    const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();
    updateSpatialSelectionCounts();
-   // Babylon's dynamicContent is evaluated by a separate internal path.
-   // Do not wrap octree.select(): that method selects static octree blocks and
-   // is not the per-frame dynamic candidate list in this Babylon build.
-   spatialSelectionStats.dynamicFilterEnabled=false;
+   // Leave Babylon's native SelectionOctree.select() intact. The scene component
+   // uses it to gather static octree blocks plus every dynamicContent mesh. Filter
+   // only safe non-skinned actor meshes through the supported scene provider hook.
+   const installSpatialDynamicCandidateFilter=()=>{
+    const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;
+    if(typeof baseGetActiveMeshCandidates!=='function')return false;
+    scene.getActiveMeshCandidates=()=>{
+     const base=baseGetActiveMeshCandidates.call(scene);
+     if(!base||!Array.isArray(base.data)||!Number.isFinite(base.length)||scene.skipFrustumClipping||
+        !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
+     const startedAt=performance.now();
+     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0;
+     // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
+     // Compact that frame-local result in place: no extra list, no scene mutation,
+     // and no allocation on the render path.
+     for(let index=0;index<base.length;index++){
+      const mesh=base.data[index];
+      if(!mesh)continue;
+      let keep=true;
+      if(spatialDynamicMeshSet.has(mesh)){
+       dynamicCandidates++;
+       if(mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'&&
+          !mesh.alwaysSelectAsActiveMesh&&
+          !(mesh.__elsnSpatialFreshUntilRenderId>=scene.getRenderId())&&
+          !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
+          typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
+        try{
+         mesh.computeWorldMatrix();
+         if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;
+        }catch(_){
+         errors++;
+        }
+       }
+      }
+      if(keep){
+       base.data[writeIndex]=mesh;
+       writeIndex++;
+       if(spatialDynamicMeshSet.has(mesh))selected++;
+      }else{
+       culled++;
+      }
+     }
+     base.length=writeIndex;
+     const duration=Math.max(0,performance.now()-startedAt);
+     spatialSelectionStats.dynamicFilterEnabled=true;
+     spatialSelectionStats.dynamicFilterPasses++;
+     spatialSelectionStats.dynamicFilterLastCandidates=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterLastSelected=selected;
+     spatialSelectionStats.dynamicFilterLastCulled=culled;
+     spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
+     spatialSelectionStats.dynamicFilterTotalCandidates+=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterTotalCulled+=culled;
+     spatialSelectionStats.dynamicFilterTotalMs+=duration;
+     spatialSelectionStats.dynamicFilterLastMs=Number(duration.toFixed(3));
+     spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,duration);
+     spatialSelectionStats.dynamicFilterErrors+=errors;
+     return base;
+    };
+    spatialSelectionStats.dynamicFilterEnabled=true;
+    return true;
+   };
+   spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();
    spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
@@ -3984,7 +4132,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
@@ -3993,8 +4141,28 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 
     # Preserve Babylon's native render-loop cadence: do not cap or pace frames below
     # the display's actual refresh rate. Only measure rendered frames for diagnostics.
+    frame_maintenance_timing_code = r"""let lastPreWorldMaintenanceMs=0;
+const frameMaintenanceTimingStats=Object.create(null);
+function recordFrameMaintenanceTiming(kind,startedAt){
+ const duration=Math.max(0,performance.now()-startedAt);
+ let row=frameMaintenanceTimingStats[kind];
+ if(!row)row=frameMaintenanceTimingStats[kind]={samples:0,lastMs:0,totalMs:0,maxMs:0,samplesMs:new Float32Array(120),cursor:0,count:0};
+ row.samples++;row.lastMs=duration;row.totalMs+=duration;row.maxMs=Math.max(row.maxMs,duration);
+ row.samplesMs[row.cursor]=duration;row.cursor=(row.cursor+1)%row.samplesMs.length;row.count=Math.min(row.samplesMs.length,row.count+1);
+}
+function getFrameMaintenanceTimingSnapshot(){
+ const snapshot={};
+ for(const [kind,row] of Object.entries(frameMaintenanceTimingStats)){
+  const values=Array.from(row.samplesMs).slice(0,row.count).sort((a,b)=>a-b);
+  const at=p=>values.length?Number(values[Math.min(values.length-1,Math.floor((values.length-1)*p))].toFixed(3)):null;
+  snapshot[kind]={samples:row.samples,lastMs:Number(row.lastMs.toFixed(3)),meanMs:Number((row.totalMs/Math.max(1,row.samples)).toFixed(3)),p50Ms:at(.50),p95Ms:at(.95),p99Ms:at(.99),maxMs:Number(row.maxMs.toFixed(3))};
+ }
+ return snapshot;
+}
+"""
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = frame_loop_marker + "\n  updateAmbientGullFlight(now*.001);\n  maintainActiveEnemyVisuals(now);\n  maintainNpcOverlayAnchors(now);"
+    frame_loop_replacement = frame_loop_marker
+    frame_loop_replacement = frame_maintenance_timing_code + "\n" + frame_loop_replacement + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  updateAmbientGullFlight(now*.001);recordFrameMaintenanceTiming('gullFlight',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
@@ -4549,8 +4717,29 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se pudieron instrumentar todas las transiciones de fase del mundo.")
     html = html[:phase_update_start] + phase_update_source + html[phase_update_end:]
 
+    # Split the broad environment/water bucket into its real owners without
+    # changing execution order, cadence, quality or the amount of simulation.
+    environment_phase_replacements = (
+        ("worldUpdateCount++;setWorldUpdatePhase('environment / water');\n  updatePerformanceIslandStreaming(dt);\n  updateActiveIslandGrass(dt);\n  updateManagedWorldShadowCasters();",
+         "worldUpdateCount++;setWorldUpdatePhase('environment / island streaming');\n  updatePerformanceIslandStreaming(dt);\n  setWorldUpdatePhase('environment / grass streaming');\n  updateActiveIslandGrass(dt);\n  setWorldUpdatePhase('environment / shadow caster maintenance');\n  updateManagedWorldShadowCasters();",
+         "separate island streaming, full-density grass and shadow-caster maintenance"),
+        ("habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
+         "setWorldUpdatePhase('environment / settlement integrity');\n  habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
+         "measure settlement integrity audit separately"),
+        ("  if(atmosphereSystem)atmosphereSystem.update(dt);",
+         "  setWorldUpdatePhase('environment / atmosphere');\n  if(atmosphereSystem)atmosphereSystem.update(dt);",
+         "measure atmosphere separately"),
+        ("  animateWater(dt);\n  updateWildlife(dt);",
+         "  setWorldUpdatePhase('environment / water simulation');\n  animateWater(dt);\n  setWorldUpdatePhase('environment / wildlife simulation');\n  updateWildlife(dt);",
+         "separate water simulation from wildlife"),
+    )
+    for old_phase_code, new_phase_code, phase_label in environment_phase_replacements:
+        if html.count(old_phase_code) != 1:
+            raise SystemExit(f"No se encontró exactamente una zona para medir {phase_label}.")
+        html = html.replace(old_phase_code, new_phase_code, 1)
+
     performance_report_marker = "waterVertices:waterPositions.length/3}};"
-    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
+    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),preWorldMaintenance:getFrameMaintenanceTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
     if html.count(performance_report_marker) != 1:
         raise SystemExit("No se encontró el objeto único del informe de rendimiento para añadir métricas por subsistema.")
     html = html.replace(performance_report_marker, performance_report_replacement, 1)
@@ -4561,7 +4750,7 @@ function getWorldPhaseTimingSnapshot(){
     html = html.replace(phase_flush_marker, "  finishWorldPhaseTiming();\n" + phase_flush_marker, 1)
 
     health_phase_marker = "worldUpdateMs:Number(lastWorldUpdateMs.toFixed(2)),renderCpuMs:Number(lastRenderCpuMs.toFixed(2)),"
-    health_phase_replacement = health_phase_marker + "worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,habitableAuditMs:Number(habitableAuditLastMs.toFixed(3)),habitableAuditMaxMs:Number(habitableAuditMaxMs.toFixed(3)),habitableAuditCount,habitableAuditLastCacheHits,habitableAuditLastCacheMisses,"
+    health_phase_replacement = health_phase_marker + "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3)),preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot(),worldPhaseTimings:getWorldPhaseTimingSnapshot(),mapDrawMs:Number(lastMapDrawMs.toFixed(3)),mapDrawMaxMs:Number(mapDrawMaxMs.toFixed(3)),mapDrawSampleCount,habitableAuditMs:Number(habitableAuditLastMs.toFixed(3)),habitableAuditMaxMs:Number(habitableAuditMaxMs.toFixed(3)),habitableAuditCount,habitableAuditLastCacheHits,habitableAuditLastCacheMisses,"
     if html.count(health_phase_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime único para publicar los tiempos de fase y del minimapa.")
     html = html.replace(health_phase_marker, health_phase_replacement, 1)

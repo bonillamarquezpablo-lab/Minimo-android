@@ -35,8 +35,12 @@ for (const marker of [
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
   'function buildSpatialSelectionOctree()',
-  'spatialSelectionStats.dynamicFilterEnabled=false;',
-  'Do not wrap octree.select(): that method selects static octree blocks',
+  'const installSpatialDynamicCandidateFilter=()=>{',
+  'scene.getActiveMeshCandidates=()=>{',
+  'spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',
+  'baseGetActiveMeshCandidates.call(scene)',
+  'mesh.isInFrustum(scene.frustumPlanes)',
+  'scene.skipFrustumClipping',
   'buildSpatialSelectionOctree();',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs',
@@ -70,6 +74,7 @@ assert.ok(source.includes('function update(dt){'), 'The full game world update m
 assert.ok(source.includes('if(!sameIsland&&!grassStreamPromise)') && source.includes('if(sameIsland){grassSameIslandSkipCount++;return;}') && source.includes('grassStreamBuildCount++'), 'Full-island Quality ground cover must only rebuild when the active island changes, not when the player walks across it.');
 assert.ok(builder.includes('qualityGrassDensity'), 'The release must keep its full-density Quality grass field.');
 assert.ok(builder.includes('phase_timing_helpers') && builder.includes('setWorldUpdatePhase(') && builder.includes('getWorldPhaseTimingSnapshot()'), 'The release must time each existing world-update phase.');
+for(const phase of ['environment / island streaming','environment / grass streaming','environment / shadow caster maintenance','environment / settlement integrity','environment / atmosphere','environment / water simulation','environment / wildlife simulation']) assert.ok(builder.includes(phase),'Environment profiling must retain separate measurements: '+phase);
 assert.ok(builder.includes('enemy_ai_lod_marker =') && builder.includes("if(isTouchDevice&&dist>18&&e.state!=='attack'&&e.stun<=0){") && builder.includes('const mobileAiInterval=dist>70?1.0:(dist>36?.45:.20);'), 'Distant touch-device enemies must use distance-based AI cadence while nearby combat remains full-rate.');
 assert.ok(builder.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   builder.includes("alignment:{source:'native-Fly-midpoint'") &&
@@ -84,8 +89,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'62\',build:\'0.6.353\''), 'Release must carry diagnostic report 62.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.353"'), 'Release validator must target version 0.6.353.');
+assert.ok(validator.includes('reportVersion:\'62\',build:\'0.6.354\''), 'Release must carry diagnostic report 62.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.354"'), 'Release validator must target version 0.6.354.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),

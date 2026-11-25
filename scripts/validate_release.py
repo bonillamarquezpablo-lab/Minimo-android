@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.353"
+EXPECTED_VERSION = "0.6.354"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
@@ -195,7 +195,7 @@ def main() -> None:
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.354-npcbrain6" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -443,6 +443,18 @@ def main() -> None:
     missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
     if missing_subsystem_diagnostics:
         fail("El runtime del juego no conecta los diagnósticos de subsistema: " + ", ".join(missing_subsystem_diagnostics))
+    environment_phase_markers = (
+        "setWorldUpdatePhase('environment / island streaming')",
+        "setWorldUpdatePhase('environment / grass streaming')",
+        "setWorldUpdatePhase('environment / shadow caster maintenance')",
+        "setWorldUpdatePhase('environment / settlement integrity')",
+        "setWorldUpdatePhase('environment / atmosphere')",
+        "setWorldUpdatePhase('environment / water simulation')",
+        "setWorldUpdatePhase('environment / wildlife simulation')",
+    )
+    missing_environment_phases = [marker for marker in environment_phase_markers if marker not in index_html]
+    if missing_environment_phases:
+        fail("La fase ambiental debe atribuir por separado streaming, hierba completa, sombras, asentamientos, atmósfera, agua y fauna: " + ", ".join(missing_environment_phases))
 
     recorder_subsystem_markers = (
         "npcDialoguePositioningCpu",
@@ -606,7 +618,11 @@ def main() -> None:
         "scene.onMeshRemovedObservable.add",
         "function buildSpatialSelectionOctree()",
         "buildSpatialSelectionOctree();",
-        "spatialSelectionStats.dynamicFilterEnabled=false;",
+        "const installSpatialDynamicCandidateFilter=()=>{",
+        "scene.getActiveMeshCandidates=()=>{",
+        "spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();",
+        "mesh.isInFrustum(scene.frustumPlanes)",
+        "mesh.alwaysSelectAsActiveMesh",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
@@ -631,7 +647,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'62',build:'0.6.353'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'62',build:'0.6.354'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -752,7 +768,7 @@ def main() -> None:
         fail("El informe de arranque debe marcar la fauna terrestre como obligatoria en ambos perfiles gráficos.")
     if "startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3" not in index_html:
         fail("La barrera final debe comprobar las tres especies terrestres también en Rendimiento.")
-    if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html:
+    if "window.__ELSN_STARTUP_RESOURCE_GATE__" not in index_html or "startupResourceFailures.length" not in index_html or "startupTimeline:getStartupTimelineSnapshot()" not in index_html:
         fail("La entrada requiere una barrera final basada en el estado real de los recursos, no en el porcentaje visual.")
     if "startupResourceSnapshot.world.islands!==13" not in index_html or "startupResourceSnapshot.world.grassClumps<=0" not in index_html:
         fail("La barrera debe validar las 13 islas y la vegetación inicial de Calidad.")
@@ -760,10 +776,20 @@ def main() -> None:
         fail("La barrera de Calidad debe validar los tres animales y las cinco gaviotas.")
     if "sceneReadyTasks=[waitForInitialViewReadiness()]" not in index_html or "scene.whenReadyAsync()" in index_html or "scene.compileMaterialsAsync()" in index_html or "getWaitingItemsCount" not in index_html or "mesh.isReady(true)" not in index_html or "stableReadySamples" not in index_html or "readinessSampleIntervalMs:250" not in index_html or "activeData[index]" not in index_html or "activeData.slice(0,active.length)" in index_html or "sceneReadyTimeout" not in index_html or "RECURSO OBLIGATORIO: escena y shaders" not in index_html or "requestAnimationFrame(()=>requestAnimationFrame(resolve))" not in index_html:
         fail("La escena y los shaders deben estar preparados con un plazo cerrado; un fallo obligatorio debe detener el arranque.")
-    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html or "startupMusicPreload" not in index_html:
-        fail("Los efectos y las dos bandas sonoras deben estar listos antes de entrar; la música debe seguir en streaming.")
-    if "if(audioPreloadResult.pending&&!audioPreloadResult.failed)" not in index_html or "audioPreloadResult=await NorseAudio.preloadAll(30000)" not in index_html:
-        fail("Una precarga de sonido pendiente debe reintentarse en la barrera de entrada; no se permite fallar antes de que el navegador comience a descargar tras la primera interacción.")
+    audio_gate_checks = {
+        "readiness-publisher": "publishStartupAudioReadiness" in index_html,
+        "async-sfx": "startupAudioPreload.then(async result=>" in index_html,
+        "async-music": "startupMusicPreload.then(outcome=>" in index_html,
+        "entry-does-not-require-audio": "audioRequiredForEntry:false" in index_html,
+        "no-awaited-audio-promise": "await startupAudioPreload" not in index_html,
+        "no-audio-fatal-error": "RECURSO OBLIGATORIO: efectos de sonido" not in index_html,
+        "background-retry": "result=await NorseAudio.preloadAll(30000)" in index_html,
+        "global-audio-readiness": "window.__ELSN_AUDIO_READINESS__" in index_html,
+    }
+    if not all(audio_gate_checks.values()):
+        missing_audio_checks = [name for name, passed in audio_gate_checks.items() if not passed]
+        fail("Precarga de audio no bloqueante incompleta; comprobaciones fallidas: " + ", ".join(missing_audio_checks))
+
     if "RECURSO OBLIGATORIO: Vikingo protagonista" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El GLB protagonista no puede sustituirse por un cuerpo provisional para entrar.")
     if "sceneWarmupStatus='completed-with-errors'" not in index_html or "blocking:true,warmupFrames:2" not in index_html:
@@ -1227,8 +1253,8 @@ def main() -> None:
         fail("La hierba completa de Calidad debe mantener las 12 hojas por mata, los lotes y la densidad por superficie originales.")
     if "await createRealGrass(initialGrassIslandIndex,grassStreamCenterX,grassStreamCenterZ);" not in index_html or "recordStartupTask('Hierba 3D inicial'" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("La hierba inicial de Calidad y los GLB de la isla inicial deben estar listos antes de entrar.")
-    if "audioPreloadResult=await startupAudioPreload" not in index_html or "RECURSO OBLIGATORIO: efectos de sonido" not in index_html or "startupAudioPreload.then(" not in index_html:
-        fail("Los efectos de sonido deben terminar antes de entrar; la música continúa en streaming.")
+    if "publishStartupAudioReadiness" not in index_html or "audioRequiredForEntry:false" not in index_html or "await startupAudioPreload" in index_html:
+        fail("Los efectos de sonido deben permanecer disponibles en segundo plano sin formar parte de la barrera de entrada.")
     if "antialias:activeGraphicsProfile!=='performance'" not in index_html or "(isTouchDevice?2048:" not in index_html:
         fail("El perfil de calidad en iPhone debe conservar antialiasing y sombras de alta resolución.")
     if "const leavesPerClump=isPerformanceMode?8:12;" not in index_html or "gm.twoSidedLighting=true;" not in index_html:
@@ -1267,7 +1293,7 @@ def main() -> None:
         fail("Falta la importación GLB con esqueleto de ciervo, venado y lobo.")
     if "const animalCount=idx===0?3:0;" not in index_html:
         fail("Los tres animales terrestres deben estar presentes en ambos perfiles; Rendimiento debe conservar su cadencia y LOD.")
-    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:12" not in index_html or "audioPreloadResult=await startupAudioPreload" not in index_html or "startupAudioPreload.then(" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
+    if "const performanceDensity=isConstrainedMobile?" not in index_html or "leavesPerClump=isPerformanceMode?8:12" not in index_html or "audioRequiredForEntry:false" not in index_html or "await Promise.all([playerHumanLoadPromise,npcStartupPromise])" not in index_html:
         fail("El presupuesto de hierba de Rendimiento y la fauna completa deben conservarse sin alterar el orden de carga.")
     if "const civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive?" not in index_html or "const warmed=await civilianWarmupPromise" not in index_html or "if(!civilianBlob){" not in index_html:
         fail("La preparación de aldeanos debe reutilizar la promesa compartida cuando hay margen y cargarla en serie en móviles sensibles a memoria.")
