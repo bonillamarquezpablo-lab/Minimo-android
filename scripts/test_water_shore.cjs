@@ -207,8 +207,12 @@ assert.match(html,/const faunaTasks=\[\{name:\'Fauna terrestre\',promise:loadWil
 assert.match(html,/faunaTasks\.push\(\{name:\'Gaviotas 3D\',promise:loadRiggedCoastalGulls\(\)\}\)/,"Rigged gull imports must also finish before entry.");
 assert.match(html,/await Promise\.allSettled\(faunaTasks\.map\(task=>task\.promise\)\)/,"No optional wildlife task may remain alive after entry.");
 assert.match(html,/startupAudioPreload\.then\(/,"Sound effects are prepared before entry while music remains streamed.");
-assert.match(html,/audioPreloadResult=await startupAudioPreload/,"Sound effects must be ready before entry.");
-assert.match(html,/RECURSO OBLIGATORIO: efectos de sonido/,"Missing sound effects must fail with a named startup resource.");
+assert.ok(buildSite.includes('startupAudioPreload.then(async result=>{') &&
+  buildSite.includes('publishStartupAudioReadiness()'),
+  "Sound effects must keep loading and publishing their readiness in the background.");
+assert.ok(buildSite.includes('audioRequiredForEntry:false') &&
+  !buildSite.includes('audioPreloadResult=await startupAudioPreload'),
+  "Sound readiness must not hold the world-ready gate.");
 assert.match(html,/recordStartupTask\('Hierba 3D inicial de Calidad'/,"Initial Quality grass build time should be measured.");
 assert.match(html,/Visible Nordic ground cover swapped atomically/,"Grass must swap only after the staged replacement is ready.");
 assert.match(html,/grassMesh\.setEnabled\(!staging\)/,"New grass batches must stay hidden until their atomic activation.");
