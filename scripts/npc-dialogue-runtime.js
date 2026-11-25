@@ -59,8 +59,13 @@ function restoreNearbyNpcVisibility(npc,root){
  restore(root);const real=parts.realHuman;if(real){for(const node of [real.visualBody,real.modelRoot,...(real.roots||[])])restore(node);}else restore(parts.body);
  restore(parts.factionBadge);restore(parts.overlayAnchor);for(const entry of parts.overlayHealthMeshes||[])restore(entry&&entry.mesh);if(recovered)diagnostics.recoveredNearbyRootCount=(diagnostics.recoveredNearbyRootCount||0)+1;return recovered;
 }
+function dialogueEligibleNpc(npc){
+ const parts=npc&&npc.parts||{},name=idOf(npc),role=String(parts.role||"").toLowerCase();
+ const combatant=!!(npc&&(npc.faction==="enemy"||npc.islandInvader===true)||parts.faction==="enemy"||role==="warrior");
+ return !combatant&&(parts.civilian===true||role==="civilian"||/^Villager_\d+_\d+$/.test(name));
+}
 function registeredNpc(npc,s){
- if(!npc||!s||!s.scene||npc.alive===false||npc.recruited===true||npc.parts&&npc.parts.alive===false)return false;
+ if(!dialogueEligibleNpc(npc)||!npc||!s||!s.scene||npc.alive===false||npc.recruited===true||npc.parts&&npc.parts.alive===false)return false;
  const root=rootOf(npc);if(!root||isDisposed(root))return false;try{if(typeof root.getScene==="function"&&root.getScene()!==s.scene)return false;}catch(_){return false;}
  const position=worldPosition(root);if(!position||!s.playerPosition||distance(position,s.playerPosition)>RANGE*1.2)return false;
  const people=Array.isArray(s.people)?s.people:[];for(let i=0;i<people.length;i++){const candidate=people[i];if(!candidate||candidate.alive===false||candidate.recruited===true)continue;if(rootOf(candidate)===root)return true;}return false;
@@ -81,7 +86,7 @@ function nearbyPeople(s){
  if(!s||!s.active||!s.playerPosition||!Number.isFinite(Number(s.playerPosition.x))||!Number.isFinite(Number(s.playerPosition.z))||!Array.isArray(s.people)){diagnostics.nearbyCount=0;return[];}
  const result=[],focus=s.playerPosition;let nearest=Infinity,nearestName=null;
  for(let i=0;i<people.length;i++){
-  const npc=people[i];if(!npc||npc.recruited===true||npc.alive===false||npc.parts&&npc.parts.alive===false)continue;const root=rootOf(npc);
+  const npc=people[i];if(!dialogueEligibleNpc(npc)||npc.recruited===true||npc.alive===false||npc.parts&&npc.parts.alive===false)continue;const root=rootOf(npc);
   if(!root||isDisposed(root)){diagnostics.missingRootCount++;continue;}
   try{if(typeof root.getScene==="function"&&root.getScene()!==s.scene){diagnostics.invalidSceneRootCount++;continue;}}catch(_){diagnostics.invalidSceneRootCount++;continue;}
   const position=worldPosition(root);if(!position){diagnostics.missingRootCount++;continue;}diagnostics.resolvedPeopleCount++;
@@ -98,7 +103,7 @@ function pairMemory(a,b){const key=pairKey(a,b);let value=relationships.get(key)
 function rememberPair(pair,topic){if(!pair)return;pair.exchanges++;pair.rapport=Math.min(5,pair.rapport+0.65);if(topic){pair.recentTopics.push(topic);if(pair.recentTopics.length>4)pair.recentTopics.shift();}saveSocialMemory();}
 function slotFor(id){const activeSlots=slots.slice(0,bubbleLimit());return activeSlots.find(s=>s.current&&s.current.id===id)||activeSlots.find(s=>!s.current);}
 function startBubble(npc,content,now,duration){
- const id=idOf(npc);if(!id||!content||!content.text)return false;
+ const id=idOf(npc);if(!dialogueEligibleNpc(npc)||!id||!content||!content.text)return false;
  const slot=slotFor(id);if(!slot)return false;
  const kind=["thought","speech","action"].includes(content.kind)?content.kind:"speech";
  slot.current={id,npc,kind,expiresAt:now+(duration||BUBBLE_DURATION_MS)};
@@ -127,7 +132,7 @@ function expire(now){for(const slot of slots)if(slot.current&&slot.current.expir
 function villageOf(npc){const direct=Number(npc&&npc.villageIndex);if(Number.isFinite(direct))return direct;const nested=Number(npc&&npc.parts&&npc.parts.villageIndex);if(Number.isFinite(nested))return nested;const name=String(npc&&npc.parts&&npc.parts.name||npc&&npc.name||"");const match=/^(?:Villager_|VillageGuard)(\d+)_/.exec(name);if(match)return Number(match[1]);return -1;}
 function partnerFor(item,nearby){let best=null,bestDistance=7.5;for(const candidate of nearby){if(candidate.id===item.id||villageOf(candidate.npc)!==villageOf(item.npc))continue;if(slots.some(slot=>slot.current&&slot.current.id===candidate.id))continue;const d=distance(item.position,candidate.position);if(d<bestDistance){best=candidate;bestDistance=d;}}return best;}
 function queueReply(npc,content,dueAt){pending.push({npc,content,dueAt});if(pending.length>4)pending.shift();}
-function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,BUBBLE_DURATION_MS);break;}}
+function processPending(now,ids){for(let i=0;i<pending.length;){const entry=pending[i];if(entry.dueAt>now){i++;continue;}pending.splice(i,1);if(!dialogueEligibleNpc(entry.npc)||!ids.has(idOf(entry.npc)))continue;startBubble(entry.npc,entry.content,now,BUBBLE_DURATION_MS);break;}}
 function remember(state,content){if(!content)return;if(content.topic){state.recentTopics.push(content.topic);if(state.recentTopics.length>3)state.recentTopics.shift();}if(content.text){state.recentTexts.push(content.text);if(state.recentTexts.length>5)state.recentTexts.shift();}}
 function schedule(now,nearby,s){
  const world=s&&s.world||{};

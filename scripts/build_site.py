@@ -875,8 +875,19 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+    # 0.6.355: only live combat entities may own damage authority.
+    combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
+    combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
+    if html.count(combat_damage_marker) != 1:
+        raise SystemExit("No se encontró la validación única de entidades de combate.")
+    html = html.replace(combat_damage_marker, combat_damage_replacement, 1)
+    enemy_ai_alive_marker = "if(!e.alive||e.recruited)continue;"
+    enemy_ai_alive_replacement = "if(!e.alive||e.parts&&e.parts.alive===false||e.recruited)continue;"
+    if html.count(enemy_ai_alive_marker) != 1:
+        raise SystemExit("No se encontró el filtro único de enemigos vivos.")
+    html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.354: unify all humanoid overlays under one measured anchor.
+    # 0.6.355: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -965,7 +976,7 @@ def main() -> None:
     html = html.replace(warrior_mesh_visibility_marker,warrior_mesh_visibility_replacement,1)
 
     warrior_attach_marker = "parts.realHuman={roots,meshes,groups,walk,run,idle,attack,current:null,rig,rest,sword,modelRoot,visualBody,isRaiderCrew,weaponSocketNode,role,manualGaitAvailable:!!(rig.leftUpperLeg&&rig.rightUpperLeg),manualGaitReady:!!(rig.leftUpperLeg&&rig.rightUpperLeg&&rig.leftLowerLeg&&rig.rightLowerLeg),modelForwardOffset:NPC_HUMAN_FORWARD_OFFSET,shadowCasterMeshes,shadowCasterActive:true,phaseOffset:index*1.37};"
-    warrior_attach_replacement = warrior_attach_marker + "visualBody.setEnabled(true);modelRoot.setEnabled(true);parts.root.setEnabled(true);roots.forEach(root=>{try{root.setEnabled(true);}catch(_){}});meshes.forEach(mesh=>{try{mesh.setEnabled(true);}catch(_){}mesh.isVisible=true;mesh.visibility=1;});"
+    warrior_attach_replacement = warrior_attach_marker.replace("phaseOffset:index*1.37};", "phaseOffset:index*1.37,visualBodyLocalPosition:visualBody.position.clone(),modelRootLocalPosition:modelRoot.position.clone()};") + "visualBody.setEnabled(true);modelRoot.setEnabled(true);parts.root.setEnabled(true);roots.forEach(root=>{try{root.setEnabled(true);}catch(_){}});meshes.forEach(mesh=>{try{mesh.setEnabled(true);}catch(_){}mesh.isVisible=true;mesh.visibility=1;});"
     if html.count(warrior_attach_marker) != 1:
         raise SystemExit("No se encontró la asignación única del rig humano NPC.")
     html = html.replace(warrior_attach_marker,warrior_attach_replacement,1)
@@ -2960,10 +2971,10 @@ function updateWildlife(dt){
        if(!node||seen.has(node))continue;
        seen.add(node);
        const name=String(node.name||'');
-       const match=/^(?:Villager_(\d+)_(\d+)|VillageGuard(\d+)_(\d+))$/.exec(name);
+       const match=/^Villager_(\d+)_(\d+)$/.exec(name);
        if(!match)continue;
-       const villageIndex=Number(match[1]!==undefined?match[1]:match[3]);
-       const slot=Number(match[2]!==undefined?match[2]:match[4]);
+       const villageIndex=Number(match[1]);
+       const slot=Number(match[2]);
        const descendants=[];
        try{if(typeof node.getChildTransformNodes==='function')descendants.push(...node.getChildTransformNodes(false));}catch(_){}
        try{if(typeof node.getChildMeshes==='function')descendants.push(...node.getChildMeshes(false));}catch(_){}
@@ -2979,7 +2990,7 @@ function updateWildlife(dt){
         }
        }
        const ambientActor=dialogueAmbientByRoot&&dialogueAmbientByRoot.get(node)||null;
-       const actualParts=ambientActor&&ambientActor.parts?ambientActor.parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:match[1]!==undefined,role:match[1]!==undefined?'civilian':'warrior'};
+       const actualParts=ambientActor&&ambientActor.parts?ambientActor.parts:{name,root:node,head,variant:villageIndex*2+slot,civilian:true,role:'civilian'};
        if(actualParts&&!actualParts.head&&head)actualParts.head=head;
        found.push({name,root:node,villageIndex,parts:actualParts,actor:ambientActor,recruited:ambientActor?ambientActor.recruited===true:false});
       }
@@ -3006,7 +3017,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.354-npcbrain6" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.355-npcbrain7" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -3019,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.354; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.355; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.354\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.355\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.354.")
-    html = html.replace("0.6.274", "0.6.354")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.355.")
+    html = html.replace("0.6.274", "0.6.355")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'62',build:'0.6.354'"
+    diagnostic_build_replacement = "reportVersion:'63',build:'0.6.355'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.354 para normalizar.")
-    game_version = "0.6.354"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.355 para normalizar.")
+    game_version = "0.6.355"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4605,33 +4616,56 @@ function getFrameMaintenanceTimingSnapshot(){
   }
  });
  let enemyVisualRecoveryAt=0;
- window.__ELSN_ENEMY_VISUAL_REPAIR__={lastAt:0,scanned:0,repaired:0,fallbackBodies:0,nearbyHostiles:0};
+ window.__ELSN_ENEMY_VISUAL_REPAIR__={lastAt:0,scanned:0,repaired:0,fallbackBodies:0,nearbyHostiles:0,rootDetachRepairs:0,visualParentRepairs:0,importedRootRepairs:0,lastRepairActor:""};
  function maintainActiveEnemyVisuals(nowMs){
   if(!gameStarted||nowMs-enemyVisualRecoveryAt<350)return;
   enemyVisualRecoveryAt=nowMs;
   const diagnostics=window.__ELSN_ENEMY_VISUAL_REPAIR__,focus=player.root&&player.root.position;
-  let scanned=0,repaired=0,fallbackBodies=0,nearbyHostiles=0;if(!focus)return;
+  let scanned=0,repaired=0,fallbackBodies=0,nearbyHostiles=0,rootDetachRepairs=0,visualParentRepairs=0,importedRootRepairs=0,lastRepairActor="";if(!focus)return;
   for(const actor of enemies||[]){
    const parts=actor&&actor.parts,root=parts&&parts.root;
    if(!parts||!root||root.isDisposed?.()||actor.alive===false||parts.alive===false||actor.recruited===true||actor.surrendered===true||parts.recruited===true||parts.surrendered===true||actor.faction==='player'||parts.faction==='player')continue;
-   scanned++;let position=root.position;try{if(root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){}
+   scanned++;
+   const mountedShipCrew=!!parts.vesselMount||Number.isInteger(actor.crewShipIndex);
+   if(root.parent&&(actor.islandInvader===true||!mountedShipCrew)){
+    try{
+     root.computeWorldMatrix(true);
+     const worldMatrix=root.getWorldMatrix().clone(),worldScale=B.Vector3.One(),worldRotation=B.Quaternion.Identity(),worldPosition=B.Vector3.Zero();
+     if(worldMatrix.decompose(worldScale,worldRotation,worldPosition)){
+      root.parent=null;root.scaling.copyFrom(worldScale);root.rotationQuaternion=null;root.rotation.copyFrom(worldRotation.toEulerAngles());root.position.copyFrom(worldPosition);root.computeWorldMatrix(true);
+      rootDetachRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");
+     }
+    }catch(_){}
+   }
+   let position=root.position;try{if(root.getAbsolutePosition)position=root.getAbsolutePosition();}catch(_){}
    const dx=position.x-focus.x,dz=position.z-focus.z;if(dx*dx+dz*dz>72*72)continue;nearbyHostiles++;
    if(typeof root.isEnabled==='function'&&!root.isEnabled()){root.setEnabled(true);repaired++;}
    const real=parts.realHuman||null;
    if(real){
-    for(const node of [real.visualBody,real.modelRoot,...(real.roots||[])]){if(!node||node.isDisposed?.())continue;if(typeof node.isEnabled==='function'&&!node.isEnabled()){node.setEnabled(true);repaired++;}}
+    const visualBody=real.visualBody||null,modelRoot=real.modelRoot||null,bodyBase=real.visualBodyLocalPosition||null,modelBase=real.modelRootLocalPosition||null;
+    if(visualBody&&!visualBody.isDisposed?.()){
+     if(visualBody.parent!==root){visualBody.parent=root;if(bodyBase)visualBody.position.copyFrom(bodyBase);else visualBody.position.set(0,.90,0);visualParentRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");}
+     else if(bodyBase&&(Math.abs(visualBody.position.x-bodyBase.x)>.35||Math.abs(visualBody.position.y-bodyBase.y)>.55||Math.abs(visualBody.position.z-bodyBase.z)>.35)){visualBody.position.copyFrom(bodyBase);visualParentRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");}
+    }
+    if(modelRoot&&visualBody&&!modelRoot.isDisposed?.()){
+     if(modelRoot.parent!==visualBody){modelRoot.parent=visualBody;if(modelBase)modelRoot.position.copyFrom(modelBase);else modelRoot.position.set(0,-.90,0);visualParentRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");}
+     else if(modelBase&&(Math.abs(modelRoot.position.x-modelBase.x)>.35||Math.abs(modelRoot.position.y-modelBase.y)>.65||Math.abs(modelRoot.position.z-modelBase.z)>.35)){modelRoot.position.copyFrom(modelBase);visualParentRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");}
+    }
+    for(const importedRoot of real.roots||[]){if(!importedRoot||importedRoot.isDisposed?.()||!modelRoot||importedRoot===visualBody||importedRoot===modelRoot)continue;if(importedRoot.parent!==modelRoot){importedRoot.parent=modelRoot;importedRootRepairs++;repaired++;lastRepairActor=String(parts.name||root.name||"");}}
+    for(const node of [visualBody,modelRoot,...(real.roots||[])]){if(!node||node.isDisposed?.())continue;if(typeof node.setEnabled==='function'&&!node.isEnabled()){node.setEnabled(true);repaired++;}}
     const meshes=Array.isArray(real.meshes)?real.meshes:[];let visibleCount=0;
     for(const mesh of meshes){if(!mesh||mesh.isDisposed?.())continue;if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled?.()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){mesh.isVisible=true;mesh.visibility=1;repaired++;}if((!mesh.isEnabled||mesh.isEnabled())&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01)visibleCount++;}
     const fallback=parts.proceduralFallbackBody;
     if(fallback&&!fallback.isDisposed?.()){const useFallback=visibleCount===0;if(typeof fallback.setEnabled==='function'&&fallback.isEnabled()!==useFallback)fallback.setEnabled(useFallback);if(useFallback)fallbackBodies++;}
    }else if(parts.body&&!parts.body.isDisposed?.()){
+    if(parts.body.parent!==root){parts.body.parent=root;repaired++;lastRepairActor=String(parts.name||root.name||"");}
     if(typeof parts.body.setEnabled==='function'&&!parts.body.isEnabled()){parts.body.setEnabled(true);repaired++;}
     const meshes=parts.body.getChildMeshes?parts.body.getChildMeshes(false):[];
     for(const mesh of meshes){if(!mesh||mesh.isDisposed?.())continue;if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled?.()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){mesh.isVisible=true;mesh.visibility=1;repaired++;}}
    }
    if(parts.factionBadge&&typeof parts.factionBadge.setEnabled==='function'&&!parts.factionBadge.isEnabled?.())parts.factionBadge.setEnabled(true);
   }
-  diagnostics.lastAt=nowMs;diagnostics.scanned=scanned;diagnostics.repaired=repaired;diagnostics.fallbackBodies=fallbackBodies;diagnostics.nearbyHostiles=nearbyHostiles;
+  diagnostics.lastAt=nowMs;diagnostics.scanned=scanned;diagnostics.repaired=repaired;diagnostics.fallbackBodies=fallbackBodies;diagnostics.nearbyHostiles=nearbyHostiles;diagnostics.rootDetachRepairs=rootDetachRepairs;diagnostics.visualParentRepairs=visualParentRepairs;diagnostics.importedRootRepairs=importedRootRepairs;diagnostics.lastRepairActor=lastRepairActor;
  }
  window.getGameWorldInspectionSnapshot=(options={})=>{
   if(!window.ELSNWorldInspection||typeof window.ELSNWorldInspection.capture!=='function'){
