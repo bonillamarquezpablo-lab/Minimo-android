@@ -17,13 +17,17 @@ EXPECTED_VERSION = "0.6.353"
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
     "RealCastawayStickBranch",
-    "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();",\n    "RealCastawayStickShaft',club,[0,.68,0]",\n    "function ensureNpcOverlayAnchor(parts,force=false){",\n    "parts.overlayHealthMeshes=[",\n    "maintainNpcOverlayAnchors(now);",,
+    "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();",
+    "capsule('RealCastawayStickShaft',club,[0,.68,0],1.34,.078,M.woodLight,[.025,0,.015]);",
+    "function ensureNpcOverlayAnchor(parts,force=false){",
+    "parts.overlayHealthMeshes=[",
+    "maintainNpcOverlayAnchors(now);",
     "function updateAmbientGullFlight(nowSeconds){",
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
-    "const holderParent=realPlayerModelPivot;",
-    "realWeaponHolder.parent=realPlayerModelPivot;",
+    "const holderParent=socket||realPlayerModelPivot;",
+    "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now*.001);",
     "b.root.position.x=Math.cos(a)*radius-36;",
@@ -191,7 +195,7 @@ def main() -> None:
     dialogue_style_source = read_text("scripts/npc-dialogue.css")
     for marker in (
         '<link rel="stylesheet" href="./scripts/npc-dialogue.css">',
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.352-npcbrain4" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
         "window.__ELSN_GAME_DIALOGUE_BRIDGE__",
@@ -213,10 +217,10 @@ def main() -> None:
         fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
         fail("Los diálogos deben reutilizar la identidad y profesión reales del aldeano, no inventar variantes.")
-    for marker in ("slot.mesh.parent=root", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
+    for marker in ("slot.mesh.parent=overlayAnchor", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "fullLocalBounds": "for(let corner=0;corner<8;corner++)" in index_html and "B.Vector3.TransformCoordinates(worldPoint,inverse)" in index_html, "nearbyInvisibleActorRecovery": "function recoverNpcActorVisuals(parts)" in index_html and "lastVisualRecoveryMeshes" in index_html, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
     for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=overlayAnchor", "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)", "restoreNearbyNpcVisibility", "Core.selectVisibleBubbles(nearby.map"):
@@ -901,7 +905,7 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=realPlayerModelPivot;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
         fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
@@ -1019,7 +1023,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I · 0.6.352" not in index_html or "EL SIN NOMBRE 0.6.352 frame error" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'62',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1171,7 +1175,7 @@ def main() -> None:
         fail("El campamento inicial sigue en la franja de rompiente.")
     if "guard.parts.realHuman?.role ? .972 : .995" not in index_html:
         fail("Los guardias del drakkar no ajustan la altura según el rig GLB.")
-    if "<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · 0.6.352</title>" not in index_html:
+    if f"<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · {EXPECTED_VERSION}</title>" not in index_html:
         fail("El título de la página no coincide con la versión publicada.")
     if "IslandGarrisonStoneFoot_" not in index_html or "IslandGarrisonSupplyCrate_" not in index_html or "outpostRoot" not in index_html:
         fail("Las nueve guarniciones exteriores deben conservar su base de piedra y caja de suministros.")

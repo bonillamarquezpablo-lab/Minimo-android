@@ -927,17 +927,18 @@ def main() -> None:
     weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
     if html.count(weapon_parent_marker) != 1:
         raise SystemExit("No se encontró la asignación única del anclaje del arma.")
-    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=realPlayerModelPivot;", 1)
+    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=socket||realPlayerModelPivot;", 1)
     weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
-    html = html.replace(weapon_sync_parent_marker, "const holderParent=realPlayerModelPivot;", 1)
+    html = html.replace(weapon_sync_parent_marker, "const holderParent=socket||realPlayerModelPivot;", 1)
     weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\n    const inverseParent=holderParent.getWorldMatrix().clone();"
     weapon_grip_guard_replacement = """    const pivotPosition=realPlayerModelPivot.getAbsolutePosition();
     if(!gripWorld||!Number.isFinite(gripWorld.x)||B.Vector3.Distance(gripWorld,pivotPosition)<.25||B.Vector3.Distance(gripWorld,pivotPosition)>2.25){
      gripWorld=pivotPosition.add(modelRight.scale(.29)).add(worldUp.scale(.92)).add(modelForward.scale(.06));
      stickAxis=forwardCarryAxis.clone();
     }
+    if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;
     holderParent.computeWorldMatrix(true);
     const inverseParent=holderParent.getWorldMatrix().clone();"""
     if html.count(weapon_grip_guard_marker) != 1:
@@ -2915,7 +2916,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.352-npcbrain4" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.353-npcbrain5" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -2928,11 +2929,11 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.352; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.353; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.352\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.353\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.352.")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.353.")
     html = html.replace("0.6.274", "0.6.353")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
@@ -2945,7 +2946,7 @@ function updateWildlife(dt){
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.352 para normalizar.")
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.353 para normalizar.")
     game_version = "0.6.353"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
@@ -3404,9 +3405,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  }
 
 """
-    const npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
-    const npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
- const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:""};
+    npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
+    npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
+ const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:"",zeroVisibleActors:0,recoveredActors:0,recoveredMeshes:0};
  function ensureNpcOverlayAnchor(parts,force=false){
   const root=parts&&parts.root;if(!root||root.isDisposed?.()){npcOverlayAnchorStats.invalid++;return null;}
   try{
@@ -3416,20 +3417,84 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    else if(anchor.parent!==root){anchor.parent=root;npcOverlayAnchorStats.repaired++;}
    const real=parts.realHuman||null,visual=real&&(real.visualBody||real.modelRoot)||parts.body||null;
    if(force||anchor.__elsnVisualRef!==visual||!anchor.__elsnMeasuredAt){
-    let top=-Infinity,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
+    let localTopY=-Infinity,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
     if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")meshes=visual.getChildMeshes(false);
-    for(let i=0;i<meshes.length;i++){const m=meshes[i];if(!m||m.isDisposed?.())continue;try{m.computeWorldMatrix?.(true);const y=m.getBoundingInfo?.()?.boundingBox?.maximumWorld?.y;if(Number.isFinite(y))top=Math.max(top,y);}catch(_){}}
-    let h=1.92;try{root.computeWorldMatrix?.(true);const base=root.getAbsolutePosition?.();if(Number.isFinite(top)&&base&&Number.isFinite(base.y))h=(top-base.y)/Math.max(.1,Math.abs(Number(root.scaling&&root.scaling.y)||1));}catch(_){}
+    try{
+     root.computeWorldMatrix?.(true);
+     const inverse=root.getWorldMatrix().clone();inverse.invert();
+     for(let i=0;i<meshes.length;i++){
+      const m=meshes[i];if(!m||m.isDisposed?.())continue;
+      try{
+       m.computeWorldMatrix?.(true);
+       const bounds=m.getBoundingInfo?.()?.boundingBox;
+       const min=bounds&&bounds.minimum,max=bounds&&bounds.maximum;
+       if(!min||!max)continue;
+       const meshWorld=m.getWorldMatrix();
+       for(let corner=0;corner<8;corner++){
+        const point=new B.Vector3(corner&1?max.x:min.x,corner&2?max.y:min.y,corner&4?max.z:min.z);
+        const worldPoint=B.Vector3.TransformCoordinates(point,meshWorld);
+        const rootPoint=B.Vector3.TransformCoordinates(worldPoint,inverse);
+        if(Number.isFinite(rootPoint.y))localTopY=Math.max(localTopY,rootPoint.y);
+       }
+      }catch(_){}
+     }
+    }catch(_){npcOverlayAnchorStats.transformFallbacks=(npcOverlayAnchorStats.transformFallbacks||0)+1;}
+    let h=Number.isFinite(localTopY)?localTopY:1.92;
     if(!Number.isFinite(h)||h<1.35||h>2.8){h=1.92;npcOverlayAnchorStats.measurementFallbacks++;}
-    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));
+    h=Math.max(1.55,Math.min(2.5,h));anchor.position.set(0,h,0);anchor.__elsnVisualRef=visual;anchor.__elsnMeasuredAt=performance.now();npcOverlayAnchorStats.measurements++;npcOverlayAnchorStats.lastMeasuredHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastAnchorLocalHeight=Number(h.toFixed(3));npcOverlayAnchorStats.lastBoundsLocalHeight=Number.isFinite(localTopY)?Number(localTopY.toFixed(3)):null;
    }
-   if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()&&parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;parts.factionBadge.position.set(0,.34,0);npcOverlayAnchorStats.badgeReattachments++;}
+   if(parts.factionBadge&&!parts.factionBadge.isDisposed?.()){if(parts.factionBadge.parent!==anchor){parts.factionBadge.parent=anchor;npcOverlayAnchorStats.badgeReattachments++;}parts.factionBadge.position.set(0,.34,0);}
    const overlays=Array.isArray(parts.overlayHealthMeshes)?parts.overlayHealthMeshes:[];
-   for(let i=0;i<overlays.length;i++){const e=overlays[i],m=e&&e.mesh;if(!m||m.isDisposed?.())continue;if(m.parent!==anchor){m.parent=anchor;npcOverlayAnchorStats.healthReattachments++;}m.position.set(0,Number(e.y)||0,Number(e.z)||0);}
+   for(let i=0;i<overlays.length;i++){const e=overlays[i],m=e&&e.mesh;if(!m||m.isDisposed?.())continue;if(typeof m.getScene==="function"&&m.getScene()!==scene){npcOverlayAnchorStats.invalid++;continue;}if(m.parent!==anchor){m.parent=anchor;npcOverlayAnchorStats.healthReattachments++;}m.position.set(0,Number.isFinite(Number(e.y))?Number(e.y):0,Number.isFinite(Number(e.z))?Number(e.z):0);}
    parts.overlayAnchor=anchor;npcOverlayAnchorActors.add(parts);return anchor;
   }catch(e){npcOverlayAnchorStats.lastError=String(e&&e.message||e).slice(0,180);return null;}
  }
- function maintainNpcOverlayAnchors(nowMs){if(!gameStarted)return;const now=performance.now();if(now-(npcOverlayAnchorStats.lastSweepAt||0)<500)return;npcOverlayAnchorStats.lastSweepAt=now;let count=0;for(const p of npcOverlayAnchorActors){const r=p&&p.root;if(!r||r.isDisposed?.()){npcOverlayAnchorActors.delete(p);continue;}if(p.alive===false||p.recruited===true)continue;ensureNpcOverlayAnchor(p);count++;}npcOverlayAnchorStats.lastSweepCount=count;}
+ function recoverNpcActorVisuals(parts){
+  const real=parts&&parts.realHuman;if(!real)return{visible:0,repaired:0};
+  let meshes=Array.isArray(real.meshes)?real.meshes:[],visual=real.visualBody||real.modelRoot||parts.body||null;
+  if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")try{meshes=visual.getChildMeshes(false);}catch(_){}
+  const isVisible=mesh=>!!mesh&&!mesh.isDisposed?.()&&(typeof mesh.isEnabled!=="function"||mesh.isEnabled())&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.001;
+  let visible=0;for(const mesh of meshes)if(isVisible(mesh))visible++;
+  if(visible>0){const fallback=parts.proceduralFallbackBody;if(fallback&&!fallback.isDisposed?.()&&typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);return{visible,repaired:0};}
+  npcOverlayAnchorStats.zeroVisibleActors++;
+  let repaired=0;
+  for(const node of [real.visualBody,real.modelRoot,...(Array.isArray(real.roots)?real.roots:[])]){
+   if(!node||node.isDisposed?.())continue;
+   try{if(typeof node.setEnabled==="function"&&!node.isEnabled()){node.setEnabled(true);repaired++;}}catch(_){}
+  }
+  for(const mesh of meshes){
+   if(!mesh||mesh.isDisposed?.())continue;
+   try{if(typeof mesh.setEnabled==="function"&&!mesh.isEnabled()){mesh.setEnabled(true);repaired++;}if(mesh.isVisible===false||Number(mesh.visibility??1)<=.001){mesh.isVisible=true;mesh.visibility=1;repaired++;}}catch(_){}
+  }
+  visible=0;for(const mesh of meshes)if(isVisible(mesh))visible++;
+  const fallback=parts.proceduralFallbackBody;
+  if(visible===0&&fallback&&!fallback.isDisposed?.()){
+   try{if(typeof fallback.setEnabled==="function"&&!fallback.isEnabled()){fallback.setEnabled(true);repaired++;}}catch(_){}
+  }else if(visible>0&&fallback&&!fallback.isDisposed?.()){
+   try{if(typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);}catch(_){}
+  }
+  if(repaired>0)npcOverlayAnchorStats.recoveredActors++;
+  npcOverlayAnchorStats.recoveredMeshes+=repaired;
+  return{visible,repaired};
+ }
+ function maintainNpcOverlayAnchors(nowMs){
+  if(!gameStarted)return;const now=performance.now();if(now-(npcOverlayAnchorStats.lastSweepAt||0)<500)return;npcOverlayAnchorStats.lastSweepAt=now;
+  let count=0,recoveredActors=0,recoveredMeshes=0,zeroVisible=0;
+  const focus=player&&player.root&&player.root.position?player.root.position:null;
+  for(const p of npcOverlayAnchorActors){
+   const r=p&&p.root;if(!r||r.isDisposed?.()){npcOverlayAnchorActors.delete(p);continue;}
+   if(p.alive===false||p.recruited===true||p.surrendered===true)continue;
+   if(focus){
+    let position=null;try{position=r.getAbsolutePosition?.()||r.position||null;}catch(_){}
+    if(position){const dx=position.x-focus.x,dz=position.z-focus.z;if(dx*dx+dz*dz<=5184){
+     try{if(typeof r.setEnabled==="function"&&!r.isEnabled())r.setEnabled(true);}catch(_){}
+     const repair=recoverNpcActorVisuals(p);if(repair.visible===0)zeroVisible++;if(repair.repaired>0){recoveredActors++;recoveredMeshes+=repair.repaired;}
+    }}
+   }
+   ensureNpcOverlayAnchor(p);count++;
+  }
+  npcOverlayAnchorStats.lastSweepCount=count;npcOverlayAnchorStats.lastVisualRecoveryActors=recoveredActors;npcOverlayAnchorStats.lastVisualRecoveryMeshes=recoveredMeshes;npcOverlayAnchorStats.lastZeroVisibleActors=zeroVisible;
+ }
  window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__=p=>ensureNpcOverlayAnchor(p);
  window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__=()=>({...npcOverlayAnchorStats,registeredActors:npcOverlayAnchorActors.size});
 """

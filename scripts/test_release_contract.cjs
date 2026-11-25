@@ -58,7 +58,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.352","The release validator must target the packaged 0.6.352 release.");
+assert.equal(expectedVersion,"0.6.353","The release validator must target the packaged 0.6.353 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -88,7 +88,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   !buildSite.includes("Seagull_Flight_Loop_") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
   "The gull must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.");
-assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=realPlayerModelPivot;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to player space.");
+assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=socket||realPlayerModelPivot;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to player space.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
@@ -97,7 +97,7 @@ assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyR
 assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSource.includes("imageConfig.contrast = 1.10") &&
   !atmosphereSource.includes("this.scene.imageProcessingConfiguration.exposure = lighting.exposure"),
   "Dusk must not rewrite shared image-processing settings on every visual update.");
-assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
+assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=socket||realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=socket||realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
   'The equipped club must stay under the moving player model hierarchy rather than a detached world-space anchor.');
 assert.ok(indexHtml.includes('function hideFactionBadge(parts)') && indexHtml.includes('hideFactionBadge(e.parts)') && indexHtml.includes('hideFactionBadge(fallen.parts)'),
   'Faction markers and health overlays must be cleaned when a guard dies or its corpse is retired.');
@@ -159,7 +159,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.352")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.352.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.353")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.353.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -244,7 +244,7 @@ new (require('node:vm').Script)(unifiedRecorder,{filename:'scripts/game-session-
 
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.352" && buildSite.includes('html = html.replace("0.6.274", "0.6.352")'), "The correction package must be release 0.6.352.");
+assert.ok(expectedVersion==="0.6.353" && buildSite.includes('html = html.replace("0.6.274", "0.6.353")'), "The correction package must be release 0.6.353.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now*.001);'), "The flock must be updated by the actual engine render-loop callback on every frame.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
 assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.353-npcbrain5") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.353-npcbrain5"), "The new shell cache must not reuse the previous NPC brain module entry.");

@@ -206,7 +206,7 @@ assert.ok(builder.includes("fps_title_replacement = fps_title_marker") && builde
 assert.ok(dialogueRuntime.includes('slot.texture.vScale=1;slot.texture.vOffset=0;') &&
   dialogueRuntime.includes('slot.texture.update(true);slot.lastUploadInvertY=true;'),
   'NPC world-dialogue canvas uploads must flip the top-origin canvas for upright text on Babylon planes.');
-assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('2.48+slot.index*.42'),
+assert.ok(dialogueRuntime.includes('width:2.12,height:1.06') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('(overlayAnchor===root?2.48:.66)+slot.index*.42') && dialogueRuntime.includes('slot.mesh.parent=overlayAnchor'),
   'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
   dialogueRuntime.includes('{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
@@ -216,8 +216,8 @@ const weaponAnchorStart=source.indexOf('function syncRealWeaponAnchor(');
 const weaponAnchorEnd=source.indexOf('function updateRealWeaponPose(',weaponAnchorStart);
 const weaponAnchorSource=source.slice(weaponAnchorStart,weaponAnchorEnd);
 assert.ok(weaponAnchorStart>=0&&weaponAnchorEnd>weaponAnchorStart,'The real weapon anchor implementation must remain present.');
-assert.ok(builder.includes('weapon_parent_marker')&&builder.includes('realWeaponHolder.parent=realPlayerModelPivot;')&&builder.includes('weapon_sync_parent_marker')&&builder.includes('const holderParent=realPlayerModelPivot;'),'All weapons must be generated under the player-model hierarchy while the live hand is sampled only for its world-space grip point.');
-assert.ok(builder.includes('weapon_grip_guard_marker')&&builder.includes('B.Vector3.Distance(gripWorld,pivotPosition)>2.25'),'The grip must be range-checked and recalibrated if the skeleton socket produces a bad world-space position.');
+assert.ok(builder.includes('weapon_parent_marker')&&builder.includes('realWeaponHolder.parent=socket||realPlayerModelPivot;')&&builder.includes('weapon_sync_parent_marker')&&builder.includes('const holderParent=socket||realPlayerModelPivot;')&&builder.includes('if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;'),'The weapon must use the animated hand socket for both its actual parent and local-space grip calculations, with the player pivot only as fallback.');
+assert.ok(builder.includes('weapon_grip_guard_marker')&&builder.includes('B.Vector3.Distance(gripWorld,pivotPosition)>2.25')&&builder.includes('if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;'),'The grip must be range-checked and recalibrated if the skeleton socket produces a bad world-space position.');
 assert.ok(source.includes("e.parts.alive=false;")&&source.includes("guard.parts.alive=true;"),'Dead and reset guards must synchronize their renderable actor lifecycle state.');
 assert.ok(source.includes("setFactionBadge(guard.parts,'friendly');"),'A recruited guard must switch its faction indicator to friendly.');
 assert.ok(source.includes('hideFactionBadge(parts);crewman.landed=false;crewman.invaderRef=null;parts.faction=\'enemy\';'),'Crew returned to a ship must not retain a detached enemy marker.');
