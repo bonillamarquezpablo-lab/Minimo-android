@@ -95,6 +95,16 @@ assert.ok(builder.includes('sparkDx*sparkDx+sparkDz*sparkDz>140*140') &&
   builder.includes('smokeDx*smokeDx+smokeDz*smokeDz>180*180'),
   'Distant embers and smoke must be culled outside the local visual field while nearby effects remain intact.');
 
+for(const phase of [
+  'environment / island streaming',
+  'environment / grass streaming',
+  'environment / shadow caster maintenance',
+  'environment / settlement integrity',
+  'environment / atmosphere',
+  'environment / water simulation',
+  'environment / wildlife simulation'
+]) assert.ok(builder.includes(phase), 'Environment profiling must split the measured water/world hotspot: '+phase);
+
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 
