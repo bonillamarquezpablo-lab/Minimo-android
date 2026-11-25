@@ -783,7 +783,7 @@ async function main() {
         return {
           beforeTicks,render,
           birds:after.map((bird,index)=>{
-            const before=birds[index],a=before?.position,b=bird?.position;
+            const before=birds[index],a=before?.worldPosition,b=bird?.worldPosition;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
               beforeWorldPosition:a||null,afterWorldPosition:b||null,worldMatrixFrozen:bird?.worldMatrixFrozen??null,
