@@ -55,6 +55,10 @@ for(const marker of [
   'meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs'
 ]) assert.ok(builder.includes(marker),'Missing dynamic-safe spatial selection guard: '+marker);
 
+assert.ok(builder.includes(String.raw\`EnemyHumanFallPivot_\d+|VillageGuard\d+_\d+|Villager_\d+_\d+|RaiderLongship_\d+\`),
+  'Numeric NPC, guard and ship root names must be classified with working regular expressions.');
+assert.ok(builder.includes('base.data[writeIndex]=mesh') && builder.includes('base.length=writeIndex'),
+  'The candidate filter must compact Babylon’s frame-local selection array in place without allocating another array.');
 const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{');
 const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
 assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
