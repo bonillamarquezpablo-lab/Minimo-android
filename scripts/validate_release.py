@@ -30,7 +30,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null,worldMatrixUnfreezes:0,worldMatrixRefreshes:0,worldMotionSamples:0};",
     "updateAmbientGullFlight(now*.001);",
-    "b.root.position.x=Math.cos(a)*radius-36;",
+    "b.root.position.set(Math.cos(a)*radius-36,",
     "function prepareGullWorldNodes(root){",
     "node.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixUnfreezes++;",
     "root.markAsDirty?.('position');root.computeWorldMatrix(true);gullFlightRenderState.worldMatrixRefreshes++;",
