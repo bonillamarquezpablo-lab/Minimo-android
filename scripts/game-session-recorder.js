@@ -445,6 +445,7 @@
       lastWorldUpdateFailure: text(health.lastWorldUpdateFailure, 220),
       cpu: {
         preWorldMaintenanceMs: number(runtime.preWorldMaintenanceMs),
+        preWorldMaintenanceTimings: runtime.preWorldMaintenanceTimings && typeof runtime.preWorldMaintenanceTimings === "object" ? runtime.preWorldMaintenanceTimings : null,
         worldUpdateMs: number(runtime.worldUpdateMs),
         renderCpuMs: number(runtime.renderCpuMs)
       },
@@ -971,6 +972,9 @@
     const medianP95 = median(p95);
     const phaseLabel = phase => {
       const key = String(phase || "").toLowerCase().replace(/[_\\s]+/g, "-");
+      if (/gullflight/.test(key)) return "Vuelo de gaviotas";
+      if (/enemyvisualrecovery/.test(key)) return "Recuperación visual de enemigos";
+      if (/npcoverlaymaintenance/.test(key)) return "Anclajes y recuperación visual de NPC";
       if (/npc|dialog|actor|villager|character|ai/.test(key)) return "Personajes e inteligencia";
       if (/path|nav|movement|locomotion/.test(key)) return "Movimiento y navegación";
       if (/phys|collision/.test(key)) return "Físicas y colisiones";
@@ -984,17 +988,35 @@
       if (/terrain|island|ground|world/.test(key)) return "Terreno y mundo";
       return "Otras tareas del mundo";
     };
-    const phaseCosts = Object.entries(latestPhaseSample?.subsystems?.worldPhaseTimings || {})
+    const worldPhaseCosts = Object.entries(latestPhaseSample?.subsystems?.worldPhaseTimings || {})
       .map(([phase, timing]) => ({
         id: phase,
         label: phaseLabel(phase),
+        source: "Fase del mundo",
         samples: number(timing && timing.samples),
         lastMs: number(timing && timing.lastMs),
         meanMs: number(timing && timing.meanMs),
         p95Ms: number(timing && timing.p95Ms),
         p99Ms: number(timing && timing.p99Ms),
         maxMs: number(timing && timing.maxMs)
-      }))
+      }));
+    const latestMaintenanceSample = samples.slice().reverse().find(sample =>
+      sample && sample.cpu && sample.cpu.preWorldMaintenanceTimings &&
+      typeof sample.cpu.preWorldMaintenanceTimings === "object");
+    const maintenancePhaseCosts = Object.entries(latestMaintenanceSample?.cpu?.preWorldMaintenanceTimings || {})
+      .filter(([phase]) => phase !== "total")
+      .map(([phase, timing]) => ({
+        id: "maintenance:" + phase,
+        label: phaseLabel(phase),
+        source: "Mantenimiento previo al mundo",
+        samples: number(timing && timing.samples),
+        lastMs: number(timing && timing.lastMs),
+        meanMs: number(timing && timing.meanMs),
+        p95Ms: number(timing && timing.p95Ms),
+        p99Ms: number(timing && timing.p99Ms),
+        maxMs: number(timing && timing.maxMs)
+      }));
+    const phaseCosts = [...worldPhaseCosts, ...maintenancePhaseCosts]
       .filter(item => item.meanMs !== null || item.lastMs !== null || item.maxMs !== null)
       .sort((a, b) => (b.meanMs || b.maxMs || 0) - (a.meanMs || a.maxMs || 0));
     const gpuProfilerEnabled = samples.some(sample => sample.gpu && sample.gpu.timerQueryStatus === "supported" && sample.gpu.frameMs !== null);
