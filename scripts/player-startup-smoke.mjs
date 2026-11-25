@@ -752,6 +752,10 @@ async function main() {
       'El palo debe ocupar volumen visible real en el mundo, no solo tener mallas marcadas como visibles: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.playerClub.worldBounds.distanceToPlayer<2.5,
       'El palo debe permanecer anclado cerca de la mano del jugador, no perdido fuera de la escena: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.handNode &&
+      Number.isFinite(visualActorsBefore.playerClub.worldBounds.distanceToHand) &&
+      visualActorsBefore.playerClub.worldBounds.distanceToHand<1.75,
+      'El palo debe quedar junto a la mano derecha real del protagonista: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
