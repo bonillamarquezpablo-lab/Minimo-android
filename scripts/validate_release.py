@@ -34,7 +34,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);",
     "const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
-    "b.root.getDescendants(false)",
+    "b.root.getChildMeshes(false)",
     "b.flightTransformNodes=descendants.filter(node=>node&&typeof node.computeWorldMatrix==='function')",
     "for(const node of b.flightTransformNodes)node.computeWorldMatrix(true);",
     "worldPosition:world?{x:world.x,y:world.y,z:world.z}:null",
