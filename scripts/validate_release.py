@@ -221,7 +221,7 @@ def main() -> None:
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
     enemy_entity_contract = {
-        "civilian_only_dialogue_bridge": r"const match=/^Villager_(\\d+)_(\\d+)$/.exec(name);" in index_html,
+        "civilian_only_dialogue_bridge": r"const match=/^Villager_(\d+)_(\d+)$/.exec(name);" in index_html,
         "combatants_rejected_by_dialogue": "function dialogueEligibleNpc(npc)" in dialogue_runtime_source and 'parts.faction==="enemy"' in dialogue_runtime_source and 'role==="warrior"' in dialogue_runtime_source,
         "combat_root_world_detach": "rootDetachRepairs" in index_html and "worldMatrix.decompose(worldScale,worldRotation,worldPosition)" in index_html,
         "visual_body_reparent": "visualBody.parent!==root" in index_html and "visualBodyLocalPosition:visualBody.position.clone()" in index_html,
