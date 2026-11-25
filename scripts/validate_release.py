@@ -443,6 +443,18 @@ def main() -> None:
     missing_subsystem_diagnostics = [marker for marker in subsystem_diagnostic_markers if marker not in index_html]
     if missing_subsystem_diagnostics:
         fail("El runtime del juego no conecta los diagnósticos de subsistema: " + ", ".join(missing_subsystem_diagnostics))
+    environment_phase_markers = (
+        "setWorldUpdatePhase('environment / island streaming')",
+        "setWorldUpdatePhase('environment / grass streaming')",
+        "setWorldUpdatePhase('environment / shadow caster maintenance')",
+        "setWorldUpdatePhase('environment / settlement integrity')",
+        "setWorldUpdatePhase('environment / atmosphere')",
+        "setWorldUpdatePhase('environment / water simulation')",
+        "setWorldUpdatePhase('environment / wildlife simulation')",
+    )
+    missing_environment_phases = [marker for marker in environment_phase_markers if marker not in index_html]
+    if missing_environment_phases:
+        fail("La fase ambiental debe atribuir por separado streaming, hierba completa, sombras, asentamientos, atmósfera, agua y fauna: " + ", ".join(missing_environment_phases))
 
     recorder_subsystem_markers = (
         "npcDialoguePositioningCpu",
