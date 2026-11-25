@@ -89,8 +89,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'64\',build:\'0.6.356\''), 'Release must carry diagnostic report 64.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.356"'), 'Release validator must target version 0.6.356.');
+assert.ok(validator.includes('reportVersion:\'64\',build:\'0.6.357\''), 'Release must carry diagnostic report 64.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.357"'), 'Release validator must target version 0.6.357.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -226,7 +226,7 @@ assert.ok(builder.includes('function updateAmbientGullFlight(nowSeconds){') && b
 assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.includes('visibleMeshCount') && builder.includes('flightPlaying') && builder.includes('leftWingPose') && builder.includes('hostiles'), 'The release must expose read-only visual proof for the club, home warriors, hostile bodies and gull wing motion.');
 assert.ok(builder.includes('function maintainActiveEnemyVisuals(nowMs){')&&builder.includes('maintainActiveEnemyVisuals(now);')&&builder.includes('proceduralFallbackBody')&&builder.includes('nearbyHostiles'), 'Every active hostile near the player must recover its visible 3D body independently of health bars, emblems and AI.');
 assert.ok(builder.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add')&&builder.includes('lastMotionAt')&&builder.includes('state.fallback=true'), 'A stalled native gull wing track must trigger articulated fallback flap motion without replacing the native clip.');
-assert.ok(builder.includes("b.root.unfreezeWorldMatrix()") && builder.includes("b.root.computeWorldMatrix(true)") && builder.includes("flightLastStepMeters"), 'Gull root transforms must be actively refreshed and stalled motion measured on every render frame.');
+assert.ok(builder.includes("node.unfreezeWorldMatrix()") && builder.includes("b.root.computeWorldMatrix(true)") && builder.includes("flightLastStepMeters"), 'Gull root transforms must be actively refreshed and stalled motion measured on every render frame.');
 assert.ok(builder.includes("worldPosition:world?{x:world.x,y:world.y,z:world.z}:null") &&
   builder.includes("frozenDescendantCount:nodes.filter(node=>node&&node._isWorldMatrixFrozen).length"),
   'Gull diagnostics must distinguish actor-local motion from the imported visual-root world motion.');
