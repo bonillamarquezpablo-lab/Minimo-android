@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.356: only live combat entities may own damage authority.
+    # 0.6.357: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.356: unify all humanoid overlays under one measured anchor.
+    # 0.6.357: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -938,11 +938,11 @@ def main() -> None:
     weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
     if html.count(weapon_parent_marker) != 1:
         raise SystemExit("No se encontró la asignación única del anclaje del arma.")
-    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=socket||realPlayerModelPivot;", 1)
+    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=realPlayerModelPivot||socket;", 1)
     weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
-    html = html.replace(weapon_sync_parent_marker, "const holderParent=socket||realPlayerModelPivot;", 1)
+    html = html.replace(weapon_sync_parent_marker, "const holderParent=realPlayerModelPivot||socket;", 1)
     weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\n    const inverseParent=holderParent.getWorldMatrix().clone();"
     weapon_grip_guard_replacement = """    const pivotPosition=realPlayerModelPivot.getAbsolutePosition();
     if(!gripWorld||!Number.isFinite(gripWorld.x)||B.Vector3.Distance(gripWorld,pivotPosition)<.25||B.Vector3.Distance(gripWorld,pivotPosition)>2.25){
@@ -1873,7 +1873,7 @@ function setLoadingProgress(value,label){
     html = html.replace(gull_legacy_animation_marker,gull_legacy_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
+    gull_rig_replacement = gull_rig_marker + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}let recoveredFrozenNodes=0;for(const node of rigNodes){try{if(node&&node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function'){node.unfreezeWorldMatrix();recoveredFrozenNodes++;}if(node&&typeof node.markAsDirty==='function')node.markAsDirty('position');if(node&&typeof node.computeWorldMatrix==='function')node.computeWorldMatrix(true);}catch(_){}}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,roots,rigNodes,recoveredFrozenNodes,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -3017,7 +3017,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.357-npcbrain7" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.356; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.357; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.356\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.357\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.356.")
-    html = html.replace("0.6.274", "0.6.356")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.357.")
+    html = html.replace("0.6.274", "0.6.357")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'64',build:'0.6.356'"
+    diagnostic_build_replacement = "reportVersion:'64',build:'0.6.357'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.356 para normalizar.")
-    game_version = "0.6.356"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.357 para normalizar.")
+    game_version = "0.6.357"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4548,7 +4548,7 @@ function getFrameMaintenanceTimingSnapshot(){
     # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
  // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
- const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};
+ const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,stalledVisualBirds:0,lastTimestamp:null,lastError:null};
  function updateAmbientGullFlight(nowSeconds){
   const birds=ambientBirds;
   if(!Number.isFinite(nowSeconds)||!Array.isArray(birds)||!birds.length)return;
@@ -4558,7 +4558,10 @@ function getFrameMaintenanceTimingSnapshot(){
   for(const b of birds){
    try{
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
-    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}
+    const flightRig=b.flightRig||null,rigNodes=flightRig&&Array.isArray(flightRig.rigNodes)?flightRig.rigNodes:[];
+    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);
+    const transformNodes=[b.root,flightRig&&flightRig.visualRoot,...rigNodes];
+    for(const node of transformNodes){if(!node||node.isDisposed?.())continue;if(node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function'){node.unfreezeWorldMatrix();if(typeof node.markAsDirty==='function')node.markAsDirty('position');gullFlightRenderState.worldMatrixRecoveries++;}}
     if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
     const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
     const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
@@ -4572,9 +4575,15 @@ function getFrameMaintenanceTimingSnapshot(){
     b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
     if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
     b.root.computeWorldMatrix(true);
+    if(flightRig&&flightRig.visualRoot){if(typeof flightRig.visualRoot.markAsDirty==='function')flightRig.visualRoot.markAsDirty('position');flightRig.visualRoot.computeWorldMatrix(true);}
+    if(flightRig&&Array.isArray(flightRig.roots))for(const importedRoot of flightRig.roots){if(importedRoot&&!importedRoot.isDisposed?.()){if(typeof importedRoot.markAsDirty==='function')importedRoot.markAsDirty('position');importedRoot.computeWorldMatrix(true);}}
     const previous=b.flightLastPosition;
     if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
     b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
+    const visibleRoot=flightRig&&flightRig.visualRoot||b.root,visualWorldPosition=typeof visibleRoot.getAbsolutePosition==='function'?visibleRoot.getAbsolutePosition():b.root.position;
+    const previousVisual=b.flightLastVisualPosition;
+    if(previousVisual){const vx=visualWorldPosition.x-previousVisual.x,vy=visualWorldPosition.y-previousVisual.y,vz=visualWorldPosition.z-previousVisual.z;b.flightLastVisualStepMeters=Math.sqrt(vx*vx+vy*vy+vz*vz);if(b.flightLastVisualStepMeters<.0001)gullFlightRenderState.stalledVisualBirds++;}
+    b.flightLastVisualPosition={x:visualWorldPosition.x,y:visualWorldPosition.y,z:visualWorldPosition.z};
     if(b.procedural&&b.left&&b.right){
      b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
      b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;
