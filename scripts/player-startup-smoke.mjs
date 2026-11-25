@@ -753,7 +753,8 @@ async function main() {
     assert.ok(closeHostiles.every(actor=>actor.rootEnabled&&actor.bodyEnabled&&actor.visibleMeshCount>0),'Hay un enemigo cercano con HUD/IA pero sin cuerpo 3D visible: '+JSON.stringify(closeHostiles));
     assert.equal(visualActorsBefore.gulls.length,5,'Calidad debe cargar las cinco gaviotas 3D: '+JSON.stringify(visualActorsBefore.gulls));
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
-    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
+    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.worldPosition?Math.round(bird.worldPosition.x*10)+':'+Math.round(bird.worldPosition.z*10):'missing'));
+    assert.ok(visualActorsBefore.gulls.every(bird=>bird.worldPosition&&!bird.worldMatrixFrozen),'Hay una gaviota sin transformada mundial válida o con matriz congelada: '+JSON.stringify(visualActorsBefore.gulls));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
     const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
     const gullFlightWaitStartedAt=performance.now();
@@ -768,11 +769,11 @@ async function main() {
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.position,b=bird?.position;
+          const before=birds[index],a=before?.worldPosition,b=bird?.worldPosition;
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&Number(bird?.flightWorldMotionTicks)>Number(before?.flightWorldMotionTicks)&&bird?.worldMatrixFrozen!==true&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
         });
       },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
@@ -785,8 +786,8 @@ async function main() {
             const before=birds[index],a=before?.position,b=bird?.position;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
-              beforePosition:a||null,afterPosition:b||null,
-              beforeFlightTicks:Number(before?.flightUpdateTicks)||0,
+              beforeWorldPosition:a||null,afterWorldPosition:b||null,worldMatrixFrozen:bird?.worldMatrixFrozen??null,
+              beforeFlightTicks:Number(before?.flightUpdateTicks)||0,beforeWorldMotionTicks:Number(before?.flightWorldMotionTicks)||0,afterWorldMotionTicks:Number(bird?.flightWorldMotionTicks)||0,
               afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
               beforeFlightElapsed:Number(before?.flightElapsed)||0,
               afterFlightElapsed:Number(bird?.flightElapsed)||0,
@@ -807,10 +808,10 @@ async function main() {
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.worldPosition,afterPosition=after?.worldPosition;
       const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
-      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(after?.worldMatrixFrozen!==true&&Number(after?.flightWorldMotionTicks)>Number(before?.flightWorldMotionTicks)&&displacement>.15,'La gaviota '+index+' no se desplazó en coordenadas mundiales durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {
