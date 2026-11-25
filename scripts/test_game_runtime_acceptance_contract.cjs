@@ -91,7 +91,12 @@ for (const marker of [
   "context.setOffline(true)",
   "manifest.offlineReload.worldReady = true",
   "modelReady",
-  "fallbackVisible"
+  "fallbackVisible",
+  "visualMeshWorldPosition",
+  "renderedDisplacement",
+  "assertClubMounted",
+  "holderGripDistanceMeters",
+  "meshCenterGripDistanceMeters"
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
