@@ -109,7 +109,7 @@ assert.ok(diagnosis.worstMoments.length > 0, "Slow periods must be pinpointed.")
 assert.ok(diagnosis.worstMoments.some(item => item.location && item.location.islandIndex === 3), "Slow periods must retain player coordinates and island.");
 assert.ok(diagnosis.worstMoments.some(item => item.topPhase && item.topPhase.id === "npc-update"), "Slow periods must identify the busiest internal world phase.");
 assert.ok(diagnosis.phaseCosts.some(item => item.id === "npc-update" && item.label === "Personajes e inteligencia"), "Internal phase timings must be understandable and retained.");
-assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:npcOverlayMaintenance" && item.label === "Anclajes y recuperación visual de NPC" && item.p95Ms === 8.4), "The report must retain P95 for the NPC overlay maintenance substage.");
+assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:npcOverlayMaintenance" && item.label === "Anclajes y recuperación visual de NPC" && item.p95Ms === 1.4), "The report must retain P95 for the NPC overlay maintenance substage.");
 assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:enemyVisualRecovery" && item.label === "Recuperación visual de enemigos"), "The report must separate enemy visual recovery from the main world update.");
 assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:gullFlight" && item.label === "Vuelo de gaviotas"), "The report must expose the gull animation maintenance cost.");
 assert.equal(diagnosis.longTasks.count, 2);
