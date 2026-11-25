@@ -3464,55 +3464,44 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // only safe non-skinned actor meshes through the supported scene provider hook.
    const installSpatialDynamicCandidateFilter=()=>{
     const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;
-    if(typeof baseGetActiveMeshCandidates!=='function'||typeof B.SmartArrayNoDuplicate!=='function')return false;
-    const candidateScratch=new B.SmartArrayNoDuplicate(Math.max(512,octree.dynamicContent.length));
-    const cullableDynamicReason=reason=>reason==='actor-or-vehicle';
+    if(typeof baseGetActiveMeshCandidates!=='function')return false;
     scene.getActiveMeshCandidates=()=>{
      const base=baseGetActiveMeshCandidates.call(scene);
-     if(!base||!base.data||!Number.isFinite(base.length)||scene.skipFrustumClipping||
+     if(!base||!Array.isArray(base.data)||!Number.isFinite(base.length)||scene.skipFrustumClipping||
         !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
      const startedAt=performance.now();
-     let dynamicCandidates=0,selected=0,culled=0,errors=0;
-     candidateScratch.reset();
-     try{
-      for(let index=0;index<base.length;index++){
-       const mesh=base.data[index];
-       if(!mesh)continue;
-       if(!spatialDynamicMeshSet.has(mesh)){
-        candidateScratch.pushNoDuplicate(mesh);
-        continue;
-       }
+     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0;
+     // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
+     // Compact that frame-local result in place: no extra list, no scene mutation,
+     // and no allocation on the render path.
+     for(let index=0;index<base.length;index++){
+      const mesh=base.data[index];
+      if(!mesh)continue;
+      let keep=true;
+      if(spatialDynamicMeshSet.has(mesh)){
        dynamicCandidates++;
-       const reason=String(mesh.__elsnSpatialDynamicReason||'');
-       // Rigs, billboards, particles, foliage, water, fresh imports and explicitly
-       // pinned meshes are retained. Unknown categories always fail open.
-       if(!cullableDynamicReason(reason)||mesh.alwaysSelectAsActiveMesh||
-          mesh.__elsnSpatialFreshUntilRenderId>=scene.getRenderId()||
-          mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||
-          typeof mesh.computeWorldMatrix!=='function'||typeof mesh.isInFrustum!=='function'){
-        candidateScratch.pushNoDuplicate(mesh);
-        selected++;
-        continue;
-       }
-       try{
-        mesh.computeWorldMatrix();
-        if(mesh.isInFrustum(scene.frustumPlanes)){
-         candidateScratch.pushNoDuplicate(mesh);
-         selected++;
-        }else{
-         culled++;
+       if(mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'&&
+          !mesh.alwaysSelectAsActiveMesh&&
+          !(mesh.__elsnSpatialFreshUntilRenderId>=scene.getRenderId())&&
+          !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
+          typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
+        try{
+         mesh.computeWorldMatrix();
+         if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;
+        }catch(_){
+         errors++;
         }
-       }catch(_){
-        errors++;
-        candidateScratch.pushNoDuplicate(mesh);
-        selected++;
        }
       }
-     }catch(error){
-      spatialSelectionStats.dynamicFilterErrors++;
-      candidateScratch.reset();
-      return base;
+      if(keep){
+       base.data[writeIndex]=mesh;
+       writeIndex++;
+       if(spatialDynamicMeshSet.has(mesh))selected++;
+      }else{
+       culled++;
+      }
      }
+     base.length=writeIndex;
      const duration=Math.max(0,performance.now()-startedAt);
      spatialSelectionStats.dynamicFilterEnabled=true;
      spatialSelectionStats.dynamicFilterPasses++;
@@ -3526,7 +3515,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      spatialSelectionStats.dynamicFilterLastMs=Number(duration.toFixed(3));
      spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,duration);
      spatialSelectionStats.dynamicFilterErrors+=errors;
-     return candidateScratch;
+     return base;
     };
     spatialSelectionStats.dynamicFilterEnabled=true;
     return true;
