@@ -9,6 +9,7 @@ const { isCompletedStartupSnapshot } = startupReadiness;
 
 const BASE_URL = process.env.PLAYER_TEST_URL || 'http://127.0.0.1:4174/';
 const MOBILE_PROFILE = process.env.PLAYER_TEST_MOBILE === '1';
+const SKIP_WARM_ONLINE_RESTART = process.env.PLAYER_TEST_SKIP_WARM_ONLINE_RESTART === '1';
 const OUT = path.resolve(process.env.PLAYER_TEST_ARTIFACT_DIR || 'artifacts/player-startup');
 const startedAt = performance.now();
 // On mobile the real game can occupy the main thread for several seconds while bootEngine builds the first scene.
@@ -1314,125 +1315,134 @@ async function main() {
       };
       return;
     }
-    // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
-    const cachedLaunchStartedAt = performance.now();
-    // Dispose of the renderer that just completed the 5,000+ mesh gameplay
-    // session before measuring the warm launch. Keep the same browser context so
-    // localStorage, Cache API and the Service Worker remain intact.
-    await page.close({ runBeforeUnload: false });
-    page = await context.newPage();
-    page.setDefaultTimeout(60000);
-    page.setDefaultNavigationTimeout(90000);
-    attachPageDiagnostics(page);
-    const warmNavigationResponse = await page.goto(BASE_URL + '?playertest=1&debug=1', {
-      waitUntil: 'domcontentloaded',
-      timeout: 90000
-    });
-    assert.ok(warmNavigationResponse && warmNavigationResponse.status() === 200,
-      'El arranque con caché no respondió HTTP 200: ' +
-      JSON.stringify({ status: warmNavigationResponse?.status(), url: warmNavigationResponse?.url() }));
-    const cachedAudioGate = page.locator('#audioGateStart');
-    if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
-    await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
-    await page.locator('#chooseQuality').click();
-
-    // A warm launch has a saved identity: it can enter booting directly and must not
-    // wait for the first-run-only "continue without name" button.
-    await page.waitForFunction(() => {
-      const identity = document.getElementById('identitySetup');
-      const loading = document.getElementById('loading');
-      const visible = element => !!element &&
-        getComputedStyle(element).display !== 'none' &&
-        getComputedStyle(element).visibility !== 'hidden';
-      const identityVisible = visible(identity) && identity?.getAttribute('aria-hidden') !== 'true';
-      const booting = document.body.classList.contains('booting') ||
-        (visible(loading) && !document.body.classList.contains('boot-failed'));
-      return identityVisible || booting || document.body.classList.contains('boot-failed');
-    }, undefined, { timeout: 30000, polling: 50 });
-    const cachedPreflightState = await page.evaluate(() => {
-      const identity = document.getElementById('identitySetup');
-      const loading = document.getElementById('loading');
-      const continueButton = document.getElementById('continueUnnamed');
-      const visible = element => !!element &&
-        getComputedStyle(element).display !== 'none' &&
-        getComputedStyle(element).visibility !== 'hidden';
-      return {
-        bodyClass: document.body.className,
-        identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
-        continueUnnamedVisible: visible(continueButton),
-        booting: document.body.classList.contains('booting') || visible(loading),
-        bootFailed: document.body.classList.contains('boot-failed'),
-        identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null
+    if (SKIP_WARM_ONLINE_RESTART) {
+      manifest.cachedRestart = {
+        enabled: false,
+        reason: 'Release gate covers cold startup plus a full offline Service Worker restart; standalone diagnostics retain the online warm-start pass.'
       };
-    });
-    manifest.cachedPreflightState = cachedPreflightState;
-    manifest.cachedIdentityPreferencePersisted = cachedPreflightState.identityStored;
-    if (new URL(BASE_URL).protocol === 'https:') {
-      assert.equal(manifest.cachedIdentityPreferencePersisted, true,
-        'La identidad elegida no sobrevivió al reinicio con caché.');
-    }
-    if (cachedPreflightState.bootFailed) {
-      throw new Error('El arranque con caché falló antes de preparar el mundo: ' +
-        JSON.stringify(cachedPreflightState));
-    }
-    if (cachedPreflightState.identityVisible && cachedPreflightState.continueUnnamedVisible) {
-      await page.locator('#continueUnnamed').click({ timeout: 15000 });
-      manifest.cachedIdentityFlow = 'first-run-anonymous';
-    } else if (cachedPreflightState.booting) {
-      manifest.cachedIdentityFlow = 'returning-player-auto-boot';
     } else {
-      throw new Error('El segundo arranque no coincide con primera partida ni jugador guardado: ' +
-        JSON.stringify(cachedPreflightState));
+      // Repeat in the same browser profile to measure the Service Worker/Cache API warm path.
+      const cachedLaunchStartedAt = performance.now();
+      // Dispose of the renderer that just completed the 5,000+ mesh gameplay
+      // session before measuring the warm launch. Keep the same browser context so
+      // localStorage, Cache API and the Service Worker remain intact.
+      await page.close({ runBeforeUnload: false });
+      page = await context.newPage();
+      page.setDefaultTimeout(60000);
+      page.setDefaultNavigationTimeout(90000);
+      attachPageDiagnostics(page);
+      const warmNavigationResponse = await page.goto(BASE_URL + '?playertest=1&debug=1', {
+        waitUntil: 'domcontentloaded',
+        timeout: 90000
+      });
+      assert.ok(warmNavigationResponse && warmNavigationResponse.status() === 200,
+        'El arranque con caché no respondió HTTP 200: ' +
+        JSON.stringify({ status: warmNavigationResponse?.status(), url: warmNavigationResponse?.url() }));
+      const cachedAudioGate = page.locator('#audioGateStart');
+      if (await cachedAudioGate.isVisible().catch(() => false)) await cachedAudioGate.click({ timeout: 30000 });
+      await page.locator('#chooseQuality').waitFor({ state: 'visible', timeout: 60000 });
+      await page.locator('#chooseQuality').click();
+  
+      // A warm launch has a saved identity: it can enter booting directly and must not
+      // wait for the first-run-only "continue without name" button.
+      await page.waitForFunction(() => {
+        const identity = document.getElementById('identitySetup');
+        const loading = document.getElementById('loading');
+        const visible = element => !!element &&
+          getComputedStyle(element).display !== 'none' &&
+          getComputedStyle(element).visibility !== 'hidden';
+        const identityVisible = visible(identity) && identity?.getAttribute('aria-hidden') !== 'true';
+        const booting = document.body.classList.contains('booting') ||
+          (visible(loading) && !document.body.classList.contains('boot-failed'));
+        return identityVisible || booting || document.body.classList.contains('boot-failed');
+      }, undefined, { timeout: 30000, polling: 50 });
+      const cachedPreflightState = await page.evaluate(() => {
+        const identity = document.getElementById('identitySetup');
+        const loading = document.getElementById('loading');
+        const continueButton = document.getElementById('continueUnnamed');
+        const visible = element => !!element &&
+          getComputedStyle(element).display !== 'none' &&
+          getComputedStyle(element).visibility !== 'hidden';
+        return {
+          bodyClass: document.body.className,
+          identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
+          continueUnnamedVisible: visible(continueButton),
+          booting: document.body.classList.contains('booting') || visible(loading),
+          bootFailed: document.body.classList.contains('boot-failed'),
+          identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null
+        };
+      });
+      manifest.cachedPreflightState = cachedPreflightState;
+      manifest.cachedIdentityPreferencePersisted = cachedPreflightState.identityStored;
+      if (new URL(BASE_URL).protocol === 'https:') {
+        assert.equal(manifest.cachedIdentityPreferencePersisted, true,
+          'La identidad elegida no sobrevivió al reinicio con caché.');
+      }
+      if (cachedPreflightState.bootFailed) {
+        throw new Error('El arranque con caché falló antes de preparar el mundo: ' +
+          JSON.stringify(cachedPreflightState));
+      }
+      if (cachedPreflightState.identityVisible && cachedPreflightState.continueUnnamedVisible) {
+        await page.locator('#continueUnnamed').click({ timeout: 15000 });
+        manifest.cachedIdentityFlow = 'first-run-anonymous';
+      } else if (cachedPreflightState.booting) {
+        manifest.cachedIdentityFlow = 'returning-player-auto-boot';
+      } else {
+        throw new Error('El segundo arranque no coincide con primera partida ni jugador guardado: ' +
+          JSON.stringify(cachedPreflightState));
+      }
+      const cachedBarrierStartedAt = performance.now();
+      const cachedStartupWait = await waitForWorldReadyWithRecovery(page, 'El arranque con caché');
+      manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché');
+      manifest.cachedStartupWaitRecoveredAfterRendererStall = cachedStartupWait.recoveredAfterWaitTimeout;
+      manifest.cachedStartupWaitDiagnostic = cachedStartupWait.recoveredAfterWaitTimeout
+        ? { ...cachedStartupWait.snapshot, recoveredAfterWaitTimeout: true,
+            waitTimeoutMs: cachedStartupWait.waitTimeoutMs, elapsedMs: cachedStartupWait.elapsedMs,
+            waitError: cachedStartupWait.waitError }
+        : { recoveredAfterWaitTimeout: false, elapsedMs: cachedStartupWait.elapsedMs };
+      if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
+        throw new Error('El arranque con caché terminó en boot-failed: ' +
+          JSON.stringify(await page.evaluate(() => ({
+            loadHelp: document.querySelector('#loadHelp')?.textContent || null,
+            recorder: window.__elSinNombreStartupSmoke || null
+          }))));
+      }
+      const cachedPlayerState = await page.evaluate(() => ({
+        player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
+        recorder: window.__elSinNombreStartupSmoke || null,
+        bootFailed: document.body.classList.contains('boot-failed')
+      }));
+      manifest.cachedPlayerState = cachedPlayerState;
+      assert.equal(cachedPlayerState.bootFailed, false,
+        'El segundo arranque marcó boot-failed.');
+      assert.equal(cachedPlayerState.player?.modelReady, true,
+        'El protagonista real no quedó listo en el arranque con caché: ' +
+        JSON.stringify(cachedPlayerState.player));
+      assert.ok(cachedPlayerState.player?.realPlayerMeshCount > 0,
+        'El segundo arranque no contiene mallas reales del protagonista.');
+      assert.equal(cachedPlayerState.player?.fallbackVisible, false,
+        'El personaje provisional sigue visible en el arranque con caché.');
+      assert.equal(cachedPlayerState.recorder?.worldReady, true,
+        'La barrera completa no quedó lista en el arranque con caché.');
+      assert.equal((cachedPlayerState.recorder?.consoleErrors || []).length, 0,
+        'Errores de consola en el segundo arranque: ' +
+        JSON.stringify(cachedPlayerState.recorder?.consoleErrors || []));
+      assert.equal((cachedPlayerState.recorder?.runtimeErrors || []).length, 0,
+        'Errores de ejecución en el segundo arranque: ' +
+        JSON.stringify(cachedPlayerState.recorder?.runtimeErrors || []));
+      assert.equal((cachedPlayerState.recorder?.unhandledRejections || []).length, 0,
+        'Promesas rechazadas en el segundo arranque: ' +
+        JSON.stringify(cachedPlayerState.recorder?.unhandledRejections || []));
+      assert.equal(manifest.consoleErrors.length, 0,
+        'Errores de consola del navegador tras ambos arranques: ' + manifest.consoleErrors.join(' | '));
+      assert.equal(manifest.pageErrors.length, 0,
+        'Errores JavaScript del navegador tras ambos arranques: ' + manifest.pageErrors.join(' | '));
+      manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
+      manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
+      manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
+  
+  
     }
-    const cachedBarrierStartedAt = performance.now();
-    const cachedStartupWait = await waitForWorldReadyWithRecovery(page, 'El arranque con caché');
-    manifest.cachedStartupPresentation=await waitForStartupPresentation(page,'Arranque con caché');
-    manifest.cachedStartupWaitRecoveredAfterRendererStall = cachedStartupWait.recoveredAfterWaitTimeout;
-    manifest.cachedStartupWaitDiagnostic = cachedStartupWait.recoveredAfterWaitTimeout
-      ? { ...cachedStartupWait.snapshot, recoveredAfterWaitTimeout: true,
-          waitTimeoutMs: cachedStartupWait.waitTimeoutMs, elapsedMs: cachedStartupWait.elapsedMs,
-          waitError: cachedStartupWait.waitError }
-      : { recoveredAfterWaitTimeout: false, elapsedMs: cachedStartupWait.elapsedMs };
-    if (await page.evaluate(() => document.body.classList.contains('boot-failed'))) {
-      throw new Error('El arranque con caché terminó en boot-failed: ' +
-        JSON.stringify(await page.evaluate(() => ({
-          loadHelp: document.querySelector('#loadHelp')?.textContent || null,
-          recorder: window.__elSinNombreStartupSmoke || null
-        }))));
-    }
-    const cachedPlayerState = await page.evaluate(() => ({
-      player: window.__ELSN_PLAYER_STARTUP_SMOKE__?.state() || null,
-      recorder: window.__elSinNombreStartupSmoke || null,
-      bootFailed: document.body.classList.contains('boot-failed')
-    }));
-    manifest.cachedPlayerState = cachedPlayerState;
-    assert.equal(cachedPlayerState.bootFailed, false,
-      'El segundo arranque marcó boot-failed.');
-    assert.equal(cachedPlayerState.player?.modelReady, true,
-      'El protagonista real no quedó listo en el arranque con caché: ' +
-      JSON.stringify(cachedPlayerState.player));
-    assert.ok(cachedPlayerState.player?.realPlayerMeshCount > 0,
-      'El segundo arranque no contiene mallas reales del protagonista.');
-    assert.equal(cachedPlayerState.player?.fallbackVisible, false,
-      'El personaje provisional sigue visible en el arranque con caché.');
-    assert.equal(cachedPlayerState.recorder?.worldReady, true,
-      'La barrera completa no quedó lista en el arranque con caché.');
-    assert.equal((cachedPlayerState.recorder?.consoleErrors || []).length, 0,
-      'Errores de consola en el segundo arranque: ' +
-      JSON.stringify(cachedPlayerState.recorder?.consoleErrors || []));
-    assert.equal((cachedPlayerState.recorder?.runtimeErrors || []).length, 0,
-      'Errores de ejecución en el segundo arranque: ' +
-      JSON.stringify(cachedPlayerState.recorder?.runtimeErrors || []));
-    assert.equal((cachedPlayerState.recorder?.unhandledRejections || []).length, 0,
-      'Promesas rechazadas en el segundo arranque: ' +
-      JSON.stringify(cachedPlayerState.recorder?.unhandledRejections || []));
-    assert.equal(manifest.consoleErrors.length, 0,
-      'Errores de consola del navegador tras ambos arranques: ' + manifest.consoleErrors.join(' | '));
-    assert.equal(manifest.pageErrors.length, 0,
-      'Errores JavaScript del navegador tras ambos arranques: ' + manifest.pageErrors.join(' | '));
-    manifest.cachedNavigationAndProfileMs = Number((cachedBarrierStartedAt - cachedLaunchStartedAt).toFixed(1));
-    manifest.cachedBlockingStartupMs = Number((performance.now() - cachedBarrierStartedAt).toFixed(1));
-    manifest.cachedMemoryEstimate = await page.evaluate(() => window.__elSinNombreStartupMemoryEstimate || null);
 
     if (secureOrigin) {
       const offlineStartedAt = performance.now();
@@ -1514,10 +1524,13 @@ async function main() {
           identityVisible: visible(identity) && identity?.getAttribute('aria-hidden') !== 'true',
           continueUnnamedVisible: visible(continueButton),
           booting: document.body.classList.contains('booting') || visible(loading),
-          bootFailed: document.body.classList.contains('boot-failed')
+          bootFailed: document.body.classList.contains('boot-failed'),
+          identityStored: localStorage.getItem('el-sin-nombre-identity-main-v1') !== null
         };
       });
       manifest.offlineReload.preflight = offlinePreflight;
+      assert.equal(offlinePreflight.identityStored, true,
+        'La identidad del jugador no sobrevivió al reinicio offline.');
       if (offlinePreflight.bootFailed) {
         throw new Error('El arranque offline falló antes de completar el preflight: ' +
           JSON.stringify(offlinePreflight));

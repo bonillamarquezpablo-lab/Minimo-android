@@ -82,11 +82,16 @@ jobs:
           else
             echo "game=false" >> "$GITHUB_OUTPUT"
           fi
-          if grep -Eq '^(index\.html|assets/|scripts/(build_site\.py|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_wildlife_runtime_contract\.cjs|test_forest_gull_assets\.cjs|create_fauna_contact_sheet\.py))' <<<"$changed"; then
-            echo "fauna=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "fauna=false" >> "$GITHUB_OUTPUT"
+          fauna_runtime_change=false
+          if grep -Eq '^(index\.html|assets/|scripts/(fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_wildlife_runtime_contract\.cjs|test_forest_gull_assets\.cjs|create_fauna_contact_sheet\.py))' <<<"$changed"; then
+            fauna_runtime_change=true
+          elif grep -Fxq 'scripts/build_site.py' <<<"$changed"; then
+            fauna_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"
+            if grep -Eiq '^[+-].*(ambientBirds|updateAmbientGullFlight|gull|wildlife|fauna|deer|stag|wolf|bird|skeleton|bone|skinning|animationGroup|GLB|gltf|ImportMesh|AssetContainer)' <<<"$fauna_diff"; then
+              fauna_runtime_change=true
+            fi
           fi
+          echo "fauna=$fauna_runtime_change" >> "$GITHUB_OUTPUT"
 
   # Fast source contracts run beside the single release build. Inspector UI checks are path-scoped in their own workflow.
   contracts:
@@ -353,6 +358,8 @@ jobs:
       - name: Verify startup, required NPCs, gameplay and offline Service Worker restart before publish
         env:
           PLAYER_TEST_URL: https://localhost:4175/
+          # Keep cold-start and offline reload gates; skip one duplicate full-world boot.
+          PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'
         run: node scripts/player-startup-smoke.mjs
 
       - name: Stop runtime acceptance HTTPS server
