@@ -2242,7 +2242,7 @@ function updateWildlife(dt){
         raise SystemExit("No se encontró el registro de efectos de sonido listos.")
     html = html.replace(effects_ready_marker, music_ready_code, 1)
     old_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
-    new_audio_error = "throw new Error('RECURSO OBLIGATORIO: efectos de sonido y música · '+String(audioRequiredError&&audioRequiredError.message||audioRequiredError));"
+    new_audio_error = "console.warn('Audio no disponible al inicio; se mantendrá la carga en segundo plano:',audioRequiredError);"
     if html.count(old_audio_error) != 1:
         raise SystemExit("No se encontró el error de audio obligatorio.")
     html = html.replace(old_audio_error, new_audio_error, 1)
