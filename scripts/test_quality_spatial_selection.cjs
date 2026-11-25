@@ -32,7 +32,16 @@ for(const marker of [
   'mesh.unfreezeWorldMatrix()',
   'spatialSelectionStats.staticWorldMatricesFrozen=frozen',
   'freezeSpatialStaticWorldMatrices();',
-  'spatialSelectionStats.dynamicFilterEnabled=false;',
+  'const installSpatialDynamicCandidateFilter=()=>{',
+  'const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;',
+  'scene.getActiveMeshCandidates=()=>{',
+  'spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',
+  "reason==='actor-or-vehicle'",
+  'mesh.alwaysSelectAsActiveMesh',
+  'mesh.skeleton||mesh.morphTargetManager',
+  'mesh.computeWorldMatrix()',
+  'mesh.isInFrustum(scene.frustumPlanes)',
+  'scene.skipFrustumClipping',
   'buildSpatialSelectionOctree();',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
@@ -83,8 +92,10 @@ for (const field of ['meshSelectionDynamicFilterTotalCandidates','meshSelectionD
 }
 assert.ok(smoke.includes('manifest.spatialSelection?.enabled === true'),'Real campaign smoke must read the runtime spatial selection state.');
 assert.ok(smoke.includes('manifest.spatialSelection.staticIndexedMeshCount'),'Real campaign smoke must verify static octree indexing.');
-assert.ok(smoke.includes('Dynamic frustum filtering is intentionally not enabled'),'Smoke must not claim dynamic culling before it is integrated into Babylon dynamicContent.');
-assert.ok(!builder.includes('const installSpatialDynamicFrustumFilter=octree=>') && !builder.includes('octree.select=function(frustumPlanes,allowDuplicate)'), 'The renderer must not wrap static octree selection as a dynamic-content filter.');
+assert.ok(smoke.includes('manifest.spatialSelection.dynamicFilterEnabled, true'),'Real gameplay smoke must require the live dynamic candidate filter.');
+assert.ok(smoke.includes('dynamicFilterPasses') && smoke.includes('dynamicFilterLastCandidates') && smoke.includes('dynamicFilterLastCulled'),'Real gameplay smoke must verify candidate filtering and capture actual cull counts.');
+assert.ok(builder.includes('const installSpatialDynamicCandidateFilter=()=>{') && builder.includes('scene.getActiveMeshCandidates=()=>{') && builder.includes('baseGetActiveMeshCandidates.call(scene)'), 'Dynamic filtering must use Babylon scene candidate-provider while leaving native octree selection intact.');
+assert.ok(!builder.includes('octree.select=function(') && !builder.includes('const installSpatialDynamicFrustumFilter=octree=>'), 'The renderer must never patch the static octree selector itself.');
 assert.ok(workflow.includes('node scripts/test_quality_spatial_selection.cjs'),'The Pages build must run the spatial selection contract.');
 assert.ok(source.includes('function update(dt){'),'World update must remain present.');
 assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Felled trees must leave static octree cells before their fall animation.');
