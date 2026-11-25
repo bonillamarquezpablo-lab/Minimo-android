@@ -89,7 +89,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   !buildSite.includes("Seagull_Flight_Loop_") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
   "The gull must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.");
-assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=socket||realPlayerModelPivot;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to player space.");
+assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=realPlayerModelPivot||socket;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to player space.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
@@ -98,7 +98,7 @@ assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyR
 assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSource.includes("imageConfig.contrast = 1.10") &&
   !atmosphereSource.includes("this.scene.imageProcessingConfiguration.exposure = lighting.exposure"),
   "Dusk must not rewrite shared image-processing settings on every visual update.");
-assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=socket||realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=socket||realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
+assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=realPlayerModelPivot||socket;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=realPlayerModelPivot||socket;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
   'The equipped club must stay under the moving player model hierarchy rather than a detached world-space anchor.');
 assert.ok(indexHtml.includes('function hideFactionBadge(parts)') && indexHtml.includes('hideFactionBadge(e.parts)') && indexHtml.includes('hideFactionBadge(fallen.parts)'),
   'Faction markers and health overlays must be cleaned when a guard dies or its corpse is retired.');
