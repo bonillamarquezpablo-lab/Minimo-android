@@ -4717,6 +4717,27 @@ function getWorldPhaseTimingSnapshot(){
         raise SystemExit("No se pudieron instrumentar todas las transiciones de fase del mundo.")
     html = html[:phase_update_start] + phase_update_source + html[phase_update_end:]
 
+    # Split the broad environment/water bucket into its real owners without
+    # changing execution order, cadence, quality or the amount of simulation.
+    environment_phase_replacements = (
+        ("worldUpdateCount++;setWorldUpdatePhase('environment / water');\\n  updatePerformanceIslandStreaming(dt);\\n  updateActiveIslandGrass(dt);\\n  updateManagedWorldShadowCasters();",
+         "worldUpdateCount++;setWorldUpdatePhase('environment / island streaming');\\n  updatePerformanceIslandStreaming(dt);\\n  setWorldUpdatePhase('environment / grass streaming');\\n  updateActiveIslandGrass(dt);\\n  setWorldUpdatePhase('environment / shadow caster maintenance');\\n  updateManagedWorldShadowCasters();",
+         "separate island streaming, full-density grass and shadow-caster maintenance"),
+        ("habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
+         "setWorldUpdatePhase('environment / settlement integrity');\\n  habitableAuditAccumulator+=dt;const habitableAuditInterval=onShip ? .5 : 1.5;",
+         "measure settlement integrity audit separately"),
+        ("  if(atmosphereSystem)atmosphereSystem.update(dt);",
+         "  setWorldUpdatePhase('environment / atmosphere');\\n  if(atmosphereSystem)atmosphereSystem.update(dt);",
+         "measure atmosphere separately"),
+        ("  animateWater(dt);\\n  updateWildlife(dt);",
+         "  setWorldUpdatePhase('environment / water simulation');\\n  animateWater(dt);\\n  setWorldUpdatePhase('environment / wildlife simulation');\\n  updateWildlife(dt);",
+         "separate water simulation from wildlife"),
+    )
+    for old_phase_code, new_phase_code, phase_label in environment_phase_replacements:
+        if html.count(old_phase_code) != 1:
+            raise SystemExit(f"No se encontró exactamente una zona para medir {phase_label}.")
+        html = html.replace(old_phase_code, new_phase_code, 1)
+
     performance_report_marker = "waterVertices:waterPositions.length/3}};"
     performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),preWorldMaintenance:getFrameMaintenanceTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
     if html.count(performance_report_marker) != 1:
