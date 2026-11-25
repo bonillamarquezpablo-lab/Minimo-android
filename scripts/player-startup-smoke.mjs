@@ -471,11 +471,29 @@ async function main() {
     assert.equal(startupResources.gltfImporterReady, true, 'El importador GLB no figura como listo.');
     assert.equal(startupResources.protagonistReady, true, 'El protagonista GLB no figura como listo.');
     assert.equal(startupResources.npcRoster?.ready, true, 'El roster NPC obligatorio no figura como listo.');
-    assert.equal(startupResources.soundEffects?.pending, 0, 'Quedan efectos de sonido pendientes.');
-    assert.equal(startupResources.soundEffects?.failed, 0, 'Hay efectos de sonido fallidos.');
-    assert.equal(startupResources.music?.menuReady, true, 'La música del menú no está en estado reproducible.');
-    assert.equal(startupResources.music?.gameplayReady, true, 'La música de partida no está en estado reproducible.');
-    assert.equal(startupResources.music?.decodedToAudioBuffer, false, 'La música no debe decodificarse a AudioBuffer.');
+    assert.equal(startupResources.audioRequiredForEntry, false,
+      'La escena no debe esperar la precarga de audio para poder entrar.');
+    assert.equal(startupResources.music?.decodedToAudioBuffer, false,
+      'La música debe conservar el streaming HTMLAudio, sin decodificarse a AudioBuffer.');
+    manifest.startupTimeline = manifest.startupResourceGate.startupTimeline || null;
+    await page.waitForFunction(() => {
+      const readiness=window.__ELSN_AUDIO_READINESS__;
+      return readiness?.soundEffects?.status !== 'loading' &&
+        readiness?.soundEffects?.status !== undefined &&
+        readiness?.music?.status !== 'loading' &&
+        readiness?.music?.status !== undefined;
+    }, undefined, { timeout: 60000, polling: 250 });
+    manifest.audioReadiness = await page.evaluate(() => window.__ELSN_AUDIO_READINESS__ || null);
+    assert.equal(manifest.audioReadiness?.soundEffects?.pending, 0,
+      'La precarga en segundo plano dejó efectos de sonido pendientes.');
+    assert.equal(manifest.audioReadiness?.soundEffects?.failed, 0,
+      'La precarga en segundo plano registró efectos de sonido fallidos.');
+    assert.equal(manifest.audioReadiness?.music?.menuReady, true,
+      'La música de menú no alcanzó estado reproducible en segundo plano.');
+    assert.equal(manifest.audioReadiness?.music?.gameplayReady, true,
+      'La música de partida no alcanzó estado reproducible en segundo plano.');
+    manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
+    manifest.startupTimeline = manifest.startupResourceGate?.startupTimeline || manifest.startupTimeline;
     assert.equal(startupResources.scene?.status, 'ready', 'La vista inicial y sus shaders no están listos.');
     assert.equal(startupResources.world?.islands, 13, 'El mundo no expone las 13 islas.');
     assert.equal(startupResources.world?.profile, 'quality', 'El smoke debe verificar el perfil Calidad sin degradaciones.');
