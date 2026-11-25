@@ -756,6 +756,9 @@ async function main() {
       Number.isFinite(visualActorsBefore.playerClub.worldBounds.distanceToHand) &&
       visualActorsBefore.playerClub.worldBounds.distanceToHand<1.75,
       'El palo debe quedar junto a la mano derecha real del protagonista: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.worldBounds.handRightSideMeters>.10 &&
+      visualActorsBefore.playerClub.worldBounds.clubRightSideMeters>.10,
+      'El palo debe quedar en el lado derecho anatómico del protagonista, no atravesar el torso ni pasar a la mano contraria: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
