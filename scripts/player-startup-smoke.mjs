@@ -993,7 +993,10 @@ async function main() {
       const state = window.__ELSN_SPATIAL_SELECTION__;
       return !!state && state.enabled === true &&
         Number(state.sceneMeshCount) >= 512 &&
-        Number(state.staticIndexedMeshCount) >= 512;
+        Number(state.staticIndexedMeshCount) >= 512 &&
+        state.dynamicFilterEnabled === true &&
+        Number(state.dynamicFilterPasses) > 0 &&
+        Number(state.dynamicFilterLastCandidates) > 0;
     }, undefined, { timeout: 30000, polling: 100 });
     manifest.spatialSelectionWaitMs = Number((performance.now() - spatialFilterWaitStartedAt).toFixed(1));
     manifest.spatialSelection = await page.evaluate(() => window.__ELSN_SPATIAL_SELECTION__ || null);
@@ -1010,8 +1013,14 @@ async function main() {
     assert.ok(Number(manifest.spatialSelection.dynamicContentRatio) < 0.80,
       'La lista dinámica supera el presupuesto validado para la escena: ' +
       JSON.stringify(manifest.spatialSelection));
-    assert.equal(manifest.spatialSelection.dynamicFilterEnabled, false,
-      'Dynamic frustum filtering is intentionally not enabled until Babylon dynamicContent evaluation is safely integrated.');
+    assert.equal(manifest.spatialSelection.dynamicFilterEnabled, true,
+      'La integración con getActiveMeshCandidates debe estar activa en la escena real.');
+    assert.ok(Number(manifest.spatialSelection.dynamicFilterPasses) > 0 && Number(manifest.spatialSelection.dynamicFilterLastCandidates) > 0,
+      'El filtro de candidatos dinámicos debe haberse ejecutado en el juego real.');
+    assert.ok(Number(manifest.spatialSelection.dynamicFilterLastSelected) > 0,
+      'El filtro debe conservar candidatos dinámicos visibles.');
+    assert.ok(Number(manifest.spatialSelection.dynamicFilterLastCulled) >= 0 && Number(manifest.spatialSelection.dynamicFilterErrors) === 0,
+      'El filtro debe registrar su trabajo sin errores; los objetos dudosos deben permanecer visibles.');
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
