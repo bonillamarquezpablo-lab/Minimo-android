@@ -89,8 +89,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'62\',build:\'0.6.354\''), 'Release must carry diagnostic report 62.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.354"'), 'Release validator must target version 0.6.354.');
+assert.ok(validator.includes('reportVersion:\'62\',build:\'0.6.355\''), 'Release must carry diagnostic report 62.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.355"'), 'Release validator must target version 0.6.355.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -157,6 +157,9 @@ assert.ok(builder.includes('npcBrainRuntime.fallbackComputeLocomotion') &&
   "Missing NPC locomotion must use an NPC-only fallback, while an incompatible brain cannot abort the rest of the world update.");
 assert.ok(builder.includes('npcBrainDiagnostics.lastProblemKey'),
   "NPC compatibility failures must be logged once per distinct API mismatch, not once per rendered frame.");
+assert.ok(builder.includes('const match=/^Villager_') && !builder.includes('VillageGuard(\\\\d+)_(\\\\d+)') && dialogueRuntime.includes('function dialogueEligibleNpc(npc)') && dialogueRuntime.includes('parts.faction==="enemy"') && dialogueRuntime.includes('role==="warrior"'), 'Ambient villager cards must never attach to VillageGuard combatants or hostile entities.');
+assert.ok(builder.includes('visualBodyLocalPosition:visualBody.position.clone()') && builder.includes('modelRootLocalPosition:modelRoot.position.clone()') && builder.includes('visualBody.parent!==root') && builder.includes('modelRoot.parent!==visualBody') && builder.includes('importedRoot.parent!==modelRoot') && builder.includes('worldMatrix.decompose(worldScale,worldRotation,worldPosition)'), 'Enemy GLB bodies must reattach to the exact combat root using calibrated local transforms.');
+assert.ok(builder.includes('rootDetachRepairs') && builder.includes('visualParentRepairs') && builder.includes('importedRootRepairs') && builder.includes('combat_damage_replacement') && builder.includes('enemy_ai_alive_replacement'), 'Enemy diagnostics count broken hierarchy repairs and dead logical entities lose damage authority.');
 console.log('OK mobile runtime stability: stale texture protection, incremental structure discovery, mobile AI cadence, per-frame draw-call telemetry, all visual systems and Quality profile retained.');
 assert.ok(builder.includes('gull_scale_marker =') && builder.includes('targetGullMaxExtentMeters=.55') &&
   builder.includes('sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)') &&
