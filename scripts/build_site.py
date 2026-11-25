@@ -4103,7 +4103,8 @@ function getFrameMaintenanceTimingSnapshot(){
 }
 """
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
-    frame_loop_replacement = frame_maintenance_timing_code + "\n" + frame_loop_marker + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  updateAmbientGullFlight(now*.001);recordFrameMaintenanceTiming('gullFlight',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
+    frame_loop_replacement = frame_loop_marker
+    frame_loop_replacement = frame_maintenance_timing_code + "\n" + frame_loop_replacement + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  updateAmbientGullFlight(now*.001);recordFrameMaintenanceTiming('gullFlight',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
