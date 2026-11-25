@@ -1911,7 +1911,7 @@ function setLoadingProgress(value,label){
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.26+i*.018});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.26+i*.018});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
