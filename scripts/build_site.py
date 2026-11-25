@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.356: only live combat entities may own damage authority.
+    # 0.6.357: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.356: unify all humanoid overlays under one measured anchor.
+    # 0.6.357: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -938,11 +938,11 @@ def main() -> None:
     weapon_parent_marker = "realWeaponHolder.parent=realPlayerModelPivot||socket;"
     if html.count(weapon_parent_marker) != 1:
         raise SystemExit("No se encontró la asignación única del anclaje del arma.")
-    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=socket||realPlayerModelPivot;", 1)
+    html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=realPlayerModelPivot||socket;", 1)
     weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
-    html = html.replace(weapon_sync_parent_marker, "const holderParent=socket||realPlayerModelPivot;", 1)
+    html = html.replace(weapon_sync_parent_marker, "const holderParent=realPlayerModelPivot||socket;", 1)
     weapon_grip_guard_marker = "    holderParent.computeWorldMatrix(true);\n    const inverseParent=holderParent.getWorldMatrix().clone();"
     weapon_grip_guard_replacement = """    const pivotPosition=realPlayerModelPivot.getAbsolutePosition();
     if(!gripWorld||!Number.isFinite(gripWorld.x)||B.Vector3.Distance(gripWorld,pivotPosition)<.25||B.Vector3.Distance(gripWorld,pivotPosition)>2.25){
@@ -3017,7 +3017,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.357-npcbrain7" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.356; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.357; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.356\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.357\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.356.")
-    html = html.replace("0.6.274", "0.6.356")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.357.")
+    html = html.replace("0.6.274", "0.6.357")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'64',build:'0.6.356'"
+    diagnostic_build_replacement = "reportVersion:'65',build:'0.6.357'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.356 para normalizar.")
-    game_version = "0.6.356"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.357 para normalizar.")
+    game_version = "0.6.357"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4558,7 +4558,17 @@ function getFrameMaintenanceTimingSnapshot(){
   for(const b of birds){
    try{
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
-    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}
+    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);
+    if(!Array.isArray(b.flightTransformNodes)){
+     const descendants=typeof b.root.getDescendants==='function'?b.root.getDescendants(false):[];
+     b.flightTransformNodes=descendants.filter(node=>node&&typeof node.computeWorldMatrix==='function');
+    }
+    const flightHierarchy=[b.root,...b.flightTransformNodes];
+    for(const node of flightHierarchy){
+     if(node&&node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function'){
+      node.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;
+     }
+    }
     if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
     const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
     const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
@@ -4568,10 +4578,12 @@ function getFrameMaintenanceTimingSnapshot(){
     const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
     b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
     b.flightElapsed=flightElapsed;
-    b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
+    const flightX=Math.cos(a)*radius-36,flightY=altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,flightZ=Math.sin(a)*radius-18;
+    b.root.position.copyFromFloats(flightX,flightY,flightZ);
     b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
     if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
     b.root.computeWorldMatrix(true);
+    for(const node of b.flightTransformNodes)node.computeWorldMatrix(true);
     const previous=b.flightLastPosition;
     if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
     b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
@@ -4686,15 +4698,29 @@ function getFrameMaintenanceTimingSnapshot(){
   const enabled=node=>!!node&&(typeof node.isEnabled!=='function'||node.isEnabled());
   const visible=mesh=>!!mesh&&!mesh.isDisposed?.()&&enabled(mesh)&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01;
   const clubMeshes=realWeaponGroups&&realWeaponGroups.club&&realWeaponGroups.club.getChildMeshes?realWeaponGroups.club.getChildMeshes(false):[];
+  const clubWorldBounds=(()=>{
+   if(!clubMeshes.length)return null;
+   const min=new B.Vector3(Infinity,Infinity,Infinity),max=new B.Vector3(-Infinity,-Infinity,-Infinity);
+   let measured=0;
+   for(const mesh of clubMeshes){
+    if(!mesh||mesh.isDisposed?.())continue;
+    mesh.computeWorldMatrix(true);
+    const bounds=mesh.getBoundingInfo?.()?.boundingBox;if(!bounds)continue;
+    min.minimizeInPlace(bounds.minimumWorld);max.maximizeInPlace(bounds.maximumWorld);measured++;
+   }
+   if(!measured||!Number.isFinite(min.x)||!Number.isFinite(max.x))return null;
+   const size=max.subtract(min),center=min.add(max).scale(.5),playerPosition=player.root?.getAbsolutePosition?.()||player.root?.position||B.Vector3.Zero();
+   return {min:{x:min.x,y:min.y,z:min.z},max:{x:max.x,y:max.y,z:max.z},center:{x:center.x,y:center.y,z:center.z},size:{x:size.x,y:size.y,z:size.z},diagonal:size.length(),distanceToPlayer:B.Vector3.Distance(center,playerPosition),measuredMeshes:measured};
+  })();
   const guards=(humanEnemyParts||[]).filter(parts=>/^VillageGuard0_/.test(String(parts&&parts.name||'')));
   const homeWarriors=guards.map(parts=>{
    const real=parts.realHuman,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
    return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
   });
   const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
-  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig,nodes=b.flightTransformNodes||[],visualRoot=nodes.find(node=>/^GullVisualCenter_/.test(String(node.name||'')))||b.root,world=visualRoot&&visualRoot.getAbsolutePosition?visualRoot.getAbsolutePosition():null;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,worldPosition:world?{x:world.x,y:world.y,z:world.z}:null,frozenDescendantCount:nodes.filter(node=>node&&node._isWorldMatrixFrozen).length,hierarchyNodeCount:nodes.length,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
   const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
-  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
+  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),holderParent:String(realWeaponHolder?.parent?.name||''),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,worldBounds:clubWorldBounds,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
     if html.count(world_snapshot_marker) != 1:
