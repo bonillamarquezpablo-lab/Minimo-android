@@ -444,6 +444,7 @@
       worldUpdatePhase: text(health.worldUpdatePhase, 64),
       lastWorldUpdateFailure: text(health.lastWorldUpdateFailure, 220),
       cpu: {
+        preWorldMaintenanceMs: number(runtime.preWorldMaintenanceMs),
         worldUpdateMs: number(runtime.worldUpdateMs),
         renderCpuMs: number(runtime.renderCpuMs)
       },
@@ -802,6 +803,7 @@
     const p95 = values(sample => sample.frameTiming && sample.frameTiming.p95Ms);
     const p99 = values(sample => sample.frameTiming && sample.frameTiming.p99Ms);
     const frameMax = values(sample => sample.frameTiming && sample.frameTiming.maxMs);
+    const preWorldMaintenance = values(sample => sample.cpu && sample.cpu.preWorldMaintenanceMs);
     const world = values(sample => sample.cpu && sample.cpu.worldUpdateMs);
     const render = values(sample => sample.cpu && sample.cpu.renderCpuMs);
     const telemetryRead = values(sample => sample.diagnosticsReadMs);
@@ -844,6 +846,7 @@
     const medianWorld = median(world), medianRender = median(render), medianGpu = median(gpu);
     const medianSceneRender = median(sceneRender), medianActiveMeshes = median(activeMeshes), medianRenderTargets = median(renderTargets);
     const stages = [
+      { name: "mantenimiento-pre-mundo", value: median(preWorldMaintenance), source: "CPU JavaScript (gaviotas, enemigos y overlays NPC)" },
       { name: "actualizacion-del-mundo", value: medianWorld, source: "CPU del juego" },
       { name: "preparacion-render-CPU", value: medianRender, source: "CPU del navegador/motor" },
       { name: "evaluacion-mallas-activas", value: medianActiveMeshes, source: "Babylon SceneInstrumentation" },
@@ -902,6 +905,8 @@
         samples: number(timing && timing.samples),
         lastMs: number(timing && timing.lastMs),
         meanMs: number(timing && timing.meanMs),
+        p95Ms: number(timing && timing.p95Ms),
+        p99Ms: number(timing && timing.p99Ms),
         maxMs: number(timing && timing.maxMs)
       }))
       .sort((a, b) => (b.maxMs || 0) - (a.maxMs || 0))
@@ -912,9 +917,10 @@
     const frameBudgetMs = targetFps > 0 ? 1000 / targetFps : null;
     // Conservative CPU/GPU attribution: compare independent P95 measurements against the frame budget.
     // CPU world and render timings are kept separate because they may overlap with browser scheduling.
+    const cpuPreWorldP95Ms = percentile(preWorldMaintenance, .95);
     const cpuWorldP95Ms = percentile(world, .95);
     const cpuRenderP95Ms = percentile(render, .95);
-    const cpuCriticalP95Ms = [cpuWorldP95Ms, cpuRenderP95Ms].filter(value => value !== null).reduce((max, value) => Math.max(max, value), 0);
+    const cpuCriticalP95Ms = [cpuPreWorldP95Ms, cpuWorldP95Ms, cpuRenderP95Ms].filter(value => value !== null).reduce((max, value) => Math.max(max, value), 0);
     const gpuP95Ms = percentile(gpu, .95);
     const frameP95Ms = percentile(p95, .95);
     const attributionThresholdMs = frameBudgetMs === null ? null : frameBudgetMs * .65;
@@ -949,12 +955,13 @@
       explanation: cpuGpuReason,
       frameBudgetMs: frameBudgetMs === null ? null : Number(frameBudgetMs.toFixed(2)),
       frameP95Ms,
+      cpuPreWorldP95Ms,
       cpuWorldP95Ms,
       cpuRenderP95Ms,
       cpuCriticalP95Ms: Number(cpuCriticalP95Ms.toFixed(2)),
       gpuP95Ms,
       gpuSampleCount: gpu.length,
-      cpuSampleCount: Math.max(world.length, render.length),
+      cpuSampleCount: Math.max(preWorldMaintenance.length, world.length, render.length),
       thresholdMs: attributionThresholdMs === null ? null : Number(attributionThresholdMs.toFixed(2)),
       confidence: gpu.length >= 12 && samples.length >= 12 ? "media" : "baja",
       method: "Comparación heurística de percentiles P95; CPU y GPU se miden por separado y no se suman."
@@ -984,6 +991,8 @@
         samples: number(timing && timing.samples),
         lastMs: number(timing && timing.lastMs),
         meanMs: number(timing && timing.meanMs),
+        p95Ms: number(timing && timing.p95Ms),
+        p99Ms: number(timing && timing.p99Ms),
         maxMs: number(timing && timing.maxMs)
       }))
       .filter(item => item.meanMs !== null || item.lastMs !== null || item.maxMs !== null)
