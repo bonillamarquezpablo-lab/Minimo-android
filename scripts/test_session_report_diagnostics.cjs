@@ -55,7 +55,16 @@ const samples = Array.from({ length: 16 }, (_, index) => {
     fps: slow ? 22 + index % 3 : 48,
     frameTiming: { samples: 60, averageMs: slow ? 34 : 16, p50Ms: slow ? 30 : 15,
       p95Ms: slow ? 42 + index : 17, p99Ms: slow ? 55 + index : 21, maxMs: slow ? 80 + index : 28 },
-    cpu: { worldUpdateMs: 12 + index % 2, renderCpuMs: 4 },
+    cpu: {
+      preWorldMaintenanceMs: 3.5,
+      preWorldMaintenanceTimings: {
+        gullFlight: { samples: 160, lastMs: 0.08, meanMs: 0.07, p95Ms: 0.12, p99Ms: 0.16, maxMs: 0.4 },
+        enemyVisualRecovery: { samples: 160, lastMs: slow ? 3.1 : 0.8, meanMs: slow ? 2.4 : 0.7, p95Ms: slow ? 5.8 : 1.2, p99Ms: slow ? 7.2 : 1.5, maxMs: slow ? 12 : 2.1 },
+        npcOverlayMaintenance: { samples: 160, lastMs: slow ? 5.2 : 1.1, meanMs: slow ? 3.8 : 0.9, p95Ms: slow ? 8.4 : 1.4, p99Ms: slow ? 10.1 : 1.8, maxMs: slow ? 16 : 2.5 },
+        total: { samples: 160, lastMs: 8.4, meanMs: 4.0, p95Ms: 11.2, p99Ms: 14, maxMs: 20 }
+      },
+      worldUpdateMs: 12 + index % 2, renderCpuMs: 4
+    },
     gpu: { frameMs: 5, sceneRenderMs: 3 },
     sceneTimings: { activeMeshesEvaluationMs: 1.2, renderTargetsMs: 1.6 },
     scene: { profileDiagnosticsEnabled: true },
@@ -100,6 +109,9 @@ assert.ok(diagnosis.worstMoments.length > 0, "Slow periods must be pinpointed.")
 assert.ok(diagnosis.worstMoments.some(item => item.location && item.location.islandIndex === 3), "Slow periods must retain player coordinates and island.");
 assert.ok(diagnosis.worstMoments.some(item => item.topPhase && item.topPhase.id === "npc-update"), "Slow periods must identify the busiest internal world phase.");
 assert.ok(diagnosis.phaseCosts.some(item => item.id === "npc-update" && item.label === "Personajes e inteligencia"), "Internal phase timings must be understandable and retained.");
+assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:npcOverlayMaintenance" && item.label === "Anclajes y recuperación visual de NPC" && item.p95Ms === 8.4), "The report must retain P95 for the NPC overlay maintenance substage.");
+assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:enemyVisualRecovery" && item.label === "Recuperación visual de enemigos"), "The report must separate enemy visual recovery from the main world update.");
+assert.ok(diagnosis.phaseCosts.some(item => item.id === "maintenance:gullFlight" && item.label === "Vuelo de gaviotas"), "The report must expose the gull animation maintenance cost.");
 assert.equal(diagnosis.longTasks.count, 2);
 assert.equal(diagnosis.longTasks.top[0].durationMs, 124.5);
 assert.equal(diagnosis.runtimeErrors.count, 1);
