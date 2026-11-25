@@ -9,6 +9,7 @@ const serviceWorker=fs.readFileSync('sw.js','utf8');
 const atmosphereSource=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
 const npcCore=fs.readFileSync('scripts/npc-agent-core.js','utf8');
 const npcRuntime=fs.readFileSync('scripts/npc-agent-runtime.js','utf8');
+const dialogueRuntime=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8');
 const deployWorkflow=fs.readFileSync('.github/workflows/deploy-pages.yml','utf8');
 
 const expectedVersion=validator.split('EXPECTED_VERSION = "')[1]?.split('"')[0];
