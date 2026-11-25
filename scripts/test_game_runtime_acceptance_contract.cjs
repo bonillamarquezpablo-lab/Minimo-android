@@ -35,8 +35,8 @@ assert.match(release, /  fauna:\n[\s\S]*?if: needs\.changes\.outputs\.fauna == '
 assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/, 'The GPU comparison remains available but non-blocking.');
 
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
-assert.match(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'/,
-  'Release may skip the duplicate online warm boot, but must keep the offline Service Worker restart.');
+assert.doesNotMatch(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART/,
+  'Release retains the warm online restart before the offline Service Worker reload.');
 assert.ok(release.includes('fauna_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"'),
   'The monolithic builder must be scoped by its changed lines before running the expensive fauna visual gate.');
 assert.ok(release.includes('updateAmbientGullFlight|gull|wildlife|fauna|deer|stag|wolf|bird'),
