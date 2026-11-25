@@ -3433,7 +3433,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
   // Meshes born after the index is built cannot be assumed static: constructions,
   // actors, equipment, effects and streamed objects stay in Babylon's dynamic list.
-  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,'created-after-octree',true);});
+  scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,spatialDynamicReasonForMesh(mesh)||'created-after-octree',true);});
  }
  if(scene.onMeshRemovedObservable&&typeof scene.onMeshRemovedObservable.add==='function'){
   scene.onMeshRemovedObservable.add(removeSpatialDynamicMesh);
@@ -3452,17 +3452,86 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Keep Babylon's own overflow/out-of-bounds dynamic entries tracked for safe removal.
    for(const mesh of Array.from(octree.dynamicContent))if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
-    mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason='octree-initial-dynamic';
+    mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic';
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
    }
    for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
    const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();
    updateSpatialSelectionCounts();
-   // Babylon's dynamicContent is evaluated by a separate internal path.
-   // Do not wrap octree.select(): that method selects static octree blocks and
-   // is not the per-frame dynamic candidate list in this Babylon build.
-   spatialSelectionStats.dynamicFilterEnabled=false;
+   // Leave Babylon's native SelectionOctree.select() intact. The scene component
+   // uses it to gather static octree blocks plus every dynamicContent mesh. Filter
+   // only safe non-skinned actor meshes through the supported scene provider hook.
+   const installSpatialDynamicCandidateFilter=()=>{
+    const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;
+    if(typeof baseGetActiveMeshCandidates!=='function'||typeof B.SmartArrayNoDuplicate!=='function')return false;
+    const candidateScratch=new B.SmartArrayNoDuplicate(Math.max(512,octree.dynamicContent.length));
+    const cullableDynamicReason=reason=>reason==='actor-or-vehicle';
+    scene.getActiveMeshCandidates=()=>{
+     const base=baseGetActiveMeshCandidates.call(scene);
+     if(!base||!base.data||!Number.isFinite(base.length)||scene.skipFrustumClipping||
+        !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
+     const startedAt=performance.now();
+     let dynamicCandidates=0,selected=0,culled=0,errors=0;
+     candidateScratch.reset();
+     try{
+      for(let index=0;index<base.length;index++){
+       const mesh=base.data[index];
+       if(!mesh)continue;
+       if(!spatialDynamicMeshSet.has(mesh)){
+        candidateScratch.pushNoDuplicate(mesh);
+        continue;
+       }
+       dynamicCandidates++;
+       const reason=String(mesh.__elsnSpatialDynamicReason||'');
+       // Rigs, billboards, particles, foliage, water, fresh imports and explicitly
+       // pinned meshes are retained. Unknown categories always fail open.
+       if(!cullableDynamicReason(reason)||mesh.alwaysSelectAsActiveMesh||
+          mesh.__elsnSpatialFreshUntilRenderId>=scene.getRenderId()||
+          mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||
+          typeof mesh.computeWorldMatrix!=='function'||typeof mesh.isInFrustum!=='function'){
+        candidateScratch.pushNoDuplicate(mesh);
+        selected++;
+        continue;
+       }
+       try{
+        mesh.computeWorldMatrix();
+        if(mesh.isInFrustum(scene.frustumPlanes)){
+         candidateScratch.pushNoDuplicate(mesh);
+         selected++;
+        }else{
+         culled++;
+        }
+       }catch(_){
+        errors++;
+        candidateScratch.pushNoDuplicate(mesh);
+        selected++;
+       }
+      }
+     }catch(error){
+      spatialSelectionStats.dynamicFilterErrors++;
+      candidateScratch.reset();
+      return base;
+     }
+     const duration=Math.max(0,performance.now()-startedAt);
+     spatialSelectionStats.dynamicFilterEnabled=true;
+     spatialSelectionStats.dynamicFilterPasses++;
+     spatialSelectionStats.dynamicFilterLastCandidates=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterLastSelected=selected;
+     spatialSelectionStats.dynamicFilterLastCulled=culled;
+     spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
+     spatialSelectionStats.dynamicFilterTotalCandidates+=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterTotalCulled+=culled;
+     spatialSelectionStats.dynamicFilterTotalMs+=duration;
+     spatialSelectionStats.dynamicFilterLastMs=Number(duration.toFixed(3));
+     spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,duration);
+     spatialSelectionStats.dynamicFilterErrors+=errors;
+     return candidateScratch;
+    };
+    spatialSelectionStats.dynamicFilterEnabled=true;
+    return true;
+   };
+   spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();
    spatialSelectionStats.dynamicFilterPasses=0;
    spatialSelectionStats.enabled=true;
    spatialSelectionStats.sceneMeshCount=meshCount;
