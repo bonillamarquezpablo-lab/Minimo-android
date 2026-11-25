@@ -950,8 +950,10 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const holderParent=realPlayerModelPivot||socket;" not in weapon_anchor_source or "const inverseParent=holderParent.getWorldMatrix().clone()" not in weapon_anchor_source:
-        fail("El arma equipada debe heredar del pivote móvil del personaje y convertir la posición real de la mano a su espacio local.")
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=holderParent.getWorldMatrix().clone()" not in weapon_anchor_source:
+        fail("La función del arma debe convertir la posición mundial de la mano al espacio local de su anclaje.")
+    if "const holderParent=realPlayerModelPivot||socket;" not in weapon_anchor_source or "realWeaponHolder.parent=realPlayerModelPivot||socket;" not in index_html or "const holderParent=socket||realPlayerModelPivot;" in weapon_anchor_source:
+        fail("El arma generada debe heredar del pivote móvil del personaje y no quedar subordinada al hueso de la mano.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html or "const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);" not in index_html or "const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();" not in index_html or "B.Vector3.Distance(gripWorld,pivotPosition)>2.25" not in index_html:
