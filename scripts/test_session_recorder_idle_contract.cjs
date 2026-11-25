@@ -59,3 +59,6 @@ assert.match(source,/habitableStructureAudit/);
 assert.match(source,/projectionAttemptsDelta/);
 assert.doesNotMatch(source,/projectionAttempts: dialogueSamples\.reduce/);
 console.log("session recorder idle-performance contract: PASS");
+assert.match(source,/preWorldMaintenanceTimings: runtime\.preWorldMaintenanceTimings/);
+assert.match(source,/maintenancePhaseCosts/);
+assert.match(source,/id: "maintenance:" \+ phase/);
