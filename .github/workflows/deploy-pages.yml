@@ -358,8 +358,6 @@ jobs:
       - name: Verify startup, required NPCs, gameplay and offline Service Worker restart before publish
         env:
           PLAYER_TEST_URL: https://localhost:4175/
-          # Keep cold-start and offline reload gates; skip one duplicate full-world boot.
-          PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'
         run: node scripts/player-startup-smoke.mjs
 
       - name: Stop runtime acceptance HTTPS server
