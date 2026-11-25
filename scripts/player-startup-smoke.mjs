@@ -748,6 +748,14 @@ async function main() {
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
     assert.equal(visualActorsBefore.playerClub.holderEnabled,true,'El anclaje del palo no está activo.');
     assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
+    const assertClubMounted=(snapshot,phase)=>{
+      const club=snapshot&&snapshot.playerClub;
+      assert.ok(club&&club.holderExists&&club.holderEnabled&&club.groupEnabled,phase+' perdió el anclaje del palo: '+JSON.stringify(club));
+      assert.equal(club.holderParentName,'RealVikingVisualOrientationPivot',phase+' no mantiene el palo en el pivote móvil del personaje: '+JSON.stringify(club));
+      assert.ok(Number.isFinite(club.holderGripDistanceMeters)&&club.holderGripDistanceMeters<1.25,phase+' dejó el anclaje del palo separado de la mano/antebrazo: '+JSON.stringify(club));
+      assert.ok(Number.isFinite(club.meshCenterGripDistanceMeters)&&club.meshCenterGripDistanceMeters<1.8,phase+' dejó la geometría del palo fuera de la zona de agarre: '+JSON.stringify(club));
+    };
+    assertClubMounted(visualActorsBefore,'Antes del movimiento');
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
@@ -768,12 +776,14 @@ async function main() {
           if(a.kind==='q')return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z)+Math.abs(a.w-b.w);
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
+        const visibleWorldPosition=bird=>bird?.visualMeshWorldPosition||bird?.visualRootWorldPosition||bird?.absolutePosition||null;
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.position,b=bird?.position;
+          const before=birds[index],a=before?.position,b=bird?.position,aw=visibleWorldPosition(before),bw=visibleWorldPosition(bird);
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+          const renderedDisplacement=aw&&bw?Math.hypot(bw.x-aw.x,bw.y-aw.y,bw.z-aw.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&renderedDisplacement>1.0&&leftMotion>.025&&rightMotion>.025;
         });
       },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
@@ -787,11 +797,17 @@ async function main() {
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
               beforePosition:a||null,afterPosition:b||null,
+              beforeVisualMeshWorldPosition:before?.visualMeshWorldPosition||null,
+              afterVisualMeshWorldPosition:bird?.visualMeshWorldPosition||null,
+              beforeVisualRootWorldPosition:before?.visualRootWorldPosition||null,
+              afterVisualRootWorldPosition:bird?.visualRootWorldPosition||null,
+              frozenHierarchyNodes:bird?.frozenHierarchyNodes??null,
               beforeFlightTicks:Number(before?.flightUpdateTicks)||0,
               afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
               beforeFlightElapsed:Number(before?.flightElapsed)||0,
               afterFlightElapsed:Number(bird?.flightElapsed)||0,
-              displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0
+              displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0,
+              renderedDisplacement:before?.visualMeshWorldPosition&&bird?.visualMeshWorldPosition?Math.hypot(bird.visualMeshWorldPosition.x-before.visualMeshWorldPosition.x,bird.visualMeshWorldPosition.y-before.visualMeshWorldPosition.y,bird.visualMeshWorldPosition.z-before.visualMeshWorldPosition.z):null
             };
           })
         };
@@ -807,11 +823,16 @@ async function main() {
     assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
+    assertClubMounted(visualActorsAfter,'Después del movimiento');
     for(let index=0;index<5;index++){
       const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
+      const beforeVisual=before?.visualMeshWorldPosition||before?.visualRootWorldPosition||before?.absolutePosition;
+      const afterVisual=after?.visualMeshWorldPosition||after?.visualRootWorldPosition||after?.absolutePosition;
       const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const renderedDisplacement=beforeVisual&&afterVisual?Math.hypot(afterVisual.x-beforeVisual.x,afterVisual.y-beforeVisual.y,afterVisual.z-beforeVisual.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
-      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(displacement>.15,'La raíz de la gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(renderedDisplacement>1.0,'El modelo GLB visible de la gaviota '+index+' sigue estático aunque cambie la raíz local: '+JSON.stringify({before,after,displacement,renderedDisplacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {
