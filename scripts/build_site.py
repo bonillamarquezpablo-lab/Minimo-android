@@ -2284,6 +2284,7 @@ function updateWildlife(dt){
   publishStartupAudioReadiness();
  });
  publishStartupAudioReadiness();
+"""
     startup_gate_marker = " setLoadingProgress(98,'Comprobando que todo está listo…');"
     startup_gate_code = """ const startupResourceSnapshot={
   engineReady:!!(window.BABYLON&&window.BABYLON.Engine),
