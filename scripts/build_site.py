@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.355: only live combat entities may own damage authority.
+    # 0.6.356: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.355: unify all humanoid overlays under one measured anchor.
+    # 0.6.356: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -3017,7 +3017,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.355-npcbrain7" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.355; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.356; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.355\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.356\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.355.")
-    html = html.replace("0.6.274", "0.6.355")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.356.")
+    html = html.replace("0.6.274", "0.6.356")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'63',build:'0.6.355'"
+    diagnostic_build_replacement = "reportVersion:'64',build:'0.6.356'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.355 para normalizar.")
-    game_version = "0.6.355"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.356 para normalizar.")
+    game_version = "0.6.356"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4548,7 +4548,7 @@ function getFrameMaintenanceTimingSnapshot(){
     # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
  // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
- const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,lastTimestamp:null,lastError:null};
+ const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};
  function updateAmbientGullFlight(nowSeconds){
   const birds=ambientBirds;
   if(!Number.isFinite(nowSeconds)||!Array.isArray(birds)||!birds.length)return;
@@ -4558,7 +4558,7 @@ function getFrameMaintenanceTimingSnapshot(){
   for(const b of birds){
    try{
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
-    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);
+    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}
     if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
     const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
     const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
@@ -4568,11 +4568,13 @@ function getFrameMaintenanceTimingSnapshot(){
     const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
     b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
     b.flightElapsed=flightElapsed;
-    b.root.position.x=Math.cos(a)*radius-36;
-    b.root.position.z=Math.sin(a)*radius-18;
-    b.root.position.y=altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12;
-    b.root.rotation.y=-a+Math.PI/2;
-    b.root.rotation.z=bank;
+    b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
+    b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
+    if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
+    b.root.computeWorldMatrix(true);
+    const previous=b.flightLastPosition;
+    if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
+    b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
     if(b.procedural&&b.left&&b.right){
      b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
      b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;
