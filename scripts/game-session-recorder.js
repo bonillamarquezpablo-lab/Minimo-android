@@ -973,7 +973,7 @@
     const phaseLabel = phase => {
       const key = String(phase || "").toLowerCase().replace(/[_\\s]+/g, "-");
       if (/gullflight/.test(key)) return "Vuelo de gaviotas";
-      if (/enemyvisualrecovery/.test(key)) return "Recuperación visual de enemigos";
+      if (phase === "enemyVisualRecovery" || /enemyvisualrecovery/.test(key)) return "Recuperación visual de enemigos";
       if (/npcoverlaymaintenance/.test(key)) return "Anclajes y recuperación visual de NPC";
       if (/npc|dialog|actor|villager|character|ai/.test(key)) return "Personajes e inteligencia";
       if (/path|nav|movement|locomotion/.test(key)) return "Movimiento y navegación";
