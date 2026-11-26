@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.356"
+EXPECTED_VERSION = "0.6.357"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
@@ -22,13 +22,20 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "function ensureNpcOverlayAnchor(parts,force=false){",
     "parts.overlayHealthMeshes=[",
     "maintainNpcOverlayAnchors(now);",
+    "function refreshGullVisualHierarchy(visualRoot){",
+    "const visualRefresh=refreshGullVisualHierarchy(b.flightRig&&b.flightRig.visualRoot);",
+    "b.flightVisualLastStepMeters=Math.sqrt(visualDx*visualDx+visualDy*visualDy+visualDz*visualDz);",
+    "visualRootAbsolutePosition:worldPos(visualRoot)",
+    "sampleVisibleMesh:firstVisibleMesh(visualRoot)",
+    "parentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot)",
+    "holderToHandMeters:weaponHolderPosition&&weaponHandPosition"
     "function updateAmbientGullFlight(nowSeconds){",
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
-    "const holderParent=socket||realPlayerModelPivot;",
-    "realWeaponHolder.parent=socket||realPlayerModelPivot;",
-    "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
+    "const holderParent=realPlayerModelPivot;",
+    "realWeaponHolder.parent=realPlayerModelPivot;",
+    "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,visualHierarchyRefreshes:0,frozenVisualNodesRecovered:0,visualPositionStalls:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now*.001);",
     "b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}",
@@ -658,7 +665,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'64',build:'0.6.356'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'65',build:'0.6.357'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -942,7 +949,7 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
         fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
