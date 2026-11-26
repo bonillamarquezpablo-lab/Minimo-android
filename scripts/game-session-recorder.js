@@ -577,8 +577,7 @@
       }
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       state.monitorTimer = null;
-      await openDatabase();
-      await pruneOldSessions();
+      state.prunedForSession = false;
       const build = document.querySelector('meta[name="el-sin-nombre-build"]');
       state.session = {
         schemaVersion: 1,
@@ -622,15 +621,16 @@
         ? window.performance.now() : 0;
       installLongTaskObserver();
       appendSample(initial);
-      await saveSession();
       state.sampleTimer = window.setInterval(queueIdleSample, SAMPLE_INTERVAL_MS);
       state.persistTimer = window.setInterval(persistSession, PERSIST_INTERVAL_MS);
       window.__ELSN_SESSION_RECORDER_STATUS__ = {
         active: true,
         sessionId: state.session.sessionId,
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
-        persistIntervalMs: PERSIST_INTERVAL_MS
+        persistIntervalMs: PERSIST_INTERVAL_MS,
+        persistenceMode: "idle"
       };
+      queueIdlePersist();
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
     } finally {
@@ -800,7 +800,7 @@
     appendSample(sample);
   }
 
-  function cancelQueuedPersistence() {
+  function cancelQueuedIdlePersist() {
     if (state.persistHandle !== null && state.persistHandle !== undefined) {
       try {
         if (state.persistHandleKind === "idle" && typeof window.cancelIdleCallback === "function") {
@@ -815,43 +815,43 @@
     state.persistQueued = false;
   }
 
-  function queueIdlePersistence() {
-    if (!state.session || state.persistQueued || state.saving || document.visibilityState !== "visible") return;
+  function queueIdlePersist() {
+    if (!state.session || state.persistQueued || state.saving) return;
     state.persistQueued = true;
-    const run = deadline => {
+    const run = async deadline => {
       state.persistHandle = null;
       state.persistHandleKind = null;
       state.persistQueued = false;
       if (!state.session) return;
-      if (document.visibilityState !== "visible") {
-        persistSession();
-        return;
-      }
-      // Prefer an idle slice so IndexedDB serialization never competes with a busy render frame.
       if (deadline && !deadline.didTimeout &&
-          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3) {
-        queueIdlePersistence();
+          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 2) {
+        queueIdlePersist();
         return;
       }
-      saveSession();
+      try {
+        // Database maintenance and report serialization stay outside the gameplay frame path.
+        await openDatabase();
+        if (!state.prunedForSession) {
+          await pruneOldSessions();
+          state.prunedForSession = true;
+        }
+        await saveSession();
+      } catch (error) {
+        if (state.session) state.session.storageError = text(error && error.message || error, 180);
+      }
     };
     if (typeof window.requestIdleCallback === "function") {
       state.persistHandleKind = "idle";
-      state.persistHandle = window.requestIdleCallback(run, { timeout: 5000 });
+      state.persistHandle = window.requestIdleCallback(run, { timeout: 4000 });
     } else {
       state.persistHandleKind = "timeout";
-      state.persistHandle = window.setTimeout(() => run(null), 3000);
+      state.persistHandle = window.setTimeout(() => run(null), 2000);
     }
   }
 
   function persistSession() {
-    if (!state.session) return;
-    if (document.visibilityState === "visible") {
-      queueIdlePersistence();
-      return;
-    }
-    cancelQueuedPersistence();
-    if (!state.saving) saveSession();
+    if (!state.session || state.saving) return;
+    queueIdlePersist();
   }
 
   function percentile(values, ratio) {
@@ -1496,7 +1496,7 @@
     state.sampleTimer = null;
     state.persistTimer = null;
     cancelQueuedIdleSample();
-    cancelQueuedPersistence();
+    cancelQueuedIdlePersist();
     if (!state.session) return;
     const current = state.session;
     current.finishedAt = new Date().toISOString();
@@ -1543,7 +1543,7 @@
         queueIdleSample();
       } else {
         cancelQueuedIdleSample();
-        persistSession();
+        saveSession();
       }
     });
     window.addEventListener("error", handleRuntimeError, true);
@@ -1554,7 +1554,7 @@
       queueIdleSample();
     });
     window.addEventListener("pagehide", () => {
-      cancelQueuedPersistence();
+      cancelQueuedIdlePersist();
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       finishSession("pagehide");
     }, { once: true });
