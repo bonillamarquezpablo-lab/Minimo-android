@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.358: only live combat entities may own damage authority.
+    # 0.6.359: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.358: unify all humanoid overlays under one measured anchor.
+    # 0.6.359: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.358; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.359; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.358\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.359\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.358.")
-    html = html.replace("0.6.274", "0.6.358")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.359.")
+    html = html.replace("0.6.274", "0.6.359")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'66',build:'0.6.358'"
+    diagnostic_build_replacement = "reportVersion:'67',build:'0.6.359'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.358 para normalizar.")
-    game_version = "0.6.358"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.359 para normalizar.")
+    game_version = "0.6.359"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3313,7 +3313,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
  const gpuTimerQueryExtensionName=(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})();
- const gpuTimerQueryAutoEnabled=!!gpuTimerQueryExtensionName;
+ const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;
  const gpuDebugRendererInfo=(()=>{try{return graphicsContext&&graphicsContext.getExtension('WEBGL_debug_renderer_info')||null;}catch(_){return null;}})();
  const readGpuLimit=(parameter)=>{try{const value=graphicsContext&&graphicsContext.getParameter(parameter);return value&&typeof value.length==='number'?Array.from(value):Number.isFinite(value)?value:null;}catch(_){return null;}};
  const gpuDeviceTelemetry=(()=>{try{return {vendor:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_VENDOR_WEBGL)||'').slice(0,120):null,renderer:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_RENDERER_WEBGL)||'').slice(0,180):null,webglVendor:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VENDOR)||'').slice(0,120):null,webglRenderer:graphicsContext?String(graphicsContext.getParameter(graphicsContext.RENDERER)||'').slice(0,180):null,maxTextureSize:readGpuLimit(graphicsContext.MAX_TEXTURE_SIZE),maxCubeMapSize:readGpuLimit(graphicsContext.MAX_CUBE_MAP_TEXTURE_SIZE),maxRenderbufferSize:readGpuLimit(graphicsContext.MAX_RENDERBUFFER_SIZE),maxViewportDims:readGpuLimit(graphicsContext.MAX_VIEWPORT_DIMS),maxSamples:graphicsContext&&graphicsContext.MAX_SAMPLES!==undefined?readGpuLimit(graphicsContext.MAX_SAMPLES):null,maxVertexAttributes:readGpuLimit(graphicsContext.MAX_VERTEX_ATTRIBS),maxVertexUniformVectors:readGpuLimit(graphicsContext.MAX_VERTEX_UNIFORM_VECTORS),maxFragmentUniformVectors:readGpuLimit(graphicsContext.MAX_FRAGMENT_UNIFORM_VECTORS),maxVaryingVectors:readGpuLimit(graphicsContext.MAX_VARYING_VECTORS),webglVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VERSION)||"").slice(0,120):null,shadingLanguageVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.SHADING_LANGUAGE_VERSION)||"").slice(0,120):null,maxTextureImageUnits:readGpuLimit(graphicsContext.MAX_TEXTURE_IMAGE_UNITS),maxVertexTextureImageUnits:readGpuLimit(graphicsContext.MAX_VERTEX_TEXTURE_IMAGE_UNITS),maxCombinedTextureImageUnits:readGpuLimit(graphicsContext.MAX_COMBINED_TEXTURE_IMAGE_UNITS),timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}catch(_){return {timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}})();
