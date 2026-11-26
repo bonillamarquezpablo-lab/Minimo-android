@@ -111,8 +111,8 @@ assert.ok(source.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),'Fe
 for(const marker of ['function animateWater(dt)','function updateWildlife(dt)','function updateActiveIslandGrass(dt)','function updateManagedWorldShadowCasters()','function auditHabitableStructures']) {
   assert.ok(source.includes(marker),'A gameplay or visual subsystem was removed: '+marker);
 }
-assert.ok(builder.includes('highHeadroomQualityMobile?deviceDpr:1.45'),'The S26 native Quality render scale must preserve the original full-resolution profile.');
-assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))'),'Mobile AA quality must remain unchanged.');
+assert.ok(builder.includes('Math.min(deviceDpr,isTouchDevice?1.80:1.85)') && builder.includes('qualityLabDprOptions=[1.8,2.1,2.5,3.0,3.75]'),'The S26 default must remain 1.8 pending approval; higher DPR values are debug-only.');
+assert.ok(builder.includes('renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))'),'Mobile AA quality must remain unchanged.');
 assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must not freeze the active list and stop dynamic rendering.');
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
