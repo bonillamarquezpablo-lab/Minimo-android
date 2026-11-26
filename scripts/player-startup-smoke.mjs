@@ -1507,14 +1507,17 @@ async function main() {
         const shellName = cacheNames.find(name => name.startsWith('el-sin-nombre-shell-'));
         const assetName = cacheNames.find(name => name.startsWith('el-sin-nombre-assets-'));
         const shell = shellName ? await caches.open(shellName) : null;
+        const assets = assetName ? await caches.open(assetName) : null;
         const shellDocumentCached = !!(shell && await shell.match(new URL('./index.html', location.href).toString()));
+        const assetKeys = assets ? await assets.keys() : [];
+        const assetProbe = assetKeys.find(request => new URL(request.url).pathname.includes('/assets/'))?.url || null;
         const requiredRequests = [
           './assets/vendor/babylon.js',
           './assets/vendor/babylonjs.loaders.min.js',
           './assets/vendor/meshopt_decoder.js',
-          './scripts/game-session-recorder.js',
-          './assets/models/Seagull.glb'
+          './scripts/game-session-recorder.js'
         ];
+        if (assetProbe) requiredRequests.push(assetProbe);
         const requests = await Promise.all(requiredRequests.map(async relativePath => {
           const response = await fetch(new URL(relativePath, location.href).toString(), { cache: 'no-store' });
           return { path: relativePath, status: response.status, ok: response.ok,
@@ -1529,6 +1532,7 @@ async function main() {
           cacheNames,
           shellDocumentCached,
           assetCachePresent: !!assetName,
+          assetProbe,
           requests
         };
       });
@@ -1544,6 +1548,7 @@ async function main() {
       assert.equal(cacheCheck.registrationState, 'activated', 'El Service Worker no sigue activo en el smoke offline.');
       assert.equal(cacheCheck.shellDocumentCached, true, 'No existe una copia verificada del shell en la caché offline.');
       assert.equal(cacheCheck.assetCachePresent, true, 'No existe la caché de recursos del juego.');
+      assert.ok(cacheCheck.assetProbe, 'La caché del juego no contiene ningún recurso para probar sin conexión.');
       assert.ok(cacheCheck.requests.every(item => item.ok && item.status === 200),
         'El Service Worker no pudo servir todos los recursos críticos sin conexión: ' + JSON.stringify(cacheCheck.requests));
       await context.setOffline(false);
