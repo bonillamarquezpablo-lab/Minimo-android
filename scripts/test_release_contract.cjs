@@ -253,8 +253,8 @@ assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone(
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 assert.ok(playerStartupSmoke.includes("clubRasterProof.changedPixels>=25") &&
-  playerStartupSmoke.includes("const clubRasterProof=await page.evaluate(async()=>") &&
-  playerStartupSmoke.includes("imageIntegrity.valid")===false?true:playerStartupSmoke.includes("clubRasterProof.changedPixels>=25"),
+  playerStartupSmoke.includes("source:'same-frame-Babylon-render-difference'") &&
+  playerStartupSmoke.includes("El palo tiene flags y coordenadas válidas, pero no aporta píxeles visibles"),
   "The player club must be proven in the actual rendered canvas, not merely reported as visible by Babylon.");
 assert.ok(buildSite.includes("const captureLocked=window.__ELSN_FAUNA_CAPTURE_LOCK__===String(b.root.name||'');") &&
   faunaCapture.includes("window.__ELSN_FAUNA_CAPTURE_LOCK__=animalId") &&
