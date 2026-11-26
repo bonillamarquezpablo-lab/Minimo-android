@@ -15,10 +15,10 @@
   for(const value of PRESETS){const option=document.createElement('option');option.value=String(value);option.textContent=value.toFixed(2);dpr.appendChild(option);}
   dpr.value=String(PRESETS.reduce((best,value)=>Math.abs(value-ctx.getDpr())<Math.abs(best-ctx.getDpr())?value:best,PRESETS[0]));
   fsr.value=ctx.getFsr()?'1':'0';msaa.value=String(ctx.getMsaa()>=4?4:2);sharp.value=ctx.getSharpen()?'1':'0';adaptive.checked=ctx.getAdaptive();
-  dpr.addEventListener('change',()=>{const actual=ctx.setDpr(Number(dpr.value));status.textContent='DPR aplicado: '+actual.toFixed(2)+'.';});
+  dpr.addEventListener('change',()=>{const actual=ctx.setDpr(Number(dpr.value));const url=new URL(location.href);url.searchParams.set('renderDpr',String(actual));history.replaceState(null,'',url.toString());status.textContent='DPR aplicado: '+actual.toFixed(2)+'.';});
   fsr.addEventListener('change',()=>{const next=new URL(location.href);next.searchParams.set('debug','1');if(fsr.value==='1')next.searchParams.set('fsr1','1');else next.searchParams.delete('fsr1');location.assign(next.toString());});
-  msaa.addEventListener('change',()=>{const actual=ctx.setMsaa(Number(msaa.value));status.textContent='MSAA aplicado: '+actual+'× (límite real del dispositivo).';});
-  sharp.addEventListener('change',()=>{ctx.setSharpen(sharp.value==='1');status.textContent='Nitidez RCAS: '+(sharp.value==='1'?'activada':'desactivada')+'. Solo afecta cuando FSR1 está activo.';});
+  msaa.addEventListener('change',()=>{const actual=ctx.setMsaa(Number(msaa.value));const url=new URL(location.href);url.searchParams.set('msaa',String(msaa.value));history.replaceState(null,'',url.toString());status.textContent='MSAA aplicado: '+actual+'× (límite real del dispositivo).';});
+  sharp.addEventListener('change',()=>{ctx.setSharpen(sharp.value==='1');const url=new URL(location.href);url.searchParams.set('sharpen',sharp.value);history.replaceState(null,'',url.toString());status.textContent='Nitidez RCAS: '+(sharp.value==='1'?'activada':'desactivada')+'. Solo afecta cuando FSR1 está activo.';});
   adaptive.addEventListener('change',()=>{ctx.setAdaptive(adaptive.checked);if(adaptive.checked)startAdaptive();});
   $('[data-close]').addEventListener('click',()=>panel.remove());
   let adaptiveRunning=false,adaptiveFrames=[],adaptiveLast=0,adaptiveLastChange=0;
