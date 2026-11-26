@@ -3077,6 +3077,7 @@ function updateWildlife(dt){
  const qualityDpr=(!isPerformanceMode&&qualityLabEnabled&&qualityLabDprOptions.some(value=>Math.abs(value-qualityLabRequestedDpr)<.001))?Math.min(deviceDpr,qualityLabRequestedDpr):qualityDprDefault;
  const legacyQualityDpr=qualityDpr;
  const fsr1InputScale=.87;
+ let fsr1Active=false;
  let qualityLabFsrRcasSharpness=qualityLabSharpenActive?.42:2.0;
  const qualityLabFsr1Requested=!!(qualityLabEnabled&&qualityLabParams.get('fsr1')==='1');
  const fsr1Candidate=!!(qualityLabFsr1Requested&&engine._gl&&typeof engine._gl.texStorage2D==='function'&&B.PostProcess&&B.PassPostProcess&&B.Effect&&B.Effect.ShadersStore);"""
@@ -3350,7 +3351,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if not quality_lab_path.is_file():
         raise SystemExit("Falta scripts/quality-render-lab.js.")
     quality_lab_source = quality_lab_path.read_text(encoding="utf-8")
-    if "window.__ELSN_QUALITY_LAB_INSTALL=install;" not in quality_lab_source:
+    if "root.__ELSN_QUALITY_LAB_INSTALL=install;" not in quality_lab_source:
         raise SystemExit("El laboratorio gráfico no expone su instalador.")
     if html.count(quality_lab_marker) != 1:
         raise SystemExit("No se encontró el punto único de inserción del laboratorio gráfico.")
