@@ -3044,21 +3044,21 @@ function updateWildlife(dt){
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
     html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.360\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.360.")
-    html = html.replace("0.6.274", "0.6.360")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.362.")
+    html = html.replace("0.6.274", "0.6.362")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'68',build:'0.6.360'"
+    diagnostic_build_replacement = "reportVersion:'70',build:'0.6.362'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.360 para normalizar.")
-    game_version = "0.6.360"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.362 para normalizar.")
+    game_version = "0.6.362"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3077,19 +3077,25 @@ function updateWildlife(dt){
     # This prevents a configured scale from being misreported as native resolution.
     render_scale_marker = "engine.setHardwareScalingLevel(renderScale);"
     render_resolution_code = """engine.setHardwareScalingLevel(renderScale);
+ window.__ELSN_RENDER_DPR_CURRENT__=qualityDpr;
  window.__ELSN_RENDER_RESOLUTION=()=>{
-  const cssWidth=Math.max(1,Math.round(canvas.clientWidth||canvas.width/deviceDpr));
-  const cssHeight=Math.max(1,Math.round(canvas.clientHeight||canvas.height/deviceDpr));
+  const rect=canvas&&typeof canvas.getBoundingClientRect==='function'?canvas.getBoundingClientRect():null;
+  const physicalDevicePixelRatio=Math.max(1,Number(window.devicePixelRatio)||deviceDpr);
+  const cssWidth=Math.max(1,Number((rect&&rect.width||canvas.clientWidth||canvas.width/physicalDevicePixelRatio).toFixed(2)));
+  const cssHeight=Math.max(1,Number((rect&&rect.height||canvas.clientHeight||canvas.height/physicalDevicePixelRatio).toFixed(2)));
   const renderWidth=Math.max(1,Math.round(engine.getRenderWidth()));
   const renderHeight=Math.max(1,Math.round(engine.getRenderHeight()));
-  const expectedDeviceWidth=Math.max(1,Math.round(cssWidth*deviceDpr));
-  const expectedDeviceHeight=Math.max(1,Math.round(cssHeight*deviceDpr));
+  const expectedDeviceWidth=Math.max(1,Math.round(cssWidth*physicalDevicePixelRatio));
+  const expectedDeviceHeight=Math.max(1,Math.round(cssHeight*physicalDevicePixelRatio));
   const fullNativeResolution=Math.abs(renderWidth-expectedDeviceWidth)<=1&&Math.abs(renderHeight-expectedDeviceHeight)<=1;
-  return {profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,
+  const pixelCoveragePercent=100*(renderWidth*renderHeight)/(expectedDeviceWidth*expectedDeviceHeight);
+  const currentDpr=Number.isFinite(Number(window.__ELSN_RENDER_DPR_CURRENT__))?Number(window.__ELSN_RENDER_DPR_CURRENT__):qualityDpr;
+  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDevicePixelRatio,physicalDevicePixelRatio,renderDpr:currentDpr,
    effectiveRenderDprX:Number((renderWidth/cssWidth).toFixed(3)),effectiveRenderDprY:Number((renderHeight/cssHeight).toFixed(3)),
-   cssWidth,cssHeight,renderWidth,renderHeight,expectedDeviceWidth,expectedDeviceHeight,
-   pixelCoverage:Number(((renderWidth*renderHeight)/(expectedDeviceWidth*expectedDeviceHeight)).toFixed(4)),
-   fullNativeResolution};
+   cssWidth,cssHeight,canvasCssWidth:cssWidth,canvasCssHeight:cssHeight,
+   renderWidth,renderHeight,expectedDeviceWidth,expectedDeviceHeight,physicalCanvasPixelWidth:expectedDeviceWidth,physicalCanvasPixelHeight:expectedDeviceHeight,
+   pixelCoverage:Number((pixelCoveragePercent/100).toFixed(4)),pixelCoveragePercent:Number(pixelCoveragePercent.toFixed(2)),
+   qualityScaleFixed:true,fullNativeResolution};
  };"""
     if html.count(render_scale_marker) != 1:
         raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
@@ -3302,7 +3308,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
 
     health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
-    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:true,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,physicalDevicePixelRatio:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalDevicePixelRatio:null,canvasCssWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().canvasCssWidth:null,canvasCssHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().canvasCssHeight:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,pixelCoveragePercent:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().pixelCoveragePercent:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
     if html.count(health_memory_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
     html = html.replace(health_memory_marker, health_memory_replacement, 1)
@@ -3313,7 +3319,45 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"
     if html.count(legacy_fsr_guard) != 1:
         raise SystemExit("No se encontró exactamente un bloque FSR heredado para proteger.")
-    html = html.replace(legacy_fsr_guard, "if(false){", 1)
+    legacy_fsr_replacement = """let fsr1SourcePostProcess=null,fsr1EasuPostProcess=null,fsr1RcasPostProcess=null,fsr1Active=false,fsr1InputScale=.87;
+ const debugRenderClarityState={renderDpr:qualityDpr,fsr1:false,msaa:Math.max(1,Number(renderPipeline&&renderPipeline.samples)||1),sharpen:!!(renderPipeline&&renderPipeline.sharpenEnabled)};
+ let debugRenderClarityBaseline=null;
+ const initializeFsr1Debug=()=>{
+  if(!debugRenderClarityMode||isPerformanceMode)return false;
+  if(fsr1Active)return true;
+  fsr1SourcePostProcess=null;fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;
+"""
+    html = html.replace(legacy_fsr_guard,legacy_fsr_replacement,1)
+    fsrLocalMarker = "let fsr1EasuPostProcess=null,fsr1RcasPostProcess=null;"
+    if html.count(fsrLocalMarker) != 1:
+        raise SystemExit("No se encontró la declaración local de postprocesos FSR1.")
+    html = html.replace(fsrLocalMarker,"fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;",1)
+    fsrTryMarker = "fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;\n  try{"
+    if html.count(fsrTryMarker) != 1:
+        raise SystemExit("No se encontró el inicio de la inicialización FSR1.")
+    html = html.replace(fsrTryMarker,"fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;\n  try{",1)
+    fsrSampleMarker = "fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples));"
+    if html.count(fsrSampleMarker) != 1:
+        raise SystemExit("No se encontró la asignación original de MSAA de FSR1.")
+    html = html.replace(fsrSampleMarker,"fsr1SourcePostProcess.samples=Math.max(1,Math.min(debugRenderClarityState.msaa,maxFsrSamples));",1)
+    fsrSharpMarker = "effect.setFloat('sharpness',.42);"
+    if html.count(fsrSharpMarker) != 1:
+        raise SystemExit("No se encontró el valor original de RCAS.")
+    html = html.replace(fsrSharpMarker,"effect.setFloat('sharpness',debugRenderClarityState.sharpen?.42:0.0);",1)
+    fsrStatusMarker = "window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',outputDpr:qualityDpr,inputScale:()=>fsr1InputScale,effectiveSourceDpr:()=>Number((qualityDpr*fsr1InputScale).toFixed(3)),"
+    if html.count(fsrStatusMarker) != 1:
+        raise SystemExit("No se encontró la telemetría original FSR1.")
+    html = html.replace(fsrStatusMarker,"window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',outputDpr:qualityDprCurrent,inputScale:()=>fsr1InputScale,effectiveSourceDpr:()=>Number((qualityDprCurrent*fsr1InputScale).toFixed(3)),",1)
+    fsrCatchMarker = "fsr1SourcePostProcess=null;fsr1Active=false;qualityDprCurrent=legacyQualityDpr;\n   engine.setHardwareScalingLevel(1/legacyQualityDpr);\n   if(renderPipeline){renderPipeline.imageProcessingEnabled=true;renderPipeline.fxaaEnabled=true;}"
+    if html.count(fsrCatchMarker) != 1:
+        raise SystemExit("No se encontró la recuperación original de FSR1.")
+    html = html.replace(fsrCatchMarker,"fsr1SourcePostProcess=null;fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;fsr1Active=false;\n   engine.setHardwareScalingLevel(1/qualityDprCurrent);\n   if(renderPipeline&&debugRenderClarityBaseline){renderPipeline.imageProcessingEnabled=debugRenderClarityBaseline.imageProcessingEnabled;renderPipeline.fxaaEnabled=debugRenderClarityBaseline.fxaaEnabled;renderPipeline.sharpenEnabled=debugRenderClarityState.sharpen;}\n   window.__ELSN_FSR1={enabled:false,reason:String(fsr1Error&&fsr1Error.message||fsr1Error)};\n   return false;",1)
+    fsrEndMarker = " }\n \n const skyTexture=new B.DynamicTexture('NordicCloudSky'"
+    if html.count(fsrEndMarker) != 1:
+        raise SystemExit("No se encontró el cierre original de FSR1.")
+    clarity_lab_code = (ROOT / "scripts" / "render-clarity-lab.js").read_text(encoding="utf-8")
+    fsrEndReplacement = "  return fsr1Active;\n };\n const disposeFsr1Debug=()=>{\n  for(const postProcess of [fsr1RcasPostProcess,fsr1EasuPostProcess,fsr1SourcePostProcess]){if(postProcess){try{camera.detachPostProcess(postProcess);postProcess.dispose();}catch(_){}}}\n  fsr1SourcePostProcess=null;fsr1EasuPostProcess=null;fsr1RcasPostProcess=null;fsr1Active=false;\n  if(renderPipeline&&debugRenderClarityBaseline){renderPipeline.imageProcessingEnabled=debugRenderClarityBaseline.imageProcessingEnabled;renderPipeline.fxaaEnabled=debugRenderClarityBaseline.fxaaEnabled;renderPipeline.sharpenEnabled=debugRenderClarityState.sharpen;debugRenderClarityBaseline=null;}\n  window.__ELSN_FSR1={enabled:false,reason:'apagado desde el laboratorio de depuración'};\n };\n window.__ELSN_FSR1={enabled:false,reason:'apagado por defecto; disponible solo con ?debug=1'};\n"+clarity_lab_code+"\n const skyTexture=new B.DynamicTexture('NordicCloudSky'";
+    html = html.replace(fsrEndMarker,fsrEndReplacement,1)
 
     # Instrumentación nativa de Babylon disponible solo para inspector/perfil.
     scene_marker = "const scene=new B.Scene(engine);"
@@ -3321,6 +3365,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Preserve opaque-scene depth for transparent footprints and ground effects.
  scene.setRenderingAutoClearDepthStencil(1,false,false,false);
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
+ const debugRenderClarityMode=new URLSearchParams(window.location.search).get('debug')==='1'&&new URLSearchParams(window.location.search).get('playertest')!=='1';
  const profileDiagnosticsEnabled=new URLSearchParams(window.location.search).get('profile')==='1';
  const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})():null;
  const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;
@@ -4209,6 +4254,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
+ window.__ELSN_RENDER_DPR_CURRENT__=qualityDprCurrent;
  // Quality keeps the full native render scale selected at startup. Runtime pressure is
  // measured and reported, never hidden by reducing resolution or scene fidelity.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
@@ -4219,7 +4265,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution),renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,qualityScaleFixed:true,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
@@ -4483,6 +4529,11 @@ function getFrameMaintenanceTimingSnapshot(){
     if html.count(atmosphere_init_marker) != 1:
         raise SystemExit("No se encontró exactamente una función update(dt) para instalar el sistema atmosférico.")
     html = html.replace(atmosphere_init_marker, atmosphere_init_code + "\n" + atmosphere_init_marker, 1)
+
+    const clarity_pause_marker = "function update(dt){";
+    if (html.count(clarity_pause_marker) != 1):
+        raise SystemExit("No se encontró exactamente una función update(dt) para pausar durante la prueba de nitidez.")
+    html = html.replace(clarity_pause_marker, clarity_pause_marker + "\n if(window.__ELSN_RENDER_CLARITY_TEST_ACTIVE__)return;", 1)
 
     # Compare the actual rendered height surfaces at their shared X/Z coordinates.
     # The 5 cm limit applies to seams between adjacent meshes, not to natural slopes
