@@ -616,7 +616,7 @@ def main() -> None:
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
-        "qualityScaleAdaptive:false",
+        "qualityScaleAdaptive:qualityLabAdaptiveActive",
         "const targetFrameRate=120;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
