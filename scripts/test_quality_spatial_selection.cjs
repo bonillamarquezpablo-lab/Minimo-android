@@ -61,7 +61,7 @@ assert.ok(builder.includes("EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villa
   'Numeric NPC, guard and ship root names must be classified with working regular expressions.');
 assert.ok(builder.includes('base.data[writeIndex]=mesh') && builder.includes('base.length=writeIndex'),
   'The candidate filter must compact Babylon’s frame-local selection array in place without allocating another array.');
-const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=()=>{');
+const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=async()=>{');
 const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
 assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
 const freezeSource=builder.slice(freezeStart,freezeEnd);
@@ -70,8 +70,8 @@ assert.ok(builder.includes(movingVisualPattern), 'Footprints, moving sun sprites
 assert.ok(freezeSource.includes('mesh.__elsnSpatialDynamic')&&freezeSource.includes('isSpatialDynamicMesh(mesh)')&&freezeSource.includes('mesh.computeWorldMatrix(true)')&&freezeSource.includes('mesh.freezeWorldMatrix(worldMatrix)')&&freezeSource.includes('mesh.isWorldMatrixFrozen===true'),
   'Only spatially classified static meshes may have their world transforms frozen.');
 const dynamicPromotion=builder.indexOf('mesh.unfreezeWorldMatrix()');
-const freezeInvocation=builder.indexOf('freezeSpatialStaticWorldMatrices();');
-const dynamicClassification=builder.indexOf('for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);');
+const freezeInvocation=builder.indexOf('await freezeSpatialStaticWorldMatrices();');
+const dynamicClassification=builder.indexOf('const classificationStartedAt=performance.now();');
 assert.ok(dynamicPromotion>0&&freezeInvocation>dynamicClassification,
   'Dynamic meshes must be unfrozen when promoted, and the static pass must run only after dynamic classification.');
 const dynamicAddStart=builder.indexOf('const addSpatialDynamicMesh=');
@@ -131,3 +131,10 @@ assert.ok(builder.includes('const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.
   !builder.includes('Array.from(octree.dynamicContent)') &&
   !builder.includes('scene.meshes.slice()'),
   'The spatial index preparation must yield between bounded work slices and avoid full-size temporary arrays.');
+
+
+assert.ok(builder.includes('await yieldSpatialWorkFrame()') &&
+  builder.includes('const initialDynamicCount=octree.dynamicContent.length') &&
+  !builder.includes('Array.from(octree.dynamicContent)') &&
+  !builder.includes('scene.meshes.slice()'),
+  'The spatial builder must use frame-budgeted live-collection passes instead of copying the complete scene arrays.');
