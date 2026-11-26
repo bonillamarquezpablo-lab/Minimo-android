@@ -64,6 +64,8 @@ assert.ok(sampler.includes("value!==null&&value!==undefined&&value!==''"),'Missi
 const guideStart=app.indexOf('  const GUIDE_STEPS=['),guideEnd=app.indexOf('\n  ];',guideStart);
 const guideTargets=[...app.slice(guideStart,guideEnd).matchAll(/target:'([^']+)'/g)].map(match=>match[1]);
 assert.deepEqual(guideTargets,['#workbench-home','#diagnostico-en-vivo','#mundo','#comparativa','#patrulla-exploradores','#control'],'The guide must follow the new guided all-in-one task flow.');
+const guideModes=[...app.slice(guideStart,guideEnd).matchAll(/mode:'([^']+)'/g)].map(match=>match[1]);
+assert.deepEqual(guideModes,['performance','world','people','tests'],'Every guided step must open one of the current four areas, including comparison under World and the patrol under People.');
 assert.ok(app.includes("window.__ELSN_INSPECTOR_NAV__") && app.includes("step.mode") && app.includes("step.subview"),'The guide must open the correct integrated tool before highlighting it.');
 assert.ok(html.includes('<header class="topbar">')&&html.indexOf('id="guideFab"')<html.indexOf('</header>'),'Help must be opened from the top header.');
 assert.ok(!html.includes('id="guideStart"')&&!app.includes("$('guideStart').addEventListener"),'The page must not show a guide launch card.');
