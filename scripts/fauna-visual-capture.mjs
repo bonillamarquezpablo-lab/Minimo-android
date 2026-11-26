@@ -614,11 +614,21 @@ async function main() {
                 Math.ceil((projectedBounds.right-projectedBounds.left+1)/sampleStep)*
                 Math.ceil((projectedBounds.bottom-projectedBounds.top+1)/sampleStep)
               );
-              const fillRatio=changedPixels/projectedSamples;
+              const projectedFillRatio=changedPixels/projectedSamples;
+              // A projected actor-wide 3D AABB can contain large empty regions when a
+              // slender animal is viewed edge-on. Validate actual silhouette density
+              // inside the raster bounds of changed pixels, while retaining the old
+              // projected-AABB ratio as diagnostic evidence.
+              const rasterBoundsSamples=Math.max(1,
+                Math.ceil(widthPx/sampleStep)*Math.ceil(heightPx/sampleStep)
+              );
+              const rasterFillRatio=changedPixels/rasterBoundsSamples;
               imageIntegrity={
-                changedPixels,sampleStep,widthPx,heightPx,fillRatio:number(fillRatio),projectedBounds,
+                changedPixels,sampleStep,widthPx,heightPx,fillRatio:number(rasterFillRatio),
+                rasterFillRatio:number(rasterFillRatio),projectedFillRatio:number(projectedFillRatio),
+                rasterBoundsSamples,projectedSamples,projectedBounds,
                 source:'same-frame-projected-animal-bounds-raster-diff',
-                valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&fillRatio>=.008
+                valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&rasterFillRatio>=.015
               };
               if(!imageIntegrity.valid)throw new Error('La captura contiene muy poca silueta real del animal; no se acepta como PNG válido: '+animalId+' · '+JSON.stringify(imageIntegrity));
             }
