@@ -532,6 +532,10 @@ def main() -> None:
         fail(f"Se esperaba la versión {EXPECTED_VERSION}, se encontró {version}.")
 
     sw = read_text("sw.js")
+    if not all(marker in sw for marker in ('"./assets/vendor/babylon.js"', '"./assets/vendor/babylonjs.loaders.min.js"', '"./assets/vendor/meshopt_decoder.js"')):
+        fail("El motor Babylon, el cargador glTF y meshopt deben quedar precargados para el arranque offline.")
+    if 'url.pathname.endsWith("/assets/vendor/babylon.js")' not in sw or "cacheFirst(request, SHELL_CACHE)" not in sw:
+        fail("Los recursos centrales de Babylon deben servirse desde la caché de shell en el reinicio offline.")
     if f'el-sin-nombre-shell-{version}' not in sw:
         fail("La caché de shell del service worker no coincide con la versión.")
     if not re.search(r'const ASSET_CACHE = "el-sin-nombre-assets-[0-9a-f]{16}";', sw):
