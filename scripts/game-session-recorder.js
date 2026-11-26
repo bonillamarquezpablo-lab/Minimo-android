@@ -15,7 +15,7 @@
   const MAX_STORED_SESSIONS = 20;
   const RECOVERY_STORAGE_KEY = "elsn-game-session-recovery-v1";
   const MAX_RECOVERY_SAMPLES = 360;
-  const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
+  const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, persistQueued: false, persistHandle: null, persistHandleKind: null, longTaskObserver: null };
 
   function number(value) {
     if (value === null || value === undefined || typeof value === "boolean" || value === "") return null;
@@ -266,6 +266,55 @@
       return false;
     } finally {
       if (state.saving === job) state.saving = null;
+    }
+  }
+
+  function cancelQueuedIdlePersist() {
+    if (state.persistHandle !== null && state.persistHandle !== undefined) {
+      try {
+        if (state.persistHandleKind === "idle" && typeof window.cancelIdleCallback === "function") {
+          window.cancelIdleCallback(state.persistHandle);
+        } else if (state.persistHandleKind === "timeout") {
+          window.clearTimeout(state.persistHandle);
+        }
+      } catch (_) {}
+    }
+    state.persistHandle = null;
+    state.persistHandleKind = null;
+    state.persistQueued = false;
+  }
+
+  function queueIdlePersist() {
+    if (!state.session || state.persistQueued || state.saving) return;
+    state.persistQueued = true;
+    const run = async deadline => {
+      state.persistHandle = null;
+      state.persistHandleKind = null;
+      state.persistQueued = false;
+      if (!state.session) return;
+      if (deadline && !deadline.didTimeout &&
+          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 2) {
+        queueIdlePersist();
+        return;
+      }
+      try {
+        // Database maintenance and report serialization stay outside the gameplay frame path.
+        await openDatabase();
+        if (!state.prunedForSession) {
+          await pruneOldSessions();
+          state.prunedForSession = true;
+        }
+        await saveSession();
+      } catch (error) {
+        if (state.session) state.session.storageError = text(error && error.message || error, 180);
+      }
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      state.persistHandleKind = "idle";
+      state.persistHandle = window.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      state.persistHandleKind = "timeout";
+      state.persistHandle = window.setTimeout(() => run(null), 2000);
     }
   }
 
@@ -575,9 +624,8 @@
       }
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       state.monitorTimer = null;
-      await openDatabase();
-      await pruneOldSessions();
       const build = document.querySelector('meta[name="el-sin-nombre-build"]');
+      state.prunedForSession = false;
       state.session = {
         schemaVersion: 1,
         sessionId: window.crypto && typeof window.crypto.randomUUID === "function"
@@ -618,15 +666,17 @@
       };
       installLongTaskObserver();
       appendSample(initial);
-      await saveSession();
+      // Start collecting immediately. IndexedDB opening, pruning and serialization are idle work.
       state.sampleTimer = window.setInterval(queueIdleSample, SAMPLE_INTERVAL_MS);
       state.persistTimer = window.setInterval(persistSession, PERSIST_INTERVAL_MS);
       window.__ELSN_SESSION_RECORDER_STATUS__ = {
         active: true,
         sessionId: state.session.sessionId,
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
-        persistIntervalMs: PERSIST_INTERVAL_MS
+        persistIntervalMs: PERSIST_INTERVAL_MS,
+        persistenceMode: "idle"
       };
+      queueIdlePersist();
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
     } finally {
@@ -788,7 +838,7 @@
 
   function persistSession() {
     if (!state.session || state.saving) return;
-    saveSession();
+    queueIdlePersist();
   }
 
   function percentile(values, ratio) {
@@ -1433,6 +1483,7 @@
     state.sampleTimer = null;
     state.persistTimer = null;
     cancelQueuedIdleSample();
+    cancelQueuedIdlePersist();
     if (!state.session) return;
     const current = state.session;
     current.finishedAt = new Date().toISOString();
@@ -1478,7 +1529,7 @@
         queueIdleSample();
       } else {
         cancelQueuedIdleSample();
-        persistSession();
+        saveSession();
       }
     });
     window.addEventListener("error", handleRuntimeError, true);
