@@ -78,7 +78,7 @@ assert.match(idlePersistenceSource,/await pruneOldSessions\(\)/);
 assert.match(idlePersistenceSource,/requestIdleCallback\(run, \{ timeout: 4000 \}\)/);
 assert.match(idlePersistenceSource,/setTimeout\(\(\) => run\(null\), 2000\)/);
 
-assert.match(source,/window\.requestIdleCallback\(run, \{ timeout: 5000 \}\)/);
+assert.match(source,/window\.requestIdleCallback\(run, \{ timeout: 4000 \}\)/);
 assert.match(source,/function cancelQueuedPersistence\(\)/);
 assert.match(source,/sceneInventory = \{ capturedAt: sample\.capturedAt, dynamicMeshSamplesByReason: inventorySnapshot \}/);
 assert.match(source,/window\.structuredClone\(inventory\)/,"The one-time scene inventory must be detached from the live renderer object.");
