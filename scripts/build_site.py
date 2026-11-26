@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.357: only live combat entities may own damage authority.
+    # 0.6.358: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.357: unify all humanoid overlays under one measured anchor.
+    # 0.6.358: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.357; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.358; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.357\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.358\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.357.")
-    html = html.replace("0.6.274", "0.6.357")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.358.")
+    html = html.replace("0.6.274", "0.6.358")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'65',build:'0.6.357'"
+    diagnostic_build_replacement = "reportVersion:'66',build:'0.6.358'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.357 para normalizar.")
-    game_version = "0.6.357"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.358 para normalizar.")
+    game_version = "0.6.358"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3058,10 +3058,32 @@ function updateWildlife(dt){
  // Quality fixes its native render scale at startup. Runtime FPS drops must never lower image quality.
  const qualityDpr=isPerformanceMode
   ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
-  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?1.80:1.45):1.65);"""
+  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65);"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
+
+    # Report the actual drawing buffer separately from the selected DPR.
+    # This prevents a configured scale from being misreported as native resolution.
+    render_scale_marker = "engine.setHardwareScalingLevel(renderScale);"
+    render_resolution_code = """engine.setHardwareScalingLevel(renderScale);
+ window.__ELSN_RENDER_RESOLUTION=()=>{
+  const cssWidth=Math.max(1,Math.round(canvas.clientWidth||canvas.width/deviceDpr));
+  const cssHeight=Math.max(1,Math.round(canvas.clientHeight||canvas.height/deviceDpr));
+  const renderWidth=Math.max(1,Math.round(engine.getRenderWidth()));
+  const renderHeight=Math.max(1,Math.round(engine.getRenderHeight()));
+  const expectedDeviceWidth=Math.max(1,Math.round(cssWidth*deviceDpr));
+  const expectedDeviceHeight=Math.max(1,Math.round(cssHeight*deviceDpr));
+  const fullNativeResolution=Math.abs(renderWidth-expectedDeviceWidth)<=1&&Math.abs(renderHeight-expectedDeviceHeight)<=1;
+  return {profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,
+   effectiveRenderDprX:Number((renderWidth/cssWidth).toFixed(3)),effectiveRenderDprY:Number((renderHeight/cssHeight).toFixed(3)),
+   cssWidth,cssHeight,renderWidth,renderHeight,expectedDeviceWidth,expectedDeviceHeight,
+   pixelCoverage:Number(((renderWidth*renderHeight)/(expectedDeviceWidth*expectedDeviceHeight)).toFixed(4)),
+   fullNativeResolution};
+ };"""
+    if html.count(render_scale_marker) != 1:
+        raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
+    html = html.replace(render_scale_marker, render_resolution_code, 1)
 
     # Make the identity gate reliable for both pointer and keyboard activation.
     identity_start_guard_marker = "function beginLoadingWithIdentity(name){\n selectedPlayerName=String(name||'').trim().slice(0,20);playerIdentityChosen=true;"
@@ -3270,7 +3292,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
 
     health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
-    health_memory_replacement = "runtime:{startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
     if html.count(health_memory_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
     html = html.replace(health_memory_marker, health_memory_replacement, 1)
@@ -4143,7 +4165,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:true,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution),renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:

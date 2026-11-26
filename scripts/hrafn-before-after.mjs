@@ -152,7 +152,7 @@ async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
   const sampleStartedAt = Date.now();
   const collect = async () => withTimeout(page.evaluate(() => {
     if (typeof window.getGameHealthDebug !== 'function') throw new Error('getGameHealthDebug() is unavailable.');
-    const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null;
+    const health = window.getGameHealthDebug(), runtime = health.runtime || {}, fsr = window.__ELSN_FSR1 || null, renderResolution = runtime.renderResolution || window.__ELSN_RENDER_RESOLUTION?.() || null;
     const water = typeof window.__elSinNombreWaterDebugSnapshot === 'function' ? window.__elSinNombreWaterDebugSnapshot() : null;
     const memory = performance.memory && typeof performance.memory === 'object' ? performance.memory : null;
     const toMB = value => value!==null&&value!==undefined&&Number.isFinite(Number(value)) ? Number((Number(value) / 1048576).toFixed(2)) : null;
@@ -160,7 +160,7 @@ async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
       build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
       profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
       frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
-      renderDpr: runtime.renderDpr ?? null, renderWidth: runtime.renderWidth ?? null, renderHeight: runtime.renderHeight ?? null,
+      renderDpr: renderResolution?.renderDpr ?? runtime.renderDpr ?? null, renderWidth: renderResolution?.renderWidth ?? runtime.renderWidth ?? null, renderHeight: renderResolution?.renderHeight ?? runtime.renderHeight ?? null, renderResolution, nativeResolutionPreserved: renderResolution?.fullNativeResolution ?? null,
       drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
       worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
       gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,
@@ -194,7 +194,7 @@ async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
     medianRenderSubmissionCpuMs:median(values('renderCpuMs')),medianDrawCalls:median(values('drawCalls')),
     heapInitialMB:samples[0]?.heapUsedMB??null,heapPeakMB:heapValues.length?Math.max(...heapValues):null,
     heapFinalMB:last.heapUsedMB??null,heapSampleCount:heapValues.length,
-    profile:last.profile,build:last.build,renderDpr:last.renderDpr,renderWidth:last.renderWidth,renderHeight:last.renderHeight,
+    profile:last.profile,build:last.build,renderDpr:last.renderDpr,renderWidth:last.renderWidth,renderHeight:last.renderHeight,renderResolution:last.renderResolution||null,nativeResolutionPreserved:last.nativeResolutionPreserved??null,
     gpuRenderer:last.gpuRenderer,gpuVendor:last.gpuVendor,webglVersion:last.webglVersion,devicePixelRatio:last.devicePixelRatio,
     isTouchDevice:last.isTouchDevice,deviceMemory:last.deviceMemory,hardwareConcurrency:last.hardwareConcurrency,
     fsr1:last.fsr1,performanceAssessment:last.performanceAssessment,samples};
