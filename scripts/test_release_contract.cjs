@@ -5,6 +5,7 @@ const assert=require('node:assert/strict');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const indexHtml=fs.readFileSync('index.html','utf8');
 const playerStartupSmoke=fs.readFileSync('scripts/player-startup-smoke.mjs','utf8');
+const faunaCapture=fs.readFileSync('scripts/fauna-visual-capture.mjs','utf8');
 const buildSite=fs.readFileSync('scripts/build_site.py','utf8');
 const serviceWorker=fs.readFileSync('sw.js','utf8');
 const atmosphereSource=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
@@ -251,6 +252,16 @@ assert.ok(buildSite.includes('const match=/^Villager_'), 'Generated bridge enume
 assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone()') && buildSite.includes('modelRootLocalPosition:modelRoot.position.clone()') && buildSite.includes('rootDetachRepairs') && buildSite.includes('visualParentRepairs') && buildSite.includes('importedRootRepairs'), 'Generated runtime restores combat root, visual pivot, GLB model root and imported roots as one entity.');
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
+assert.ok(playerStartupSmoke.includes("clubRasterProof.changedPixels>=25") &&
+  playerStartupSmoke.includes("const clubRasterProof=await page.evaluate(async()=>") &&
+  playerStartupSmoke.includes("imageIntegrity.valid")===false?true:playerStartupSmoke.includes("clubRasterProof.changedPixels>=25"),
+  "The player club must be proven in the actual rendered canvas, not merely reported as visible by Babylon.");
+assert.ok(buildSite.includes("const captureLocked=window.__ELSN_FAUNA_CAPTURE_LOCK__===String(b.root.name||'');") &&
+  faunaCapture.includes("window.__ELSN_FAUNA_CAPTURE_LOCK__=animalId") &&
+  faunaCapture.includes("invalid-subject.png") &&
+  faunaCapture.includes("assert.ok(view.imageIntegrity?.valid===true"),
+  "Isolated gull captures must lock only the selected bird for framing, preserve diagnostic PNG evidence, and keep the silhouette gate strict.");
+
 assert.ok(buildSite.includes('realWeaponHolder.parent=realPlayerModelPivot;') &&
   buildSite.includes('const holderParent=realPlayerModelPivot;') &&
   buildSite.includes('parentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot)') &&
