@@ -3040,25 +3040,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.360; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.361; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.360\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.361\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.360.")
-    html = html.replace("0.6.274", "0.6.360")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.361.")
+    html = html.replace("0.6.274", "0.6.361")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'68',build:'0.6.360'"
+    diagnostic_build_replacement = "reportVersion:'69',build:'0.6.361'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.360 para normalizar.")
-    game_version = "0.6.360"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.361 para normalizar.")
+    game_version = "0.6.361"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3378,7 +3378,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
  const publishSpatialSelectionStats=()=>{
   try{
@@ -3408,13 +3408,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   return null;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
- const freezeSpatialStaticWorldMatrices=()=>{
+ const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;
+ const yieldSpatialWorkFrame=()=>new Promise(resolve=>{
+  let settled=false,timer=0;
+  const finish=()=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);resolve();};
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);else timer=setTimeout(finish,0);
+  if(!settled)timer=setTimeout(finish,50);
+ });
+ const freezeSpatialStaticWorldMatrices=async()=>{
   let frozen=0,errors=0,skippedDynamic=0;
-  const startedAt=performance.now();
+  const startedAt=performance.now(),meshCount=scene.meshes.length;
+  let sliceStartedAt=startedAt;
   // Freeze only meshes that are static after the complete scene has been assembled.
   // Moving roots, animated rigs, vegetation pivots, effects and all their descendants
   // are excluded; their matrix updates and animations remain live.
-  for(let index=0;index<scene.meshes.length;index++){
+  for(let index=0;index<meshCount;index++){
    const mesh=scene.meshes[index];
    if(!mesh||mesh.__elsnSpatialDynamic||isSpatialDynamicMesh(mesh)||
       mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||
@@ -3430,6 +3438,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     mesh.freezeWorldMatrix(worldMatrix);
     frozen++;
    }catch(_){errors++;}
+   if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){
+    await yieldSpatialWorkFrame();
+    sliceStartedAt=performance.now();
+   }
   }
   spatialSelectionStats.staticWorldMatricesFrozen=frozen;
   spatialSelectionStats.staticWorldMatrixFreezeMs=Number((performance.now()-startedAt).toFixed(2));
@@ -3492,26 +3504,43 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  if(scene.onMeshRemovedObservable&&typeof scene.onMeshRemovedObservable.add==='function'){
   scene.onMeshRemovedObservable.add(removeSpatialDynamicMesh);
  }
- function buildSpatialSelectionOctree(){
+ async function buildSpatialSelectionOctree(){
   if(spatialSelectionOctree)return true;
   if(scene.meshes.length<512||typeof scene.createOrUpdateSelectionOctree!=='function')return false;
   if(!scene.onNewMeshAddedObservable||typeof scene.onNewMeshAddedObservable.add!=='function')return false;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
   try{
+   // Let the final loading frame paint before Babylon performs its native octree build.
+   await yieldSpatialWorkFrame();
+   const octreeBuildStartedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
+   spatialSelectionStats.babylonOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
    if(!octree||!octree.dynamicContent||typeof octree.dynamicContent.push!=='function'){
     throw new Error('Babylon no devolvió la lista dinámica de la selección espacial.');
    }
    spatialSelectionOctree=octree;
    // Keep Babylon's own overflow/out-of-bounds dynamic entries tracked for safe removal.
-   for(const mesh of Array.from(octree.dynamicContent))if(mesh&&!mesh.__elsnSpatialDynamic){
+   // Iterate the live collections directly: no full-size temporary arrays on memory-sensitive phones.
+   let workSliceStartedAt=performance.now();
+   const initialDynamicCount=octree.dynamicContent.length;
+   for(let index=0;index<initialDynamicCount;index++){
+    const mesh=octree.dynamicContent[index];
+    if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
     mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic';
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
+    }
+    if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
-   for(const mesh of scene.meshes.slice())if(isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
-   const staticWorldMatricesFrozen=freezeSpatialStaticWorldMatrices();
+   const classificationStartedAt=performance.now();
+   for(let index=0;index<meshCount;index++){
+    const mesh=scene.meshes[index];
+    if(mesh&&isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
+    if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
+   }
+   spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
+   const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
    updateSpatialSelectionCounts();
    // Leave Babylon's native SelectionOctree.select() intact. The scene component
    // uses it to gather static octree blocks plus every dynamicContent mesh. Filter
@@ -3741,7 +3770,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(perf_render_loop_marker, perf_render_loop_replacement, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs,meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
@@ -3752,7 +3781,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         raise SystemExit("No se encontró el punto único para preparar la selección espacial antes de la campaña.")
     html = html.replace(
         spatial_startup_marker,
-        spatial_startup_marker + "\n    buildSpatialSelectionOctree();",
+        spatial_startup_marker + "\n    // Spatial indexing is awaited by the asynchronous startup handoff below.",
         1,
     )
 
@@ -3778,7 +3807,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    }
    // Keep the regular render-loop handoff invariant: the spatial octree must
    // exist before gameplay can be selected, even when this safety path wins the race.
-   buildSpatialSelectionOctree();
+   await buildSpatialSelectionOctree();
    const startupLoading=document.getElementById('loading');
    if(startupLoading)startupLoading.style.display='none';
    showStartScreen();
