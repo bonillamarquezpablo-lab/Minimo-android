@@ -22,7 +22,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;",
     "if(perfAuditScenario==='sin seleccionar')return null;",
     "if(perfAuditScenario==='sin seleccionar')return;",
-    "perf_render_loop_marker",
+    "if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}",
     "performanceAuditActive=perfAuditScenario!=='sin seleccionar'",
     "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
     "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
