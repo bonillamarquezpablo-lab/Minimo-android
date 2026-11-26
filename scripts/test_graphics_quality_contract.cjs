@@ -17,7 +17,7 @@ for(const marker of [
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
   'qualityScaleLockedForSession:true',
-  'window.__ELSN_RENDER_RESOLUTION=getRenderResolutionSnapshot',
+  'window.__ELSN_RENDER_RESOLUTION=()=>{',
   'nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)',
   'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
