@@ -78,6 +78,7 @@ assert.ok(observerStart>=0&&observerEnd>observerStart,"Gameplay long-task captur
 const observerSource=source.slice(observerStart,observerEnd);
 assert.match(observerSource,/entry\\.startTime/);
 assert.match(observerSource,/state\\.sessionStartedPerformanceAt/,"Buffered browser startup tasks must not be misattributed to gameplay.");
+assert.match(source,/state\\.sessionStartedPerformanceAt = 0/,"Session timing state must be reset after a report is finalized.");
 console.log("session recorder idle-performance contract: PASS");
 assert.match(source,/preWorldMaintenanceTimings: runtime\.preWorldMaintenanceTimings/);
 assert.match(source,/maintenancePhaseCosts/);
