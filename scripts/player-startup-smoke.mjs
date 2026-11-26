@@ -148,25 +148,31 @@ async function waitForStartupPresentation(page, phase) {
   await page.waitForFunction(()=>{
     const intro=document.getElementById('intro');
     const loading=document.getElementById('loading');
-    return document.body.classList.contains('intro-open') &&
+    const introReady=document.body.classList.contains('intro-open')&&!!intro&&
+      intro.classList.contains('open')&&intro.getAttribute('aria-hidden')==='false';
+    // Returning players can resume directly into the saved world. That is a valid
+    // presentation state after an offline Service Worker restart; it need not reopen
+    // the campaign selector that is shown only before entering a new session.
+    const gameplayReady=document.body.classList.contains('game-running');
+    return (introReady||gameplayReady) &&
       !document.body.classList.contains('booting') &&
       !document.body.classList.contains('boot-failed') &&
-      !!intro && intro.classList.contains('open') &&
-      intro.getAttribute('aria-hidden')==='false' &&
       (!loading || getComputedStyle(loading).display==='none');
   },undefined,{timeout:STARTUP_PRESENTATION_TIMEOUT_MS,polling:100});
   const state=await page.evaluate(()=>({
     bodyClass:document.body.className,
     introOpen:document.body.classList.contains('intro-open'),
     introVisible:!!document.getElementById('intro')&&document.getElementById('intro').classList.contains('open')&&document.getElementById('intro').getAttribute('aria-hidden')==='false',
+    gameRunning:document.body.classList.contains('game-running'),
     loadingVisible:!!document.getElementById('loading')&&getComputedStyle(document.getElementById('loading')).display!=='none',
     booting:document.body.classList.contains('booting'),
     bootFailed:document.body.classList.contains('boot-failed')
   }));
   assert.equal(state.booting,false,phase+' dejó el body en booting después de la barrera de recursos: '+JSON.stringify(state));
   assert.equal(state.bootFailed,false,phase+' terminó en boot-failed: '+JSON.stringify(state));
-  assert.equal(state.introOpen,true,phase+' no mostró el selector real de campaña: '+JSON.stringify(state));
-  assert.equal(state.introVisible,true,phase+' mantiene oculto el selector de campaña: '+JSON.stringify(state));
+  assert.ok(state.introOpen||state.gameRunning,phase+' no llegó al selector de campaña ni reanudó la partida guardada: '+JSON.stringify(state));
+  if(state.introOpen)assert.equal(state.introVisible,true,phase+' mantiene oculto el selector de campaña: '+JSON.stringify(state));
+  if(!state.introOpen)assert.equal(state.gameRunning,true,phase+' no confirmó el estado de juego reanudado: '+JSON.stringify(state));
   assert.equal(state.loadingVisible,false,phase+' conserva la pantalla de carga después de iniciar: '+JSON.stringify(state));
   return {elapsedMs:Number((performance.now()-startedAt).toFixed(1)),...state};
 }
