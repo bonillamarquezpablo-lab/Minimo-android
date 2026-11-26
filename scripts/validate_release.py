@@ -29,6 +29,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "sampleVisibleMesh:firstVisibleMesh(visualRoot)",
     "parentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot)",
     "holderToHandMeters:weaponHolderPosition&&weaponHandPosition",
+    "const captureLocked=window.__ELSN_FAUNA_CAPTURE_LOCK__===String(b.root.name||'');",
     "function updateAmbientGullFlight(nowSeconds){",
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
