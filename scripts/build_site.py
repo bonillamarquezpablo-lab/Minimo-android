@@ -1138,6 +1138,16 @@ def main() -> None:
     return 2;
    };
 
+   let grassWindCachedFrameId=-1,grassWindCachedTime=0;
+   const grassWindTimeForCurrentFrame=()=>{
+    const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;
+    if(!Number.isFinite(frameId)||frameId!==grassWindCachedFrameId){
+     grassWindCachedFrameId=Number.isFinite(frameId)?frameId:-1;
+     grassWindCachedTime=performance.now()*.001;
+    }
+    return grassWindCachedTime;
+   };
+
    class NordicGrassWindPlugin extends B.MaterialPluginBase{
     constructor(material){
      super(material,'NordicGrassWind',200,{NORSE_GRASS_WIND:true});
@@ -1155,7 +1165,7 @@ def main() -> None:
     }
     _bindWind(uniformBuffer){
      if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
-     uniformBuffer.updateFloat('grassWindTime',performance.now()*.001);
+     uniformBuffer.updateFloat('grassWindTime',grassWindTimeForCurrentFrame());
      uniformBuffer.updateFloat('grassWindStrength',this.strength);
     }
     bindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
