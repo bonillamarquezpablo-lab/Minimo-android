@@ -469,7 +469,6 @@ async function main() {
           const ancestorsContain=(node,root)=>{let current=node,depth=0;while(current&&depth++<48){if(current===root)return true;current=current.parent;}return false;};
           const root=scene?.getTransformNodeByName?.(animalId);
           if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar: '+animalId+' · api='+!!api);
-          const isBird=/^RealSeagullActor_\d+$/.test(animalId);
           const previousFaunaCaptureLock=window.__ELSN_FAUNA_CAPTURE_LOCK__??null;
           root.computeWorldMatrix?.(true);
           const meshes=root.getChildMeshes?.(false)||[];
