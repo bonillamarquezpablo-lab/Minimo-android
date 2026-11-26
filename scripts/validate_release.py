@@ -634,7 +634,7 @@ def main() -> None:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
     if "qualityScaleFixed:!qualityLabAdaptiveActive" not in index_html or "physicalPixelCoveragePct" not in index_html:
         fail("El perfil Calidad debe informar la escala fija y el porcentaje real de píxeles físicos.")
-    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt\)\{([\\s\\S]*?)\\n  \\}", index_html)
+    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt\)\{([\s\S]*?)\n  \}", index_html)
     if not quality_adaptive_match or "engine.setHardwareScalingLevel" in quality_adaptive_match.group(1) or "qualityDprSlowSamples" in quality_adaptive_match.group(1):
         fail("El runtime no puede reducir automáticamente la escala de Calidad; los cambios manuales quedan limitados al laboratorio debug.")
     mobile_gpu_budget_markers = (
