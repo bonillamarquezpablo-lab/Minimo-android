@@ -55,13 +55,26 @@ for(const marker of [
 const anchorBuilder=builder.slice(builder.indexOf('npc_overlay_anchor_code = r"""'),builder.indexOf('if (scene_profile_code.count(npc_overlay_anchor_marker)'));
 assert.ok(anchorBuilder.includes('boundingBox') && anchorBuilder.includes('for(let corner=0;corner<8;corner++)') && anchorBuilder.includes('TransformCoordinates(worldPoint,inverse)') && anchorBuilder.includes('inverse.invert()'),
   'NPC overlay height must use all eight mesh-bound corners transformed through complete mesh and root world matrices, including inherited rotation and scale.');
-assert.ok(anchorBuilder.includes('function recoverNpcActorVisuals(parts)') && anchorBuilder.includes('lastVisualRecoveryMeshes') && anchorBuilder.includes('proceduralFallbackBody'),
+assert.ok(anchorBuilder.includes('function recoverNpcActorVisuals(parts,nowMs)') && anchorBuilder.includes('lastVisualRecoveryMeshes') && anchorBuilder.includes('proceduralFallbackBody'),
   'Nearby NPCs with zero renderable imported meshes must recover their visual hierarchy or use the existing fallback until the rig is visible.');
 assert.ok(anchorBuilder.includes('parts.factionBadge.position.set(0,.34,0)') && anchorBuilder.includes('m.position.set(0,Number.isFinite(Number(e.y))'),
   'Faction emblems and health bars must have their local offsets reasserted on every anchor maintenance pass.');
 assert.ok(anchorBuilder.includes('transformFallbacks') && anchorBuilder.includes('healthReattachments'),
   'NPC overlay anchor recovery must expose transform fallback and health-bar reattachment diagnostics.');
 
+
+assert.ok(anchorBuilder.includes("now-parts.__elsnVisualAuditAt<1200") &&
+  anchorBuilder.includes("visualAuditCacheHits++") &&
+  anchorBuilder.includes("visualAuditRuns++") &&
+  anchorBuilder.includes("recordFrameMaintenanceTiming('npcVisualRecoveryAudit',auditStarted)") &&
+  anchorBuilder.includes("recoverNpcActorVisuals(p,now)"),
+  'NPC mesh-visibility recovery must retain its automatic repair path while reusing a short-lived visibility audit between sweeps.');
+assert.ok(builder.includes("nowMs-(parts.__elsnEnemyMeshAuditAt||0)>=1200") &&
+  builder.includes("recordFrameMaintenanceTiming('enemyMeshVisibilityAudit',meshAuditStarted)") &&
+  builder.includes("recordFrameMaintenanceTiming('enemyFallbackMeshAudit',meshAuditStarted)") &&
+  builder.includes("nowMs-enemyVisualRecoveryAt<350") &&
+  anchorBuilder.includes("now-(npcOverlayAnchorStats.lastSweepAt||0)<500"),
+  'Enemy/NPC hierarchy repair cadence must remain active while expensive full mesh visibility scans are throttled and separately measured.');
 assert.ok(dialogue.includes('lastPositioningMs') &&
   dialogue.includes('maxPositioningMs') &&
   dialogue.includes('lastProjection'),
