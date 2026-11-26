@@ -3795,7 +3795,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # then reveal the campaign selector from the startup task itself. The render-loop
     # path remains the normal path; this idempotent hand-off is only its safety net.
     startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
-    startup_handoff_replacement = """ startupAssetsReady=true;
+    startup_handoff_replacement = """ if(!startScreenShown){
  if(!startScreenShown){
   try{
    if(!firstFrameRendered){
@@ -3812,6 +3812,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Keep the regular render-loop handoff invariant: the spatial octree must
    // exist before gameplay can be selected, even when this safety path wins the race.
    await buildSpatialSelectionOctree();
+   startupAssetsReady=true;
    const startupLoading=document.getElementById('loading');
    if(startupLoading)startupLoading.style.display='none';
    showStartScreen();
