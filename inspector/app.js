@@ -645,11 +645,11 @@
 
 
   const GUIDE_STEPS=[
-    {target:'#workbench-home',title:'1. Elige qué quieres revisar',text:'Empieza por una de las cinco tarjetas. Cada una abre solo las herramientas necesarias para esa tarea.'},
+    {target:'#workbench-home',title:'1. Elige qué quieres revisar',text:'Empieza por una de las cuatro áreas. Cada una agrupa las herramientas de esa tarea.'},
     {mode:'performance',subview:'diagnostico-en-vivo',target:'#diagnostico-en-vivo',title:'2. Comprueba la fluidez',text:'Abre el juego desde aquí y juega un rato. Verás si los FPS se mantienen y dónde aparecen los tirones.'},
     {mode:'world',subview:'mundo',target:'#mundo',title:'3. Revisa el mundo 3D',text:'Haz una captura de la escena después de recorrer la zona que quieras revisar. El mapa te ayuda a localizar cada isla y estructura.'},
-    {mode:'evidence',subview:'comparativa',target:'#comparativa',title:'4. Compara el aspecto',text:'Elige amanecer, día, atardecer o noche y desliza para comparar las imágenes cuando existan capturas.'},
-    {mode:'intelligence',subview:'patrulla-exploradores',target:'#patrulla-exploradores',title:'5. Consulta a los especialistas',text:'Aquí aparecen los recorridos de las islas, los informes de NPC y lo que recuerdan de partidas anteriores.'},
+    {mode:'world',subview:'comparativa',target:'#comparativa',title:'4. Compara el aspecto',text:'Elige amanecer, día, atardecer o noche y desliza para comparar las imágenes cuando existan capturas.'},
+    {mode:'people',subview:'patrulla-exploradores',target:'#patrulla-exploradores',title:'5. Consulta a los especialistas',text:'Aquí aparecen los recorridos de las islas, los informes de NPC y lo que recuerdan de partidas anteriores.'},
     {mode:'tests',subview:'control',target:'#control',title:'6. Ejecuta una prueba cuando haga falta',text:'Elige rápida, completa o profunda. El Inspector reúne el estado, los pasos y las capturas en el mismo lugar.'}
   ];
   let guideIndex=0,guideActive=false,guideHighlighted=null;
