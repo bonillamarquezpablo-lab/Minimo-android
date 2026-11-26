@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.358: only live combat entities may own damage authority.
+    # 0.6.360: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.358: unify all humanoid overlays under one measured anchor.
+    # 0.6.360: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -1138,6 +1138,16 @@ def main() -> None:
     return 2;
    };
 
+   let grassWindCachedFrameId=-1,grassWindCachedTime=0;
+   const grassWindTimeForCurrentFrame=()=>{
+    const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;
+    if(!Number.isFinite(frameId)||frameId!==grassWindCachedFrameId){
+     grassWindCachedFrameId=Number.isFinite(frameId)?frameId:-1;
+     grassWindCachedTime=performance.now()*.001;
+    }
+    return grassWindCachedTime;
+   };
+
    class NordicGrassWindPlugin extends B.MaterialPluginBase{
     constructor(material){
      super(material,'NordicGrassWind',200,{NORSE_GRASS_WIND:true});
@@ -1155,7 +1165,7 @@ def main() -> None:
     }
     _bindWind(uniformBuffer){
      if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
-     uniformBuffer.updateFloat('grassWindTime',performance.now()*.001);
+     uniformBuffer.updateFloat('grassWindTime',grassWindTimeForCurrentFrame());
      uniformBuffer.updateFloat('grassWindStrength',this.strength);
     }
     bindForSubMesh(uniformBuffer){this._bindWind(uniformBuffer);}
@@ -3030,25 +3040,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.358; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.360; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.358\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.360\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.358.")
-    html = html.replace("0.6.274", "0.6.358")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.360.")
+    html = html.replace("0.6.274", "0.6.360")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'66',build:'0.6.358'"
+    diagnostic_build_replacement = "reportVersion:'68',build:'0.6.360'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.358 para normalizar.")
-    game_version = "0.6.358"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.360 para normalizar.")
+    game_version = "0.6.360"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3312,11 +3322,22 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  scene.setRenderingAutoClearDepthStencil(1,false,false,false);
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
  const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
- const gpuTimerQueryExtensionName=(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})();
- const gpuTimerQueryAutoEnabled=!!gpuTimerQueryExtensionName;
- const gpuDebugRendererInfo=(()=>{try{return graphicsContext&&graphicsContext.getExtension('WEBGL_debug_renderer_info')||null;}catch(_){return null;}})();
+ const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})():null;
+ const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;
+ const gpuDebugRendererInfo=profileDiagnosticsEnabled?(()=>{try{return graphicsContext&&graphicsContext.getExtension('WEBGL_debug_renderer_info')||null;}catch(_){return null;}})():null;
  const readGpuLimit=(parameter)=>{try{const value=graphicsContext&&graphicsContext.getParameter(parameter);return value&&typeof value.length==='number'?Array.from(value):Number.isFinite(value)?value:null;}catch(_){return null;}};
- const gpuDeviceTelemetry=(()=>{try{return {vendor:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_VENDOR_WEBGL)||'').slice(0,120):null,renderer:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_RENDERER_WEBGL)||'').slice(0,180):null,webglVendor:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VENDOR)||'').slice(0,120):null,webglRenderer:graphicsContext?String(graphicsContext.getParameter(graphicsContext.RENDERER)||'').slice(0,180):null,maxTextureSize:readGpuLimit(graphicsContext.MAX_TEXTURE_SIZE),maxCubeMapSize:readGpuLimit(graphicsContext.MAX_CUBE_MAP_TEXTURE_SIZE),maxRenderbufferSize:readGpuLimit(graphicsContext.MAX_RENDERBUFFER_SIZE),maxViewportDims:readGpuLimit(graphicsContext.MAX_VIEWPORT_DIMS),maxSamples:graphicsContext&&graphicsContext.MAX_SAMPLES!==undefined?readGpuLimit(graphicsContext.MAX_SAMPLES):null,maxVertexAttributes:readGpuLimit(graphicsContext.MAX_VERTEX_ATTRIBS),maxVertexUniformVectors:readGpuLimit(graphicsContext.MAX_VERTEX_UNIFORM_VECTORS),maxFragmentUniformVectors:readGpuLimit(graphicsContext.MAX_FRAGMENT_UNIFORM_VECTORS),maxVaryingVectors:readGpuLimit(graphicsContext.MAX_VARYING_VECTORS),webglVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VERSION)||"").slice(0,120):null,shadingLanguageVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.SHADING_LANGUAGE_VERSION)||"").slice(0,120):null,maxTextureImageUnits:readGpuLimit(graphicsContext.MAX_TEXTURE_IMAGE_UNITS),maxVertexTextureImageUnits:readGpuLimit(graphicsContext.MAX_VERTEX_TEXTURE_IMAGE_UNITS),maxCombinedTextureImageUnits:readGpuLimit(graphicsContext.MAX_COMBINED_TEXTURE_IMAGE_UNITS),timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}catch(_){return {timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}})();
+ const gpuDeviceTelemetry=profileDiagnosticsEnabled?(()=>{try{return {profilingEnabled:true,vendor:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_VENDOR_WEBGL)||'').slice(0,120):null,renderer:gpuDebugRendererInfo?String(graphicsContext.getParameter(gpuDebugRendererInfo.UNMASKED_RENDERER_WEBGL)||'').slice(0,180):null,webglVendor:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VENDOR)||'').slice(0,120):null,webglRenderer:graphicsContext?String(graphicsContext.getParameter(graphicsContext.RENDERER)||'').slice(0,180):null,maxTextureSize:readGpuLimit(graphicsContext.MAX_TEXTURE_SIZE),maxCubeMapSize:readGpuLimit(graphicsContext.MAX_CUBE_MAP_TEXTURE_SIZE),maxRenderbufferSize:readGpuLimit(graphicsContext.MAX_RENDERBUFFER_SIZE),maxViewportDims:readGpuLimit(graphicsContext.MAX_VIEWPORT_DIMS),maxSamples:graphicsContext&&graphicsContext.MAX_SAMPLES!==undefined?readGpuLimit(graphicsContext.MAX_SAMPLES):null,maxVertexAttributes:readGpuLimit(graphicsContext.MAX_VERTEX_ATTRIBS),maxVertexUniformVectors:readGpuLimit(graphicsContext.MAX_VERTEX_UNIFORM_VECTORS),maxFragmentUniformVectors:readGpuLimit(graphicsContext.MAX_FRAGMENT_UNIFORM_VECTORS),maxVaryingVectors:readGpuLimit(graphicsContext.MAX_VARYING_VECTORS),webglVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.VERSION)||'').slice(0,120):null,shadingLanguageVersion:graphicsContext?String(graphicsContext.getParameter(graphicsContext.SHADING_LANGUAGE_VERSION)||'').slice(0,120):null,maxTextureImageUnits:readGpuLimit(graphicsContext.MAX_TEXTURE_IMAGE_UNITS),maxVertexTextureImageUnits:readGpuLimit(graphicsContext.MAX_VERTEX_TEXTURE_IMAGE_UNITS),maxCombinedTextureImageUnits:readGpuLimit(graphicsContext.MAX_COMBINED_TEXTURE_IMAGE_UNITS),timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}catch(_){return {profilingEnabled:true,timerQueryExtension:gpuTimerQueryExtensionName,timerQuerySupported:!!gpuTimerQueryExtensionName,debugRendererInfoAvailable:!!gpuDebugRendererInfo};}})():{profilingEnabled:false,timerQueryExtension:null,timerQuerySupported:null,debugRendererInfoAvailable:false};
+ const gpuContextLifecycle={state:graphicsContext?'ready':'unavailable',lossCount:0,restoreCount:0,creationErrorCount:0,lastEvent:null,lastLossAt:null,lastRestoreAt:null,lastCreationErrorAt:null,restorePending:false};
+ const gpuContextCanvas=engine&&typeof engine.getRenderingCanvas==='function'?engine.getRenderingCanvas():null;
+ if(gpuContextCanvas&&typeof gpuContextCanvas.addEventListener==='function'&&!gpuContextCanvas.__elsnGpuContextLifecycleObserved){
+  try{
+   gpuContextCanvas.addEventListener('webglcontextlost',event=>{gpuContextLifecycle.state='lost';gpuContextLifecycle.lossCount++;gpuContextLifecycle.lastEvent='webglcontextlost';gpuContextLifecycle.lastLossAt=Date.now();gpuContextLifecycle.restorePending=true;gpuContextLifecycle.lastStatusMessage=String(event&&event.statusMessage||'').slice(0,160);perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;},false);
+   gpuContextCanvas.addEventListener('webglcontextrestored',()=>{perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;gpuContextLifecycle.state='restored';gpuContextLifecycle.restoreCount++;gpuContextLifecycle.lastEvent='webglcontextrestored';gpuContextLifecycle.lastRestoreAt=Date.now();gpuContextLifecycle.restorePending=false;},false);
+   gpuContextCanvas.addEventListener('webglcontextcreationerror',event=>{gpuContextLifecycle.state='creation-error';gpuContextLifecycle.creationErrorCount++;gpuContextLifecycle.lastEvent='webglcontextcreationerror';gpuContextLifecycle.lastCreationErrorAt=Date.now();gpuContextLifecycle.lastStatusMessage=String(event&&event.statusMessage||'').slice(0,160);},false);
+   Object.defineProperty(gpuContextCanvas,'__elsnGpuContextLifecycleObserved',{value:true,configurable:true});
+  }catch(contextObserverError){gpuContextLifecycle.observerError=String(contextObserverError&&contextObserverError.message||contextObserverError).slice(0,180);}
+ }
+ window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;
  let engineInstrumentation=null,sceneInstrumentation=null;
  const safePerfCounterValue=(counter,scale=1)=>{
   // A missing profiler counter is unavailable evidence, never a measured 0 ms.
@@ -3686,8 +3707,29 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
         raise SystemExit("No se encontró exactamente una construcción de escena Babylon.")
     html = html.replace(scene_marker, scene_marker + "\n" + scene_profile_code, 1)
 
+    # The performance audit must be explicitly selected before it starts issuing
+    # GPU timer queries or writing per-frame samples. Normal gameplay stays lean.
+    perf_gpu_query_marker = " function beginPerfGpuQuery(){\n  if(perfGpuMode==='unavailable')initPerfGpuTimer();"
+    perf_gpu_query_replacement = " function beginPerfGpuQuery(){\n  if(perfAuditScenario==='sin seleccionar')return null;\n  if(perfGpuMode==='unavailable')initPerfGpuTimer();"
+    if html.count(perf_gpu_query_marker) != 1:
+        raise SystemExit("No se encontró exactamente una función de consulta GPU de la auditoría.")
+    html = html.replace(perf_gpu_query_marker, perf_gpu_query_replacement, 1)
+    perf_audit_record_marker = " function recordPerformanceAuditFrame(frameMs){\n  pollPerfGpuQueries();"
+    perf_audit_record_replacement = " function recordPerformanceAuditFrame(frameMs){\n  if(perfAuditScenario==='sin seleccionar')return;\n  pollPerfGpuQueries();"
+    if html.count(perf_audit_record_marker) != 1:
+        raise SystemExit("No se encontró exactamente una función de captura de fotogramas de auditoría.")
+    html = html.replace(perf_audit_record_marker, perf_audit_record_replacement, 1)
+
+    # Keep the regular render loop free of audit function calls until a scenario
+    # is explicitly selected in the diagnostic drawer.
+    perf_render_loop_marker = "const perfGpuQuery=beginPerfGpuQuery();const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);"
+    perf_render_loop_replacement = "const performanceAuditActive=perfAuditScenario!=='sin seleccionar',perfGpuQuery=performanceAuditActive?beginPerfGpuQuery():null,renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"
+    if html.count(perf_render_loop_marker) != 1:
+        raise SystemExit("No se encontró exactamente una llamada al perfilador GPU dentro del bucle de renderizado.")
+    html = html.replace(perf_render_loop_marker, perf_render_loop_replacement, 1)
+
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':(profileDiagnosticsEnabled?'extension-present-counter-unavailable':'available-not-initialized')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
@@ -5074,6 +5116,262 @@ function getWorldPhaseTimingSnapshot(){
     )
     if npc_behavior_count != 1:
         raise SystemExit(f"Se esperaba una sustitución de comportamiento NPC; se realizaron {npc_behavior_count}.")
+
+    # Render the ocean surface and its analytical normals in the vertex shader.
+    # The CPU waterHeight() function remains the authoritative sampler for ships,
+    # buoys, shoreline solving and the existing foam/backwash simulation.
+    water_geometry_marker = "const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice(),waterPositions=waterBase.slice(),waterIndices=ground.getIndices(),waterNormals=new Float32Array(waterBase.length);"
+    if html.count(water_geometry_marker) != 1:
+        raise SystemExit("No se encontró la única malla oceánica para migrar su deformación a GPU.")
+    html = html.replace(water_geometry_marker, "const waterBase=ground.getVerticesData(B.VertexBuffer.PositionKind).slice();", 1)
+
+    water_color_cache_marker = "const oceanDepthVertexColors=new Float32Array((waterBase.length/3)*4),oceanDepthBaseColors=new Float32Array((waterBase.length/3)*4);"
+    if html.count(water_color_cache_marker) != 1:
+        raise SystemExit("No se encontró el almacenamiento de color base del océano.")
+    html = html.replace(water_color_cache_marker, "const oceanDepthVertexColors=new Float32Array((waterBase.length/3)*4);", 1)
+    if html.count("  oceanDepthBaseColors.set(oceanDepthVertexColors);\n") != 1:
+        raise SystemExit("No se encontró la copia única de colores base del océano.")
+    html = html.replace("  oceanDepthBaseColors.set(oceanDepthVertexColors);\n", "", 1)
+
+    water_grid_pattern = r"const waterGridSize=waterSubdivisions\+1,(WATER_DETAIL_RADIUS=isPerformanceMode\?.*?),WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS\*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ\*\.55;\n const waterPositionBuffer=[^\n]+\n"
+    html, water_grid_count = re.subn(
+        water_grid_pattern,
+        r"const \1,WATER_DETAIL_RADIUS_SQ=WATER_DETAIL_RADIUS*WATER_DETAIL_RADIUS,WATER_DETAIL_FADE_START_SQ=WATER_DETAIL_RADIUS_SQ*.55;\n",
+        html,
+        count=1,
+    )
+    if water_grid_count != 1:
+        raise SystemExit("No se pudo sustituir el almacenamiento de vértices dinámicos del océano.")
+
+    water_debug_start_marker = " // Instrumentación de solo lectura. Solo reserva buffers de muestreo en ?debug=1 o ?test=1."
+    water_debug_end_marker = " function recordWaterCoastSolverDiagnostic("
+    water_debug_start = html.find(water_debug_start_marker)
+    water_debug_end = html.find(water_debug_end_marker, water_debug_start)
+    if water_debug_start < 0 or water_debug_end <= water_debug_start:
+        raise SystemExit("No se encontró el bloque de auditoría de vértices del agua.")
+    water_debug_replacement = r""" const createWaterCoastSolverStats=()=>({samples:0,bracketFailures:0,finiteResiduals:0,converged:0,lastResidualMeters:null,maxResidualMeters:0,totalMs:0,lastMs:0,maxMs:0});
+ const waterDebugSolverStats=coastalDiagnosticsEnabled?Object.assign(createWaterCoastSolverStats(),{initial:createWaterCoastSolverStats(),animated:createWaterCoastSolverStats()}):null;
+ function getWaterVertexAgreementDiagnostics(){
+  const gpu=window.__ELSN_WATER_GPU__||null;
+  return {
+   implemented:!!(gpu&&gpu.enabled),
+   mode:gpu&&gpu.mode||'unavailable',
+   requested:0,sampled:0,meanAbsErrorMeters:null,p95AbsErrorMeters:null,maxAbsErrorMeters:null,
+   gpuReadback:false,meshVertexCount:waterBase.length/3,
+   cpuMeshVertexEvaluations:0,dynamicPositionUploads:0,dynamicNormalUploads:0,
+   comparison:'El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización.'
+  };
+ }
+"""
+    html = html[:water_debug_start] + water_debug_replacement + html[water_debug_end:]
+
+    # Remove the per-vertex phase cache; keep the canonical analytic height function.
+    water_wave_cache_start = html.find(" const WATER_WAVE_STRIDE=")
+    water_wave_cache_end = html.find(" function waterHeightFromWaveValues(", water_wave_cache_start)
+    if water_wave_cache_start < 0 or water_wave_cache_end <= water_wave_cache_start:
+        raise SystemExit("No se encontró la tabla CPU de fases del oleaje.")
+    html = html[:water_wave_cache_start] + html[water_wave_cache_end:]
+
+    water_normals_init = " for(let i=0;i<waterNormals.length;i+=3)waterNormals[i+1]=1;\n"
+    if html.count(water_normals_init) != 1:
+        raise SystemExit("No se encontró la inicialización única de las normales CPU obsoletas.")
+    html = html.replace(water_normals_init, "", 1)
+
+    water_far_cpu_start = html.find(" function waterFarHeightAtVertex(")
+    water_clock_marker = "let oceanTime=0,waterAccumulator=0,waterNormalAccumulator=0,waterFarAccumulator=0,tidalFoamAccumulator=0,tidalFoamWorkPending=false,tidalFoamWorkElapsed=0;"
+    water_clock_start = html.find(water_clock_marker, water_far_cpu_start)
+    if water_far_cpu_start < 0 or water_clock_start <= water_far_cpu_start:
+        raise SystemExit("No se encontró el bloque completo de deformación CPU y normales del océano.")
+    water_clock_replacement = "let waterFocusX=NaN,waterFocusZ=NaN,waterLastUpdatedVertices=0,waterLastUploadedVertices=0,waterLastUploadBytes=0,waterLastUpdateMs=0,waterLastNormalMs=0;\n let oceanTime=0,tidalFoamAccumulator=0,tidalFoamWorkPending=false,tidalFoamWorkElapsed=0;"
+    html = html[:water_far_cpu_start] + water_clock_replacement + html[water_clock_start+len(water_clock_marker):]
+
+    water_cadence_pattern = r"\n const waterVertexStep=[^\n]+\n const waterNormalStep=[^\n]+\n const waterFarStep=[^\n]+\n"
+    html, water_cadence_count = re.subn(water_cadence_pattern, "\n", html, count=1)
+    if water_cadence_count != 1:
+        raise SystemExit("No se encontraron las tres cadencias de deformación CPU que ya no necesita el mar GPU.")
+
+    water_gpu_install_marker = " function createVesselFloatState(){"
+    water_gpu_code = r""" // La misma superficie analítica se evalúa en GPU para todos los vértices visibles.
+ // El atributo costero se calcula una sola vez; no se envían posiciones ni normales cada fotograma.
+ ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1);
+ class NordicWaterGpuPlugin extends B.MaterialPluginBase{
+  constructor(material){super(material,'NordicWaterGpu',210,{NORSE_WATER_GPU:true});this._lastUniformBuffer=null;this._lastUniformFrame=-1;this._enable(true);}
+  getClassName(){return 'NordicWaterGpuPlugin';}
+  isCompatible(shaderLanguage){return shaderLanguage===B.ShaderLanguage.GLSL;}
+  prepareDefines(defines){defines.NORSE_WATER_GPU=true;}
+  getAttributes(attributes){attributes.push('norseWaterCoastalCap');}
+  getUniforms(){
+   return {ubo:[
+    {name:'norseWaterTime',size:1,type:'float'},{name:'norseWaterFocus',size:2,type:'vec2'},
+    {name:'norseWaterDetailRadiusSq',size:1,type:'float'},{name:'norseWaterDetailEnabled',size:1,type:'float'},
+    {name:'norseWaterTideOffset',size:1,type:'float'},{name:'norseWaterSeaLevel',size:1,type:'float'},
+    {name:'norseWaterCrestStrength',size:1,type:'float'},{name:'norseWaterShortScale',size:1,type:'float'}
+   ],vertex:'#ifdef NORSE_WATER_GPU\nuniform float norseWaterTime;\nuniform vec2 norseWaterFocus;\nuniform float norseWaterDetailRadiusSq;\nuniform float norseWaterDetailEnabled;\nuniform float norseWaterTideOffset;\nuniform float norseWaterSeaLevel;\nuniform float norseWaterCrestStrength;\nuniform float norseWaterShortScale;\n#endif'};
+  }
+  _bindWater(uniformBuffer){
+   if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
+   const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;
+   if(Number.isFinite(frameId)&&this._lastUniformBuffer===uniformBuffer&&this._lastUniformFrame===frameId)return;
+   const focusX=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
+   const focusZ=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
+   uniformBuffer.updateFloat('norseWaterTime',oceanTime);
+   if(typeof uniformBuffer.updateFloat2==='function')uniformBuffer.updateFloat2('norseWaterFocus',focusX,focusZ);
+   uniformBuffer.updateFloat('norseWaterDetailRadiusSq',WATER_DETAIL_RADIUS_SQ);
+   uniformBuffer.updateFloat('norseWaterDetailEnabled',coastalDiagnosticOverrides.disableNearWaterDetail?0:1);
+   uniformBuffer.updateFloat('norseWaterTideOffset',tideOffsetAt(oceanTime));
+   uniformBuffer.updateFloat('norseWaterSeaLevel',Number(ground.position.y)||0);
+   uniformBuffer.updateFloat('norseWaterCrestStrength',Number(oceanDepthSettings.waveCrestStrength)||0);
+   uniformBuffer.updateFloat('norseWaterShortScale',coastalDiagnosticOverrides.disableShortVertexWaves?0:1);
+   this._lastUniformBuffer=uniformBuffer;this._lastUniformFrame=frameId;
+  }
+  bindForSubMesh(uniformBuffer){this._bindWater(uniformBuffer);}
+  hardBindForSubMesh(uniformBuffer){this._bindWater(uniformBuffer);}
+  getCustomCode(shaderType,shaderLanguage){
+   if(shaderType!=='vertex'||shaderLanguage!==B.ShaderLanguage.GLSL)return null;
+   return {
+    CUSTOM_VERTEX_DEFINITIONS:'attribute float norseWaterCoastalCap;',
+    CUSTOM_VERTEX_UPDATE_POSITION:
+     '#ifdef NORSE_WATER_GPU\n'+
+     'float nwX=positionUpdated.x;float nwZ=positionUpdated.z;\n'+
+     'float nwSlopeX=0.0;float nwSlopeZ=0.0;float nwDetailSlopeX=0.0;float nwDetailSlopeZ=0.0;\n'+
+     
+     'float nwDx=nwX-norseWaterFocus.x;float nwDz=nwZ-norseWaterFocus.y;\n'+
+     'float nwDistanceSq=nwDx*nwDx+nwDz*nwDz;\n'+
+     'float nwFadeT=clamp((norseWaterDetailRadiusSq-nwDistanceSq)/max(0.0001,norseWaterDetailRadiusSq*0.45),0.0,1.0);\n'+
+     'float nwFade=nwFadeT*nwFadeT*(3.0-2.0*nwFadeT)*norseWaterDetailEnabled;\n'+
+     'float nwFadeDx=0.0;float nwFadeDz=0.0;\n'+
+     'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,norseWaterDetailRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,norseWaterDetailRadiusSq*0.45);}\n'+
+     'float nwP0=nwX*0.014+nwZ*0.018+norseWaterTime*0.48;\n'+
+     'float nwP1=nwX*0.024+nwZ*0.018+norseWaterTime*0.82;\n'+
+     'float nwP2=nwX*(-0.018)+nwZ*0.036-norseWaterTime*0.73;\n'+
+     'float nwP3=nwX*0.066+nwZ*0.044+norseWaterTime*1.28;\n'+
+     'float nwP4=nwX*0.145-nwZ*0.145-norseWaterTime*1.82;\n'+
+     'float nwP5=nwX*(0.76*0.185)+nwZ*(-1.13*0.185)+norseWaterTime*2.15;\n'+
+     'float nwP6=nwX*0.235+nwZ*0.18+norseWaterTime*2.8;\n'+
+     'float nwS0=sin(nwP0);float nwC0=cos(nwP0);\n'+
+     'float nwS1=sin(nwP1);float nwC1=cos(nwP1);\n'+
+     'float nwS2=sin(nwP2);float nwC2=cos(nwP2);\n'+
+     'float nwS3=sin(nwP3);float nwC3=cos(nwP3);\n'+
+     'float nwS4=sin(nwP4);float nwC4=cos(nwP4);\n'+
+     'float nwS5=sin(nwP5);float nwC5=cos(nwP5);\n'+
+     'float nwS6=sin(nwP6);float nwC6=cos(nwP6);\n'+
+     'float nwBase=nwS0*0.145+nwS1*0.365+nwS2*0.275;\n'+
+     'float nwDetail=nwS3*0.185+nwS4*0.105+nwS5*0.064+nwS6*0.040;\n'+
+     'float nwS3Positive=max(0.0,nwS3);float nwS4Positive=max(0.0,nwS4);\n'+
+     'float nwS3Squared=nwS3Positive*nwS3Positive;float nwS4Squared=nwS4Positive*nwS4Positive;\n'+
+     'float nwS3Cubed=nwS3Squared*nwS3Positive;float nwS4Cubed=nwS4Squared*nwS4Positive;\n'+
+     'float nwCrest=nwS3Cubed*0.072*norseWaterCrestStrength;\n'+
+     'float nwShortCrest=nwS4Cubed*0.044*norseWaterCrestStrength;\n'+
+     'float nwDetailTotal=nwDetail+nwCrest+nwShortCrest;\n'+
+     'float nwHeight=norseWaterTideOffset+nwBase+nwDetailTotal*nwFade*norseWaterShortScale;\n'+
+     'float nwCap=norseWaterSeaLevel+0.38;float nwCoast=clamp(norseWaterCoastalCap,0.0,1.0);\n'+
+     'positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast);\n'+
+     'nwSlopeX=nwC0*0.014*0.145+nwC1*0.024*0.365+nwC2*(-0.018)*0.275;\n'+
+     'nwSlopeZ=nwC0*0.018*0.145+nwC1*0.018*0.365+nwC2*0.036*0.275;\n'+
+     'nwDetailSlopeX=nwC3*0.066*0.185+nwC4*0.145*0.105+nwC5*(0.76*0.185)*0.064+nwC6*0.235*0.040;\n'+
+     'nwDetailSlopeZ=nwC3*0.044*0.185+nwC4*(-0.145)*0.105+nwC5*(-1.13*0.185)*0.064+nwC6*0.18*0.040;\n'+
+     'nwDetailSlopeX+=3.0*nwS3Squared*nwC3*0.066*0.072*norseWaterCrestStrength+3.0*nwS4Squared*nwC4*0.145*0.044*norseWaterCrestStrength;\n'+
+     'nwDetailSlopeZ+=3.0*nwS3Squared*nwC3*0.044*0.072*norseWaterCrestStrength+3.0*nwS4Squared*nwC4*(-0.145)*0.044*norseWaterCrestStrength;\n'+
+     'nwSlopeX+=(nwDetailSlopeX*nwFade+nwDetailTotal*nwFadeDx)*norseWaterShortScale;\n'+
+     'nwSlopeZ+=(nwDetailSlopeZ*nwFade+nwDetailTotal*nwFadeDz)*norseWaterShortScale;\n'+
+     'if(nwHeight>nwCap){nwSlopeX*=1.0-nwCoast;nwSlopeZ*=1.0-nwCoast;}\n'+
+     '#ifdef VERTEXCOLOR\n'+
+     'float nwInDetail=1.0-step(norseWaterDetailRadiusSq,nwDistanceSq);\n'+
+     'float nwCrestLight=min(0.34,(nwS3Cubed*0.25+nwS4Cubed*0.09)*norseWaterCrestStrength*nwInDetail);\n'+
+     'colorUpdated.rgb=min(vec3(1.0),colorUpdated.rgb*(vec3(1.0)+vec3(nwCrestLight,nwCrestLight*0.92,nwCrestLight*0.78)));\n'+
+     '#endif\n'+
+     '#endif',
+    CUSTOM_VERTEX_UPDATE_NORMAL:
+     '#ifdef NORSE_WATER_GPU\n'+
+     '#ifdef NORMAL\n'+
+     'normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ));\n'+
+     '#endif\n'+
+     '#endif'
+   };
+  }
+ }
+ const waterGpuPlugin=new NordicWaterGpuPlugin(M.water);
+ window.__ELSN_WATER_GPU__={
+  enabled:true,mode:'gpu-vertex-displacement',shader:'seven-wave-analytic',
+  meshVertexCount:waterBase.length/3,coastalCapAttribute:'norseWaterCoastalCap',
+  cpuMeshVertexEvaluations:0,dynamicPositionUploads:0,dynamicNormalUploads:0,dynamicColorUploads:0,
+  analyticGameplaySampler:'waterHeight',shorelineSolver:'preserved',vesselFloat:'preserved',
+  tidalFoam:'preserved',mirrorReflection:'preserved',gpuReadback:false,
+  materialReady:()=>!!M.water.isReady(ground,false)
+ };
+"""
+    if html.count(water_gpu_install_marker) != 1:
+        raise SystemExit("No se encontró el punto único tras el límite costero del océano.")
+    html = html.replace(water_gpu_install_marker, water_gpu_code + water_gpu_install_marker, 1)
+
+    water_animation_start = html.find(" function animateWater(dt){")
+    water_foam_start = html.find("  if(foamWorkDue){", water_animation_start)
+    water_animation_end = html.find("\n function rand(a,b)", water_animation_start)
+    if water_animation_start < 0 or water_foam_start <= water_animation_start or water_animation_end <= water_foam_start:
+        raise SystemExit("No se encontró el bloque único de animación y espuma del agua.")
+    water_animation_tail = html[water_foam_start:water_animation_end]
+    water_texture_marker = "\nM.water.diffuseTexture.uOffset="
+    water_texture_start = water_animation_tail.find(water_texture_marker)
+    if water_texture_start < 0:
+        raise SystemExit("No se encontró la animación de texturas del agua.")
+    water_foam_update = water_animation_tail[:water_texture_start]
+    water_animation_replacement = r""" function animateWater(dt){
+  const frameStep=Math.max(0,Number(dt)||0);
+  oceanTime+=frameStep;
+  const activeCamera=scene.activeCamera,focus=activeCamera&&activeCamera.position?activeCamera.position:(onShip?ship.position:player.root.position);
+  const fx=Number(focus.x)||0,fz=Number(focus.z)||0,focusDx=fx-waterFocusX,focusDz=fz-waterFocusZ;
+  if(!Number.isFinite(waterFocusX)||focusDx*focusDx+focusDz*focusDz>=576){waterFocusX=fx;waterFocusZ=fz;}
+  syncActiveBeachIsland();
+  syncActiveTidalFoamIsland();
+  syncNordicWaterReflectionIsland();
+  tidalFoamAccumulator+=frameStep;
+  const foamDue=!tidalFoamWorkPending&&tidalFoamAccumulator>=TIDAL_FOAM_UPDATE_STEP;
+  if(foamDue){tidalFoamWorkElapsed=tidalFoamAccumulator;tidalFoamAccumulator=0;tidalFoamWorkPending=true;for(const foam of tidalFoamMeshes)foam._norseUpdateColumn=0;}
+  const foamWorkDue=tidalFoamWorkPending,foamElapsed=foamWorkDue?tidalFoamWorkElapsed:0;
+  waterLastUpdatedVertices=0;waterLastUploadedVertices=0;waterLastUploadBytes=0;waterLastNormalMs=0;
+  const workStart=performance.now();
+""" + water_foam_update + r"""
+  if(M.water.diffuseTexture){M.water.diffuseTexture.uOffset=(oceanTime*.010)%1;M.water.diffuseTexture.vOffset=(oceanTime*.007)%1;}
+  if(M.water.bumpTexture){M.water.bumpTexture.uOffset=(oceanTime*.0078)%1;M.water.bumpTexture.vOffset=(-oceanTime*.0058)%1;}
+  waterLastUpdateMs=performance.now()-workStart;
+ }"""
+    html = html[:water_animation_start] + water_animation_replacement + html[water_animation_end:]
+
+
+    water_perf_vertices_marker = "waterVertices:waterPositions.length/3"
+    if html.count(water_perf_vertices_marker) != 1:
+        raise SystemExit("No se encontró el contador del agua en la auditoría de rendimiento.")
+    html = html.replace(water_perf_vertices_marker, "waterVertices:waterBase.length/3", 1)
+
+    water_coast_diagnostics_marker = "waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE"
+    if html.count(water_coast_diagnostics_marker) != 1:
+        raise SystemExit("No se encontró el diagnóstico de buffers antiguos del océano.")
+    html = html.replace(
+        water_coast_diagnostics_marker,
+        "waterTotalVertices:waterBase.length/3,waterPhaseCacheVertices:0,waterGpuMode:(window.__ELSN_WATER_GPU__&&window.__ELSN_WATER_GPU__.mode)||'unavailable'",
+        1
+    )
+
+    water_gpu_required_markers = (
+        "function waterHeight(x,z,t=oceanTime,detailFade)",
+        "ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)",
+        "class NordicWaterGpuPlugin extends B.MaterialPluginBase",
+        "CUSTOM_VERTEX_UPDATE_POSITION",
+        "CUSTOM_VERTEX_UPDATE_NORMAL",
+        "positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast)",
+        "normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ))",
+        "window.__ELSN_WATER_GPU__",
+        "syncNordicWaterReflectionIsland()",
+        "if(foamWorkDue){",
+        "M.water.diffuseTexture.uOffset=(oceanTime*.010)%1",
+        "waterLastUploadBytes=0;waterLastNormalMs=0;",
+    )
+    missing_water_gpu_markers = [marker for marker in water_gpu_required_markers if marker not in html]
+    if missing_water_gpu_markers:
+        raise SystemExit("El nuevo renderer GPU de agua está incompleto: " + ", ".join(missing_water_gpu_markers))
+    if any(marker in html for marker in ("waterPositions", "waterNormals", "waterIndices", "waterWaveBasis", "waterPositionBuffer", "waterNormalBuffer", "oceanDepthBaseColors")):
+        raise SystemExit("Quedan buffers/cachés CPU obsoletos en el renderer de agua.")
+
     # Validate the transformed runtime too; the earlier syntax check runs before these patches.
     transformed_scripts = re.findall(r"<script\b[^>]*>(.*?)</script\s*>", html, flags=re.IGNORECASE | re.DOTALL)
     transformed_inline_scripts = [block for block in transformed_scripts if block.strip()]

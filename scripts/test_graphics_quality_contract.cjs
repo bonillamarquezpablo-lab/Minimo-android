@@ -18,6 +18,22 @@ for(const marker of [
   'renderedFps||engine.getFps()',
   'qualityScaleLockedForSession:true',
   'window.__ELSN_RENDER_RESOLUTION=()=>{',
+  'const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?',
+  'const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;',
+  'perf_gpu_query_marker',
+  "if(perfAuditScenario==='sin seleccionar')return null;",
+  'perf_audit_record_marker',
+  'perf_render_loop_marker',
+  'performanceAuditActive=perfAuditScenario',
+  "if(perfAuditScenario==='sin seleccionar')return;",
+  'const gpuDebugRendererInfo=profileDiagnosticsEnabled?',
+  'gpuTimerQueryStatus:!profileDiagnosticsEnabled?',
+  'gpuContextCanvas.addEventListener(\'webglcontextrestored\'',
+  'renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;',
+  'shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null',
+  'customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null',
+  'window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;',
+  "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)',
   'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
@@ -42,10 +58,23 @@ assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.in
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
-assert.ok(gameSource.includes('const waterNormalLeftOffsets=new Uint32Array(waterBase.length/3)'), 'Water normal neighbour indices must be cached without changing the rendered mesh.');
-assert.ok(gameSource.includes('waterNormalInvDx[count]=1/(waterBase[right]-waterBase[left]||1)'), 'Water normal grid spacing must be precomputed when the detail region changes.');
-assert.ok(gameSource.includes('const offset=waterActiveVertexOffsets[n],left=waterNormalLeftOffsets[n]'), 'Water normal updates must reuse cached neighbours instead of recalculating grid indices per frame.');
+assert.ok(builder.includes('class NordicWaterGpuPlugin extends B.MaterialPluginBase') &&
+  builder.includes('CUSTOM_VERTEX_UPDATE_POSITION') && builder.includes('CUSTOM_VERTEX_UPDATE_NORMAL') &&
+  builder.includes("ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)"),
+  'The ocean mesh must deform and rebuild analytical normals in its GPU vertex shader.');
+assert.ok(builder.includes('waterLastUploadBytes=0;waterLastNormalMs=0;') &&
+  builder.includes('cpuMeshVertexEvaluations:0') && builder.includes('dynamicPositionUploads:0') &&
+  builder.includes('dynamicNormalUploads:0'),
+  'The animated ocean must not stream per-vertex positions/normals from CPU to GPU.');
+assert.ok(builder.includes('waterHeight(x,z,t=oceanTime,detailFade)') &&
+  builder.includes("analyticGameplaySampler:'waterHeight'"),
+  'The analytic water function must remain the gameplay/shoreline reference while rendering moves to GPU.');
 assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.includes('framesOver90BudgetPct'), 'The runtime must report frame-budget diagnostics.');
+assert.ok(builder.includes('const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;') && builder.includes('const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?') && builder.includes('const gpuDebugRendererInfo=profileDiagnosticsEnabled?'), 'GPU profiling and adapter queries must remain opt-in with Inspector/profile mode, not active in every normal session.');
+assert.ok(builder.includes('gpuTimerQueryStatus:!profileDiagnosticsEnabled?') && builder.includes('gpuContextLifecycle'), 'Runtime diagnostics must distinguish disabled profiling from unsupported timers and record WebGL context loss/restoration.');
+assert.ok(builder.includes('perf_gpu_query_marker') && builder.includes("if(perfAuditScenario==='sin seleccionar')return null;") && builder.includes('perf_audit_record_marker') && builder.includes("if(perfAuditScenario==='sin seleccionar')return;"), 'The normal render loop must not initialize GPU timer queries or write audit samples until an explicit performance-audit scenario is selected.');
+assert.ok(builder.includes('perf_render_loop_marker') && builder.includes("performanceAuditActive=perfAuditScenario!=='sin seleccionar'") && builder.includes('if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}'), 'The normal render loop must not even call audit helpers unless a diagnostic scenario is explicitly active.');
+assert.ok(builder.includes('if(profileDiagnosticsEnabled||gpuTimerQueryAutoEnabled)'), 'The native profiling stack must remain available when diagnostics are explicitly requested.');
 assert.ok(builder.includes('highHeadroomQualityMobile?deviceDpr:1.45'), 'Flagship Quality must use the physical device DPR, not a capped internal scale.');
 assert.ok(atmosphere.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high atmosphere tier.');
 assert.ok(atmosphere.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'The mobile-high tier must not stack FXAA on top of native MSAA.');

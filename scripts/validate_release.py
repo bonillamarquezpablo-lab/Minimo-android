@@ -12,10 +12,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.358"
+EXPECTED_VERSION = "0.6.360"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
+    "const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?",
+    "gpuContextCanvas.addEventListener('webglcontextlost'",
+    "window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;",
+    "renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;",
+    "if(perfAuditScenario==='sin seleccionar')return null;",
+    "if(perfAuditScenario==='sin seleccionar')return;",
+    "if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}",
+    "performanceAuditActive=perfAuditScenario!=='sin seleccionar'",
+    "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
+    "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
     "fullNativeResolution",
     "expectedDeviceWidth",
     "expectedDeviceHeight",
@@ -30,6 +40,15 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
+    "class NordicWaterGpuPlugin extends B.MaterialPluginBase",
+    "ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)",
+    "positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast)",
+    "normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ))",
+    "window.__ELSN_WATER_GPU__={",
+    "cpuMeshVertexEvaluations:0,dynamicPositionUploads:0,dynamicNormalUploads:0,dynamicColorUploads:0",
+    "syncNordicWaterReflectionIsland()",
+    "if(foamWorkDue){",
+    "M.water.diffuseTexture.uOffset=(oceanTime*.010)%1",
     "const holderParent=equippedWeapon==='club'?realPlayerModelPivot:(socket||realPlayerModelPivot);",
     "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
@@ -672,7 +691,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'66',build:'0.6.358'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'68',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -760,8 +779,8 @@ def main() -> None:
     animate_start = index_html.find("function animateWater(dt)")
     animate_end = index_html.find("function rand(a,b)", animate_start)
     animate_body = index_html[animate_start:animate_end]
-    if animate_start < 0 or animate_end <= animate_start or "waterDetailHeightAtVertex" not in animate_body or "waterFarHeightAtVertex" not in animate_body:
-        fail("La animación base del oleaje debe conservar la caché de fases y el detalle de agua.")
+    if animate_start < 0 or animate_end <= animate_start or "window.__ELSN_WATER_GPU__" not in index_html or "class NordicWaterGpuPlugin extends B.MaterialPluginBase" not in index_html or "waterHeight(x,z,t=oceanTime,detailFade)" not in index_html:
+        fail("La animación base del oleaje debe conservar la superficie GPU y el muestreador analítico de física.")
     if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma de la orilla debe proceder del canal Foam de BeachState y de su encaje de shader.")
     if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
@@ -1074,7 +1093,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'66',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'68',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1158,8 +1177,8 @@ def main() -> None:
     shoreline_body = index_html[shoreline_start:shoreline_end]
     if shoreline_start < 0 or shoreline_end <= shoreline_start or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)" not in shoreline_body or "return terrainY-coastalWaterHeight(x,z,t);" not in shoreline_body or "surfaceLimitSq=(island.r*1.09)**2" in shoreline_body or ".42;" in shoreline_body:
         fail("La espuma de orilla debe cruzar el heightfield deformable y mantener el límite de tierra firme.")
-    if "waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
-        fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
+    if "class NordicWaterGpuPlugin extends B.MaterialPluginBase" not in index_html or "CUSTOM_VERTEX_UPDATE_POSITION" not in index_html or "CUSTOM_VERTEX_UPDATE_NORMAL" not in index_html or "analyticGameplaySampler:'waterHeight'" not in index_html or "cpuMeshVertexEvaluations:0" not in index_html:
+        fail("El oleaje debe conservar las mismas ondas en GPU y mantener waterHeight como referencia analítica de costa y flotación.")
     if "const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;" not in index_html or "createFootprintAtlas({size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE})" not in index_html or "NorseMovingFootprints" not in index_html:
         fail("Las huellas deben usar un atlas cartesiano móvil de 16x16m a 512x512.")
     if "footprintAtlas.stamp(x,z,heading,strength,currentTick)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
@@ -1290,8 +1309,8 @@ def main() -> None:
         fail("El Galaxy A12 Nacho SM-A127 / Exynos 850 no tiene un perfil de Rendimiento específico.")
     if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&(isUltraLowEndMobile||isGalaxyA12NachoPerformance))" not in index_html:
         fail("El Galaxy A12 Nacho no activa el streaming visual de la isla ocupada.")
-    if "isGalaxyA12NachoPerformance?32:" not in index_html or "isGalaxyA12NachoPerformance?1/5:" not in index_html:
-        fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
+    if "isGalaxyA12NachoPerformance?32:" not in index_html or "WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:" not in index_html or "uniform float norseWaterDetailRadius" not in index_html:
+        fail("El perfil A12 Nacho debe conservar su malla de 32 subdivisiones y limitar el detalle próximo del shader GPU.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
     if "const warriorPartsToLoad=humanEnemyParts.filter(p=>/^VillageGuard0_/" not in index_html or "const civilianPartsToLoad=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2)" not in index_html or "const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance)" not in index_html:

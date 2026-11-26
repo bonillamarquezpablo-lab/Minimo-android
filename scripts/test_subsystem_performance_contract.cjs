@@ -23,6 +23,12 @@ for(const marker of [
   'p99Ms:at(.99)',
   'worldPhases:getWorldPhaseTimingSnapshot()',
   'getPerformanceSnapshot()',
+  'gpuContextLifecycle',
+  'perf_gpu_query_marker',
+  'perf_audit_record_marker',
+  'perf_render_loop_marker',
+  'performanceAuditActive=perfAuditScenario',
+  "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'window.__ELSN_WILDLIFE_DIAGNOSTICS__',
   'wildlifeUpdatePerfSamples=new Float32Array(120)',
   'npcDialogue:window.__ELSN_NPC_DIALOGUES__',
@@ -75,6 +81,13 @@ assert.ok(builder.includes('gpuTimerQueryExtensionName') && builder.includes('gp
   builder.includes('gpuTimerQueryStatus') && builder.includes('maxRenderbufferSize') &&
   builder.includes('maxViewportDims'),
   'GPU telemetry must identify timer-query availability, adapter identity when exposed, and hardware limits.');
+assert.ok(recorder.includes('contextLifecycle: runtime.gpuContextLifecycle') && recorder.includes('contextLifecycle: latestGpuSample'), 'Session reports must persist WebGL context loss and restoration events.');
+assert.ok(recorder.includes('renderPipeline: runtime.renderPipelineDiagnostics') && recorder.includes('renderPipeline: latestGpuSample'), 'Session reports must persist the effective MSAA, post-processing, shadow-map, caster and render-target configuration.');
+assert.ok(builder.includes('msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))') && builder.includes('shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null'), 'The render pipeline snapshot must expose effective MSAA and the real shadow caster list without mutating rendering state.');
+assert.ok(builder.includes('window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;') && builder.includes("gpuContextCanvas.addEventListener('webglcontextlost'") && builder.includes("gpuContextCanvas.addEventListener('webglcontextrestored'"), 'The runtime must observe WebGL context loss, creation failure and restoration without taking over Babylon recovery.');
+assert.ok(builder.includes("if(perfAuditScenario==='sin seleccionar')return null;") && builder.includes("if(perfAuditScenario==='sin seleccionar')return;"), 'The always-running game loop must bypass GPU timer queries and audit writes when no audit scenario is selected.');
+assert.ok(builder.includes('perf_render_loop_marker') && builder.includes("performanceAuditActive=perfAuditScenario!=='sin seleccionar'") && builder.includes('if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}'), 'The idle frame path must skip audit helper calls entirely.');
+assert.ok(builder.includes("perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;"), 'GPU timer-query handles must be invalidated across WebGL context loss/restoration and lazily recreated by the next explicit audit.');
 assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
   recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
   recorder.includes('timerQueryStatus'),
@@ -105,6 +118,11 @@ for(const phase of [
   'environment / wildlife simulation'
 ]) assert.ok(builder.includes(phase), 'Environment profiling must split the measured water/world hotspot: '+phase);
 
+
+assert.ok(validator.includes('"if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"') &&
+  !validator.includes('"perf_render_loop_marker"'),
+  'Release validation must check the actual idle-frame guard emitted into the visual package, not a build-script variable name.');
+
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 
@@ -127,5 +145,49 @@ assert.ok(builder.includes('distanceSquared=dx*dx+dz*dz;') &&
 
 for(const marker of ['frameMaintenanceTimingStats=Object.create(null)','getFrameMaintenanceTimingSnapshot()', "recordFrameMaintenanceTiming('gullFlight'", "recordFrameMaintenanceTiming('enemyVisualRecovery'", "recordFrameMaintenanceTiming('npcOverlayMaintenance'", 'preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()']) assert.ok(builder.includes(marker),'Missing pre-world frame timing marker: '+marker);
 assert.ok(recorder.includes('preWorldMaintenanceMs') && recorder.includes('cpuPreWorldP95Ms'),'Session recorder must include pre-world CPU in its bottleneck diagnosis.');
+
+const grassWindClassStart=builder.indexOf('class NordicGrassWindPlugin');
+const grassWindClassEnd=builder.indexOf('const grassWindPlugin=new NordicGrassWindPlugin(gm);',grassWindClassStart);
+const grassWindBindingBlock=builder.slice(grassWindClassStart,grassWindClassEnd);
+assert.ok(builder.includes('let grassWindCachedFrameId=-1,grassWindCachedTime=0;') &&
+  builder.includes("const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;") &&
+  builder.includes("uniformBuffer.updateFloat('grassWindTime',grassWindTimeForCurrentFrame());") &&
+  grassWindClassStart>=0 && grassWindClassEnd>grassWindClassStart &&
+  !grassWindBindingBlock.includes('performance.now()'),
+  'GPU grass wind time must be sampled once per Babylon scene frame, not once for each material/submesh bind.');
+
+const waterAnimatorStart=builder.indexOf('water_animation_replacement = r"""');
+const waterAnimatorEnd=builder.indexOf('water_gpu_required_markers',waterAnimatorStart);
+assert.ok(builder.includes('water_gpu_required_markers') &&
+  builder.includes('cpuMeshVertexEvaluations:0') &&
+  builder.includes('dynamicPositionUploads:0') &&
+  builder.includes('dynamicNormalUploads:0'),
+  'The water pipeline must expose zero CPU mesh deformation and zero ocean position/normal uploads.');
+assert.ok(waterAnimatorStart>=0 && waterAnimatorEnd>waterAnimatorStart &&
+  !builder.slice(waterAnimatorStart,waterAnimatorEnd).includes('updateVerticesData(B.VertexBuffer.PositionKind'),
+  'The main ocean animation must not update mesh positions from JavaScript; foam meshes keep their independent updater.');
+assert.ok(builder.includes('syncNordicWaterReflectionIsland()') &&
+  builder.includes('if(foamWorkDue){') &&
+  builder.includes("analyticGameplaySampler:'waterHeight'"),
+  'GPU water deformation must preserve mirror scheduling, coastal foam and analytic gameplay sampling.');
+const waterGpuStart=builder.indexOf('class NordicWaterGpuPlugin extends B.MaterialPluginBase');
+const waterGpuEnd=builder.indexOf('const waterGpuPlugin=new NordicWaterGpuPlugin(M.water);',waterGpuStart);
+const waterGpuShaderBlock=builder.slice(waterGpuStart,waterGpuEnd);
+assert.ok(waterGpuStart>=0&&waterGpuEnd>waterGpuStart&&
+  waterGpuShaderBlock.includes('norseWaterDetailRadiusSq')&&
+  !waterGpuShaderBlock.includes('norseWaterDetailRadius*norseWaterDetailRadius')&&
+  !/norseWaterDetailRadius(?!Sq)/.test(waterGpuShaderBlock)&&
+  !waterGpuShaderBlock.includes('nwRadiusSq'),
+  'The water vertex shader must receive the squared detail radius once instead of multiplying it per vertex.');
+assert.ok(waterGpuShaderBlock.includes('this._lastUniformBuffer===uniformBuffer')&&
+  waterGpuShaderBlock.includes('this._lastUniformFrame===frameId')&&
+  waterGpuShaderBlock.includes('this._lastUniformBuffer=uniformBuffer'),
+  'Water material uniforms must be bound at most once per scene frame for the same material UBO.');
+assert.ok(waterGpuShaderBlock.includes('nwS3Squared')&&waterGpuShaderBlock.includes('nwS4Squared')&&
+  waterGpuShaderBlock.includes('nwS3Cubed')&&waterGpuShaderBlock.includes('nwS4Cubed')&&
+  !/pow\\(max\\(0\\.0,nwS[34]\\),3\\.0\\)/.test(waterGpuShaderBlock),
+  'Water crest powers must be reused for height, normal derivatives and vertex-color crest highlights.');
+
+
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');

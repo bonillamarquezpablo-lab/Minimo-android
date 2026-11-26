@@ -116,9 +116,9 @@ assert.match(captureRunner, /assert\.equal\(boot\.build, EXPECTED_BUILD,/,
   'The coast capture must validate against the release validator instead of a hard-coded historical version.');
 assert.match(captureRunner, /const EXPECTED_BUILD = process\.env\.EXPECTED_GAME_VERSION \|\| fs\.readFileSync\('scripts\/validate_release\.py'/,
   'The visual audit must derive its expected release from the active validator.');
-assert.match(validator, /EXPECTED_VERSION = "0.6.358"/,
-  'The release validator must target the current 0.6.358 candidate.');
-assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.358 by the release builder.');
+assert.match(validator, /EXPECTED_VERSION = "0.6.360"/,
+  'The release validator must target the current 0.6.360 candidate.');
+assert.match(html,/name="el-sin-nombre-build" content="0\.6\.274"/, 'The source HTML remains 0.6.274 and is promoted to 0.6.360 by the release builder.');
 assert.ok(builder.includes('atmosphere-system.js'),'The release builder must package the atmospheric shader module.');
 assert.ok(builder.includes('window.__ELSN_ATMOSPHERE_CONTROLS'),'The atmospheric controls must be installed in the game runtime.');
 assert.ok(builder.includes('atmosphereSystem.update(dt)'),'The atmosphere clock must be updated once per game frame.');
@@ -196,3 +196,8 @@ assert.ok(workflow.includes('cancel-in-progress: false'),
 // The coast solver and static foam profile caches are guarded by the assertions above.
 
 // A/B road isolation is exercised by the 37th diagnostic image.
+
+assert.ok(builder.includes('water_gpu_required_markers') && builder.includes('class NordicWaterGpuPlugin'),
+  'The release build must install and validate the GPU ocean path.');
+assert.match(captureRunner, /waterGpu\?\.materialReady/);
+assert.match(captureRunner, /dynamicPositionUploads/);
