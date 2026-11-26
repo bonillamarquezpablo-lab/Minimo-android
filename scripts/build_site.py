@@ -2061,7 +2061,7 @@ function setLoadingProgress(value,label){
     html = html.replace(grass_tile_grid_marker, grass_tile_grid_replacement, 1)
 
     grass_tile_coverage_marker = "const safeLandRadius=island.r*.70;\n   const centerX=island.x,centerZ=island.z;\n   const radius=safeLandRadius;\n   const areaFraction=1;"
-    grass_tile_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=tileOptions?tileOptions.centerX:island.x,centerZ=tileOptions?tileOptions.centerZ:island.z;\n   const radius=tileOptions?tileOptions.tileSize*.5:safeLandRadius;\n   const areaFraction=tileOptions?Math.min(1,(tileOptions.tileSize*tileOptions.tileSize)/(Math.PI*safeLandRadius*safeLandRadius)):1;"
+    grass_tile_coverage_replacement = "const safeLandRadius=island.r*.70;\n   const centerX=tileOptions?tileOptions.centerX:island.x,centerZ=tileOptions?tileOptions.centerZ:island.z;\n   const radius=tileOptions?tileOptions.tileSize*.5:safeLandRadius;\n   const areaFraction=tileOptions?Math.min(1,(tileOptions.tileSize*tileOptions.tileSize*tileOptions.landFraction)/(Math.PI*safeLandRadius*safeLandRadius)):1;"
     if html.count(grass_tile_coverage_marker) != 1:
         raise SystemExit("No se encontró el generador de cobertura completa para transformarlo en generación por tile.")
     html = html.replace(grass_tile_coverage_marker, grass_tile_coverage_replacement, 1)
@@ -2100,9 +2100,16 @@ function setLoadingProgress(value,label){
   const closestX=Math.max(minX,Math.min(island.x,maxX)),closestZ=Math.max(minZ,Math.min(island.z,maxZ));
   const landDx=closestX-island.x,landDz=closestZ-island.z;
   if(landDx*landDx+landDz*landDz>safeRadius*safeRadius)return null;
+  let landSamples=0;const landSampleSide=9;
+  for(let sampleZ=0;sampleZ<landSampleSide;sampleZ++)for(let sampleX=0;sampleX<landSampleSide;sampleX++){
+   const x=minX+(sampleX+.5)/landSampleSide*GRASS_TILE_SIZE_METERS-island.x;
+   const z=minZ+(sampleZ+.5)/landSampleSide*GRASS_TILE_SIZE_METERS-island.z;
+   if(x*x+z*z<=safeRadius*safeRadius)landSamples++;
+  }
+  const landFraction=landSamples/(landSampleSide*landSampleSide);if(landFraction<=0)return null;
   const centerX=minX+GRASS_TILE_SIZE_METERS*.5,centerZ=minZ+GRASS_TILE_SIZE_METERS*.5;
   const dx=centerX-focusX,dz=centerZ-focusZ,distanceSquared=dx*dx+dz*dz;
-  return {key:grassTileKey(islandIndex,tileX,tileZ),islandIndex,tileX,tileZ,minX,minZ,maxX,maxZ,centerX,centerZ,distanceSquared,ahead,priority:Math.sqrt(distanceSquared)-(ahead?GRASS_TILE_SIZE_METERS*.36:0),seed:grassTileSeed(islandIndex,tileX,tileZ)};
+  return {key:grassTileKey(islandIndex,tileX,tileZ),islandIndex,tileX,tileZ,minX,minZ,maxX,maxZ,centerX,centerZ,landFraction,distanceSquared,ahead,priority:Math.sqrt(distanceSquared)-(ahead?GRASS_TILE_SIZE_METERS*.36:0),seed:grassTileSeed(islandIndex,tileX,tileZ)};
  }
  function collectGrassTileTargets(islandIndex,focusX,focusZ,includeAhead=true){
   const island=land[islandIndex];if(!island)return [];
@@ -2168,7 +2175,7 @@ function setLoadingProgress(value,label){
   if(grassTileCache.has(tile.key))return grassTileCache.get(tile.key);
   const startedAt=performance.now(),previousMaterial=grassBatchMaterial;
   try{
-   const tileOptions={tileSize:GRASS_TILE_SIZE_METERS,tileX:tile.tileX,tileZ:tile.tileZ,minX:tile.minX,minZ:tile.minZ,maxX:tile.maxX,maxZ:tile.maxZ,centerX:tile.centerX,centerZ:tile.centerZ,seed:tile.seed,material:grassBatchMaterial};
+   const tileOptions={tileSize:GRASS_TILE_SIZE_METERS,tileX:tile.tileX,tileZ:tile.tileZ,minX:tile.minX,minZ:tile.minZ,maxX:tile.maxX,maxZ:tile.maxZ,centerX:tile.centerX,centerZ:tile.centerZ,seed:tile.seed,landFraction:tile.landFraction,material:grassBatchMaterial};
    const staged=await createRealGrass(tile.islandIndex,tile.centerX,tile.centerZ,true,tileOptions);
    if(tile.islandIndex!==grassTileRequestedIslandIndex){
     for(const mesh of staged.meshes||[])try{if(mesh&&!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,false);}catch(_){}
@@ -2228,7 +2235,13 @@ function setLoadingProgress(value,label){
   const focus=player.root.position;let currentIsland=-1,bestRatio=Infinity;
   for(let i=0;i<land.length;i++){const island=land[i],ratio=Math.hypot(focus.x-island.x,focus.z-island.z)/island.r;if(ratio<bestRatio){bestRatio=ratio;currentIsland=i;}}
   if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;
-  if(currentIsland<0){grassTileRequestedIslandIndex=-1;return;}
+  if(currentIsland<0){
+   grassTileRequestedIslandIndex=-1;
+   for(const entry of [...grassTileCache.values()])disposeGrassTile(entry);
+   grassTileActiveIslandIndex=-1;grassStreamActiveIslandIndex=-1;
+   qualityGrassVisibleBatchCount=0;refreshGrassTileAggregates();
+   return;
+  }
   grassTileRequestedIslandIndex=currentIsland;
   const targets=collectGrassTileTargets(currentIsland,focus.x,focus.z,true);
   grassTileLastFocusX=focus.x;grassTileLastFocusZ=focus.z;
