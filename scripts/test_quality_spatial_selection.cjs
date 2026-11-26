@@ -118,6 +118,6 @@ assert.ok(dynamicFilterStart>=0&&dynamicFilterEnd>dynamicFilterStart,'The live d
 const dynamicFilterSource=builder.slice(dynamicFilterStart,dynamicFilterEnd);
 assert.ok(dynamicFilterSource.includes('const currentRenderId=scene.getRenderId();')&&dynamicFilterSource.includes('mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId'),'The render id must be read once per filter pass and reused for freshness checks.');
 assert.ok(dynamicFilterSource.includes('const isDynamic=spatialDynamicMeshSet.has(mesh);')&&dynamicFilterSource.includes('if(isDynamic)selected++;'),'Each candidate membership lookup must be reused for both filtering and selected-count accounting.');
-assert.equal((dynamicFilterSource.match(/scene\\.getRenderId\\(\\)/g)||[]).length,1,'Do not call Scene.getRenderId for every dynamic mesh.');
-assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\\.has\\(mesh\\)/g)||[]).length,1,'Do not repeat dynamic-set lookups for selected meshes.');
+assert.equal((dynamicFilterSource.match(/scene\.getRenderId\(\)/g)||[]).length,1,'Do not call Scene.getRenderId for every dynamic mesh.');
+assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\.has\(mesh\)/g)||[]).length,1,'Do not repeat dynamic-set lookups for selected meshes.');
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
