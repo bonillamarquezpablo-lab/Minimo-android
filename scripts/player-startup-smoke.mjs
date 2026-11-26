@@ -759,6 +759,59 @@ async function main() {
     assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
     const clubWorldMeshes=(visualActorsBefore.playerClub.meshEvidence||[]).filter(mesh=>mesh.enabled&&mesh.isVisible&&mesh.visibility>.01&&mesh.worldCenter&&[mesh.worldCenter.x,mesh.worldCenter.y,mesh.worldCenter.z].every(Number.isFinite));
     assert.ok(clubWorldMeshes.length>=3,'El palo no conserva tres piezas renderizables con transformaciones mundiales válidas: '+JSON.stringify(visualActorsBefore.playerClub.meshEvidence));
+    const clubRasterProof=await page.evaluate(async()=>{
+      const B=window.BABYLON,scene=B?.EngineStore?.LastCreatedScene,canvas=document.getElementById('renderCanvas'),api=window.__ELSN_TEST__;
+      if(!scene||!canvas||!api?.render||!api?.captureCanvas)return {available:false,reason:'No está disponible la captura del render real de Babylon.'};
+      const meshes=(scene.meshes||[]).filter(mesh=>/^RealCastawayStick(?:Shaft|Branch|Grip|Knot)$/.test(String(mesh.name||'')));
+      if(meshes.length<3)return {available:true,meshCount:meshes.length,changedPixels:0};
+      const viewport=scene.activeCamera?.viewport?.toGlobal?.(canvas.width,canvas.height),transform=scene.getTransformMatrix?.();
+      const projected=[];
+      for(const mesh of meshes){
+        mesh.computeWorldMatrix?.(true);
+        const box=mesh.getBoundingInfo?.()?.boundingBox;
+        if(!box)continue;
+        const min=box.minimumWorld,max=box.maximumWorld;
+        for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){
+          const p=B.Vector3.Project(new B.Vector3(x,y,z),B.Matrix.Identity(),transform,viewport);
+          if(Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.z>=0&&p.z<=1)projected.push({x:p.x,y:p.y});
+        }
+      }
+      if(projected.length<4)return {available:true,meshCount:meshes.length,changedPixels:0,reason:'Las mallas del palo no proyectan un volumen válido en la cámara activa.'};
+      const x0=Math.max(0,Math.floor(Math.min(...projected.map(p=>p.x))-24));
+      const y0=Math.max(0,Math.floor(Math.min(...projected.map(p=>p.y))-24));
+      const x1=Math.min(canvas.width-1,Math.ceil(Math.max(...projected.map(p=>p.x))+24));
+      const y1=Math.min(canvas.height-1,Math.ceil(Math.max(...projected.map(p=>p.y))+24));
+      const flags=meshes.map(mesh=>({mesh,isVisible:mesh.isVisible,visibility:mesh.visibility}));
+      let visiblePng=null,hiddenPng=null;
+      try{
+        api.render();visiblePng=api.captureCanvas();
+        for(const mesh of meshes){mesh.isVisible=false;mesh.visibility=0;}
+        api.render();hiddenPng=api.captureCanvas();
+      }finally{
+        for(const row of flags){row.mesh.isVisible=row.isVisible;row.mesh.visibility=row.visibility;}
+        api.render();
+      }
+      const raster=async src=>{
+        const image=new Image();image.src=src;await image.decode();
+        const tmp=document.createElement('canvas');tmp.width=image.naturalWidth;tmp.height=image.naturalHeight;
+        const ctx=tmp.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0);
+        return {width:tmp.width,height:tmp.height,data:ctx.getImageData(0,0,tmp.width,tmp.height).data};
+      };
+      const [visible,hidden]=await Promise.all([raster(visiblePng),raster(hiddenPng)]);
+      const scaleX=visible.width/canvas.width,scaleY=visible.height/canvas.height;
+      const left=Math.max(0,Math.floor(x0*scaleX)),right=Math.min(visible.width-1,Math.ceil(x1*scaleX));
+      const top=Math.max(0,Math.floor(y0*scaleY)),bottom=Math.min(visible.height-1,Math.ceil(y1*scaleY));
+      let changedPixels=0,minX=Infinity,minY=Infinity,maxX=-1,maxY=-1;
+      for(let y=top;y<=bottom;y+=2)for(let x=left;x<=right;x+=2){
+        const offset=(y*visible.width+x)*4;
+        const delta=Math.max(Math.abs(visible.data[offset]-hidden.data[offset]),Math.abs(visible.data[offset+1]-hidden.data[offset+1]),Math.abs(visible.data[offset+2]-hidden.data[offset+2]));
+        if(delta>=24){changedPixels++;minX=Math.min(minX,x);minY=Math.min(minY,y);maxX=Math.max(maxX,x);maxY=Math.max(maxY,y);}
+      }
+      return {available:true,meshCount:meshes.length,changedPixels,widthPx:maxX>=minX?maxX-minX+2:0,heightPx:maxY>=minY?maxY-minY+2:0,projectedBounds:{left,top,right,bottom},source:'same-frame-Babylon-render-difference'};
+    });
+    manifest.clubRasterProof=clubRasterProof;
+    assert.ok(clubRasterProof.available&&clubRasterProof.changedPixels>=25&&clubRasterProof.widthPx>=5&&clubRasterProof.heightPx>=6,
+      'El palo tiene flags y coordenadas válidas, pero no aporta píxeles visibles a la imagen real del juego: '+JSON.stringify(clubRasterProof));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
@@ -840,6 +893,7 @@ async function main() {
       assert.ok(visibleMeshDisplacement>.15,'La malla renderizada de la gaviota '+index+' permanece inmóvil aunque se mueva su raíz: '+JSON.stringify({beforeMesh:before?.sampleVisibleMesh,afterMesh:after?.sampleVisibleMesh,visibleMeshDisplacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
+    manifest.visualActorAcceptance.clubRasterProof=clubRasterProof;
     manifest.visualActorAcceptance.clubAnchoredToModelPivot=true;
     manifest.visualActorAcceptance.clubHandDistanceMeters=visualActorsAfter.playerClub.holderToHandMeters;
     manifest.visualActorAcceptance.gullVisualRootsMoved=true;
