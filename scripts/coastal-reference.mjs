@@ -346,6 +346,24 @@ async function main() {
         startup: window.__elSinNombreStartupSmoke.result,
         islands: api.islands,
         diagnostics: api.diagnostics(),
+        waterGpu: (() => {
+          const water = window.__ELSN_WATER_GPU__;
+          return water ? {
+            enabled: water.enabled,
+            mode: water.mode,
+            shader: water.shader,
+            meshVertexCount: water.meshVertexCount,
+            cpuMeshVertexEvaluations: water.cpuMeshVertexEvaluations,
+            dynamicPositionUploads: water.dynamicPositionUploads,
+            dynamicNormalUploads: water.dynamicNormalUploads,
+            analyticGameplaySampler: water.analyticGameplaySampler,
+            shorelineSolver: water.shorelineSolver,
+            vesselFloat: water.vesselFloat,
+            tidalFoam: water.tidalFoam,
+            mirrorReflection: water.mirrorReflection,
+            materialReady: water.materialReady()
+          } : null;
+        })(),
         backgroundModels: window.__elSinNombreBackgroundModelTasks || null,
         sceneWarmup: window.__elSinNombreStartupSceneWarmup || null
       };
@@ -357,6 +375,20 @@ async function main() {
     manifest.sceneWarmup = boot.sceneWarmup;
 
     assert.equal(boot.build, EXPECTED_BUILD, 'La referencia costera debe coincidir con la versión validada por scripts/validate_release.py: ' + EXPECTED_BUILD);
+    assert.equal(boot.waterGpu?.enabled, true, 'El océano debe usar deformación GPU en el shader de vértices.');
+    assert.equal(boot.waterGpu?.mode, 'gpu-vertex-displacement');
+    assert.equal(boot.waterGpu?.materialReady, true, 'El material estándar del agua no terminó de compilar su shader GPU.');
+    assert.ok(Number.isFinite(boot.waterGpu?.meshVertexCount) && boot.waterGpu.meshVertexCount > 1000,
+      'La malla de agua perdió su resolución geométrica original.');
+    assert.equal(boot.waterGpu?.cpuMeshVertexEvaluations, 0);
+    assert.equal(boot.waterGpu?.dynamicPositionUploads, 0);
+    assert.equal(boot.waterGpu?.dynamicNormalUploads, 0);
+    assert.equal(boot.waterGpu?.analyticGameplaySampler, 'waterHeight');
+    assert.equal(boot.waterGpu?.shorelineSolver, 'preserved');
+    assert.equal(boot.waterGpu?.vesselFloat, 'preserved');
+    assert.equal(boot.waterGpu?.tidalFoam, 'preserved');
+    assert.equal(boot.waterGpu?.mirrorReflection, 'preserved');
+    manifest.waterGpu = boot.waterGpu;
     assert.equal(boot.coastalRuntimeMode, 'module', 'El módulo costero externo debe cargarse desde dist; el respaldo inline no debe ocultar un error de empaquetado.');
     assert.equal(boot.coastalApiReady, true, 'Falta una o más funciones de la API costera al construir la escena.');
     assert.equal(boot.startup.worldReady, true, 'La escena costera no terminó de prepararse');

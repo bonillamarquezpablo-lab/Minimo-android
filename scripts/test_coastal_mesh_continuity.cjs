@@ -25,10 +25,10 @@ assert.ok(build.includes('thresholdMeters=.05'),
   'Cross-mesh seam tolerance must be fixed at 5 cm.');
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
-assert.ok(release.includes('EXPECTED_VERSION = "0.6.359"'));
+assert.ok(release.includes('EXPECTED_VERSION = "0.6.360"'));
 assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?32:48)'),
   'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
-assert.ok(build.includes('html = html.replace("0.6.274", "0.6.359")'));
+assert.ok(build.includes('html = html.replace("0.6.274", "0.6.360")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I'));
 assert.ok(release.includes('if f"<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · {EXPECTED_VERSION}</title>" not in index_html:'));
 
@@ -38,4 +38,12 @@ assert.ok(runner.includes("meshContinuityAudit?.thresholdMeters, .05"));
 assert.ok(runner.includes("meshContinuityAudit?.passed, true"));
 assert.ok(deploy.includes('node scripts/test_coastal_mesh_continuity.cjs'));
 assert.ok(validate.includes('node scripts/test_coastal_mesh_continuity.cjs'));
-console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm cross-mesh seam audit, 0.6.359 release.');
+assert.ok(build.includes('class NordicWaterGpuPlugin extends B.MaterialPluginBase') &&
+  build.includes("ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)") &&
+  build.includes('positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast)') &&
+  build.includes('normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ))'),
+  'The visible ocean geometry must use GPU wave displacement and matching GPU normals.');
+assert.ok(build.includes('function waterHeight(x,z,t=oceanTime,detailFade)') &&
+  build.includes("analyticGameplaySampler:'waterHeight'"),
+  'The coast and vessel simulation must retain its canonical analytical wave sampler.');
+console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm seam audit, GPU ocean and 0.6.360 release.');

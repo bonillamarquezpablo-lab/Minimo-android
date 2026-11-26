@@ -155,5 +155,21 @@ assert.ok(builder.includes('let grassWindCachedFrameId=-1,grassWindCachedTime=0;
   grassWindClassStart>=0 && grassWindClassEnd>grassWindClassStart &&
   !grassWindBindingBlock.includes('performance.now()'),
   'GPU grass wind time must be sampled once per Babylon scene frame, not once for each material/submesh bind.');
+
+const waterAnimatorStart=builder.indexOf('water_animation_replacement = r"""');
+const waterAnimatorEnd=builder.indexOf('water_gpu_required_markers',waterAnimatorStart);
+assert.ok(builder.includes('water_gpu_required_markers') &&
+  builder.includes('cpuMeshVertexEvaluations:0') &&
+  builder.includes('dynamicPositionUploads:0') &&
+  builder.includes('dynamicNormalUploads:0'),
+  'The water pipeline must expose zero CPU mesh deformation and zero ocean position/normal uploads.');
+assert.ok(waterAnimatorStart>=0 && waterAnimatorEnd>waterAnimatorStart &&
+  !builder.slice(waterAnimatorStart,waterAnimatorEnd).includes('updateVerticesData(B.VertexBuffer.PositionKind'),
+  'The main ocean animation must not update mesh positions from JavaScript; foam meshes keep their independent updater.');
+assert.ok(builder.includes('syncNordicWaterReflectionIsland()') &&
+  builder.includes('if(foamWorkDue){') &&
+  builder.includes("analyticGameplaySampler:'waterHeight'"),
+  'GPU water deformation must preserve mirror scheduling, coastal foam and analytic gameplay sampling.');
+
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.359"
+EXPECTED_VERSION = "0.6.360"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -40,6 +40,15 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
+    "class NordicWaterGpuPlugin extends B.MaterialPluginBase",
+    "ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)",
+    "positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast)",
+    "normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ))",
+    "window.__ELSN_WATER_GPU__={",
+    "cpuMeshVertexEvaluations:0,dynamicPositionUploads:0,dynamicNormalUploads:0,dynamicColorUploads:0",
+    "syncNordicWaterReflectionIsland()",
+    "if(foamWorkDue){",
+    "M.water.diffuseTexture.uOffset=(oceanTime*.010)%1",
     "const holderParent=equippedWeapon==='club'?realPlayerModelPivot:(socket||realPlayerModelPivot);",
     "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
@@ -682,7 +691,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'67',build:'0.6.359'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'67',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
