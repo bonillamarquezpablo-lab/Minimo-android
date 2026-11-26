@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.360"
+EXPECTED_VERSION = "0.6.361"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -658,9 +658,13 @@ def main() -> None:
             fail("La actualización de DynamicTexture debe recuperar el motor vivo o descartar de forma segura una textura huérfana: " + dynamic_texture_guard)
     spatial_selection_markers = (
         "scene.createOrUpdateSelectionOctree(64,3)",
+        "await yieldSpatialWorkFrame()",
+        "babylonOctreeBuildMs",
+        "dynamicClassificationMs",
+        "await freezeSpatialStaticWorldMatrices()",
         "scene.onNewMeshAddedObservable.add",
         "scene.onMeshRemovedObservable.add",
-        "function buildSpatialSelectionOctree()",
+        "async function buildSpatialSelectionOctree()",
         "buildSpatialSelectionOctree();",
         "const installSpatialDynamicCandidateFilter=()=>{",
         "scene.getActiveMeshCandidates=()=>{",
@@ -669,6 +673,8 @@ def main() -> None:
         "mesh.alwaysSelectAsActiveMesh",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
+        "meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs",
+        "meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
         "meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason",
         "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
@@ -691,7 +697,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'68',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'69',build:'0.6.361'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
