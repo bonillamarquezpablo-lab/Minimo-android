@@ -129,7 +129,8 @@ assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.356
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
 assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.362"\)/,"The build must promote every visible source version to 0.6.362.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!qualityLabAdaptiveActive") && buildSite.includes("qualityScaleAdaptive:qualityLabAdaptiveActive") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must keep its native render scale fixed for the session.");
-assert.ok(!buildSite.includes("engine.setHardwareScalingLevel(1/qualityDprCurrent)") && !buildSite.includes("qualityDprSlowSamples") && !buildSite.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction.");
+const qualityAdaptiveCode=buildSite.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||"";
+assert.ok(!qualityAdaptiveCode.includes("engine.setHardwareScalingLevel") && !qualityAdaptiveCode.includes("qualityDprSlowSamples") && !qualityAdaptiveCode.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction; manual DPR changes remain debug-only.");
 assert.ok(buildSite.includes("Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
 assert.ok(buildSite.includes("const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024"),"The original mobile water-reflection resolution must be preserved.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?10:4"),"The original flagship mobile shadow-refresh cadence must be preserved.");
