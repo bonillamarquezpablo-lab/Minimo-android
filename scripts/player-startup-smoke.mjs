@@ -747,7 +747,12 @@ async function main() {
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
     assert.equal(visualActorsBefore.playerClub.holderEnabled,true,'El anclaje del palo no está activo.');
+    assert.equal(visualActorsBefore.playerClub.parentIsModelPivot,true,'El anclaje del palo no cuelga del pivote visual estable del jugador: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.holderWorldPosition&&visualActorsBefore.playerClub.pivotWorldPosition,'El palo no tiene transformaciones mundiales válidas: '+JSON.stringify(visualActorsBefore.playerClub));
+    assert.ok(visualActorsBefore.playerClub.holderToHandMeters===null||visualActorsBefore.playerClub.holderToHandMeters<.35,'El palo no está colocado junto a la mano del jugador: '+JSON.stringify(visualActorsBefore.playerClub));
     assert.ok(visualActorsBefore.playerClub.visibleMeshCount>=3,'El palo inicial no tiene sus piezas visibles: '+JSON.stringify(visualActorsBefore.playerClub));
+    const clubWorldMeshes=(visualActorsBefore.playerClub.meshEvidence||[]).filter(mesh=>mesh.enabled&&mesh.isVisible&&mesh.visibility>.01&&mesh.worldCenter&&[mesh.worldCenter.x,mesh.worldCenter.y,mesh.worldCenter.z].every(Number.isFinite));
+    assert.ok(clubWorldMeshes.length>=3,'El palo no conserva tres piezas renderizables con transformaciones mundiales válidas: '+JSON.stringify(visualActorsBefore.playerClub.meshEvidence));
     assert.ok(visualActorsBefore.homeWarriors.length>=1,'No se cargó ningún guardián humano de la zona inicial: '+JSON.stringify(visualActorsBefore.homeWarriors));
     assert.ok(visualActorsBefore.homeWarriors.every(actor=>actor.rootEnabled&&actor.realHuman&&actor.bodyEnabled&&actor.modelRootEnabled&&actor.visibleMeshCount>0),'Hay guardianes GLB invisibles o incompletos: '+JSON.stringify(visualActorsBefore.homeWarriors));
     const closeHostiles=(visualActorsBefore.hostiles||[]).filter(actor=>actor.position&&Math.hypot(actor.position.x-(visualActorsBefore.playerPosition?.x||0),actor.position.z-(visualActorsBefore.playerPosition?.z||0))<20);
@@ -768,12 +773,16 @@ async function main() {
           if(a.kind==='q')return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z)+Math.abs(a.w-b.w);
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
+        const distance=(a,b)=>a&&b?Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z):0;
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.position,b=bird?.position;
-          const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+          const before=birds[index],rootTravel=distance(before?.position,bird?.position);
+          const visualRootTravel=distance(before?.visualRootAbsolutePosition,bird?.visualRootAbsolutePosition);
+          const meshTravel=distance(before?.sampleVisibleMesh?.worldCenter,bird?.sampleVisibleMesh?.worldCenter);
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&
+            rootTravel>1.0&&visualRootTravel>1.0&&meshTravel>1.0&&
+            leftMotion>.025&&rightMotion>.025;
         });
       },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
@@ -791,6 +800,12 @@ async function main() {
               afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
               beforeFlightElapsed:Number(before?.flightElapsed)||0,
               afterFlightElapsed:Number(bird?.flightElapsed)||0,
+              beforeVisualRoot:before?.visualRootAbsolutePosition||null,
+              afterVisualRoot:bird?.visualRootAbsolutePosition||null,
+              beforeVisibleMesh:before?.sampleVisibleMesh?.worldCenter||null,
+              afterVisibleMesh:bird?.sampleVisibleMesh?.worldCenter||null,
+              visualRootDisplacement:before?.visualRootAbsolutePosition&&bird?.visualRootAbsolutePosition?Math.hypot(bird.visualRootAbsolutePosition.x-before.visualRootAbsolutePosition.x,bird.visualRootAbsolutePosition.y-before.visualRootAbsolutePosition.y,bird.visualRootAbsolutePosition.z-before.visualRootAbsolutePosition.z):0,
+              visibleMeshDisplacement:before?.sampleVisibleMesh?.worldCenter&&bird?.sampleVisibleMesh?.worldCenter?Math.hypot(bird.sampleVisibleMesh.worldCenter.x-before.sampleVisibleMesh.worldCenter.x,bird.sampleVisibleMesh.worldCenter.y-before.sampleVisibleMesh.worldCenter.y,bird.sampleVisibleMesh.worldCenter.z-before.sampleVisibleMesh.worldCenter.z):0,
               displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0
             };
           })
@@ -807,13 +822,23 @@ async function main() {
     assert.ok(gullRenderStateAfter&&gullRenderStateAfter.active===true&&Number(gullRenderStateAfter.frameTicks)>gullRenderTicksBefore&&Number(gullRenderStateAfter.updateErrors)===0,'El callback real del motor no está actualizando la bandada sin errores: '+JSON.stringify(gullRenderStateAfter));
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
+    const movementDistance=(a,b)=>a&&b?Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z):0;
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
-      const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index];
+      const displacement=before?.position&&after?.position?Math.hypot(after.position.x-before.position.x,after.position.z-before.position.z):0;
+      const visualRootDisplacement=movementDistance(before?.visualRootAbsolutePosition,after?.visualRootAbsolutePosition);
+      const visibleMeshDisplacement=movementDistance(before?.sampleVisibleMesh?.worldCenter,after?.sampleVisibleMesh?.worldCenter);
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
-      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(displacement>.15,'La raíz lógica de la gaviota '+index+' no se desplazó: '+JSON.stringify({before,after,displacement}));
+      assert.ok(visualRootDisplacement>.15,'La jerarquía visual de la gaviota '+index+' permanece inmóvil en el mundo: '+JSON.stringify({beforeVisualRoot:before?.visualRootAbsolutePosition,afterVisualRoot:after?.visualRootAbsolutePosition,visualRootDisplacement,after}));
+      assert.ok(visibleMeshDisplacement>.15,'La malla renderizada de la gaviota '+index+' permanece inmóvil aunque se mueva su raíz: '+JSON.stringify({beforeMesh:before?.sampleVisibleMesh,afterMesh:after?.sampleVisibleMesh,visibleMeshDisplacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
+    manifest.visualActorAcceptance.clubAnchoredToModelPivot=true;
+    manifest.visualActorAcceptance.clubHandDistanceMeters=visualActorsAfter.playerClub.holderToHandMeters;
+    manifest.visualActorAcceptance.gullVisualRootsMoved=true;
+    manifest.visualActorAcceptance.gullRenderedMeshesMoved=true;
+    await page.screenshot({path:path.join(OUT,'weapon-and-gull-world-proof.png'),fullPage:true}).catch(()=>{});
     await page.waitForFunction(() => {
       const state = window.__ELSN_NPC_DIALOGUES__?.getSnapshot?.();
       return !!state && state.active === true;
