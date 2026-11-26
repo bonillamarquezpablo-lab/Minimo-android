@@ -612,7 +612,7 @@ def main() -> None:
         "physicalPixelCoveragePct",
         "physicalPixelWidth",
         "physicalPixelHeight",
-        "Math.min(deviceDpr,isTouchDevice?1.80:1.85)",
+        "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
@@ -637,7 +637,7 @@ def main() -> None:
     if "engine.setHardwareScalingLevel(1/qualityDprCurrent)" in index_html or "qualityDprSlowSamples" in index_html:
         fail("El runtime no puede reducir la resolución nativa automáticamente.")
     mobile_gpu_budget_markers = (
-        "Math.min(deviceDpr,isTouchDevice?1.80:1.85)",
+        "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
         "nordicWaterMirror.refreshRate=isTouchDevice?12:8",
         "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))",
