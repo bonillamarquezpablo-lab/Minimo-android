@@ -501,6 +501,47 @@ async function main() {
     manifest.startupResourceGate = await page.evaluate(() => window.__ELSN_STARTUP_RESOURCE_GATE__ || null);
     manifest.startupTimeline = manifest.startupResourceGate?.startupTimeline || manifest.startupTimeline;
     assert.equal(startupResources.scene?.status, 'ready', 'La vista inicial y sus shaders no están listos.');
+
+    manifest.waterGpu = await page.evaluate(() => {
+      const water = window.__ELSN_WATER_GPU__ || null;
+      if (!water) return null;
+      return {
+        enabled: water.enabled === true,
+        mode: water.mode || null,
+        shader: water.shader || null,
+        meshVertexCount: Number(water.meshVertexCount) || 0,
+        cpuMeshVertexEvaluations: Number(water.cpuMeshVertexEvaluations),
+        dynamicPositionUploads: Number(water.dynamicPositionUploads),
+        dynamicNormalUploads: Number(water.dynamicNormalUploads),
+        dynamicColorUploads: Number(water.dynamicColorUploads),
+        analyticGameplaySampler: water.analyticGameplaySampler || null,
+        shorelineSolver: water.shorelineSolver || null,
+        vesselFloat: water.vesselFloat || null,
+        tidalFoam: water.tidalFoam || null,
+        mirrorReflection: water.mirrorReflection || null,
+        gpuReadback: water.gpuReadback === true,
+        materialReady: typeof water.materialReady === 'function' && water.materialReady() === true
+      };
+    });
+    assert.ok(manifest.waterGpu, 'El renderizador GPU del agua no se registró en la escena.');
+    assert.equal(manifest.waterGpu.enabled, true, 'La deformación GPU del agua está desactivada.');
+    assert.equal(manifest.waterGpu.mode, 'gpu-vertex-displacement');
+    assert.equal(manifest.waterGpu.materialReady, true,
+      'Babylon no terminó de compilar y preparar el material GPU del agua: ' + JSON.stringify(manifest.waterGpu));
+    assert.ok(manifest.waterGpu.meshVertexCount > 1000,
+      'La malla de agua perdió resolución: ' + JSON.stringify(manifest.waterGpu));
+    assert.equal(manifest.waterGpu.cpuMeshVertexEvaluations, 0);
+    assert.equal(manifest.waterGpu.dynamicPositionUploads, 0);
+    assert.equal(manifest.waterGpu.dynamicNormalUploads, 0);
+    assert.equal(manifest.waterGpu.dynamicColorUploads, 0);
+    assert.equal(manifest.waterGpu.analyticGameplaySampler, 'waterHeight');
+    assert.equal(manifest.waterGpu.shorelineSolver, 'preserved');
+    assert.equal(manifest.waterGpu.vesselFloat, 'preserved');
+    assert.equal(manifest.waterGpu.tidalFoam, 'preserved');
+    assert.equal(manifest.waterGpu.mirrorReflection, 'preserved');
+    assert.equal(manifest.waterGpu.gpuReadback, false,
+      'No se debe introducir una lectura GPU-CPU síncrona en el bucle del agua.');
+
     assert.equal(startupResources.world?.islands, 13, 'El mundo no expone las 13 islas.');
     assert.equal(startupResources.world?.profile, 'quality', 'El smoke debe verificar el perfil Calidad sin degradaciones.');
     assert.equal(startupResources.fauna?.requested, 3, 'No se prepararon los tres animales de la isla inicial.');
@@ -1631,6 +1672,7 @@ async function main() {
         perf20s, postEntryAudit: manifest.postEntryAudit, postEntryErrors: finalErrors,
         serviceWorkerBeforeOfflineReload: manifest.serviceWorkerBeforeOfflineReload,
         serviceWorkerAfterOfflineReload: manifest.serviceWorkerAfterOfflineReload,
+        waterGpu: manifest.waterGpu,
         offlineReload: manifest.offlineReload, worldUpdateWaitMs: manifest.worldUpdateWaitMs,
         cachedNavigationAndProfileMs: manifest.cachedNavigationAndProfileMs,
         cachedBlockingStartupMs: manifest.cachedBlockingStartupMs }));

@@ -99,7 +99,19 @@ for (const marker of [
   "context.setOffline(true)",
   "manifest.offlineReload.worldReady = true",
   "modelReady",
-  "fallbackVisible"
+  "fallbackVisible",
+  "window.__ELSN_WATER_GPU__",
+  "gpu-vertex-displacement",
+  "water.materialReady()",
+  "cpuMeshVertexEvaluations",
+  "dynamicPositionUploads",
+  "dynamicNormalUploads",
+  "dynamicColorUploads",
+  "analyticGameplaySampler",
+  "shorelineSolver",
+  "vesselFloat",
+  "tidalFoam",
+  "mirrorReflection"
 ]) {
   assert.ok(smoke.includes(marker), 'Runtime smoke is missing acceptance check: ' + marker);
 }
