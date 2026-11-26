@@ -739,8 +739,8 @@ def main() -> None:
     missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
     if missing_mobile_memory:
         fail("La versión móvil debe escalonar GLB, liberar fuentes ya importadas y registrar memoria sin alterar Calidad: " + ", ".join(missing_mobile_memory))
-    if "const qualityDpr=isPerformanceMode" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
-        fail("La política de memoria no debe sustituir la escala gráfica seleccionada.")
+    if "const qualityDprDefault=isPerformanceMode" not in index_html or "const qualityDpr=(!isPerformanceMode&&qualityLabEnabled" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
+        fail("La política de memoria no debe sustituir la escala gráfica seleccionada ni el selector de depuración.")
     missing_beach_diagnostics = [marker for marker in beach_diagnostic_markers if marker not in index_html]
     if missing_beach_diagnostics:
         fail("El informe debe separar CPU de tiempo transcurrido y medir el material/texturas de arena: " + ", ".join(missing_beach_diagnostics))
