@@ -23,6 +23,8 @@ for(const marker of [
   'perf_gpu_query_marker',
   "if(perfAuditScenario==='sin seleccionar')return null;",
   'perf_audit_record_marker',
+  'perf_render_loop_marker',
+  'performanceAuditActive=perfAuditScenario',
   "if(perfAuditScenario==='sin seleccionar')return;",
   'const gpuDebugRendererInfo=profileDiagnosticsEnabled?',
   'gpuTimerQueryStatus:!profileDiagnosticsEnabled?',
@@ -63,6 +65,7 @@ assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.include
 assert.ok(builder.includes('const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;') && builder.includes('const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?') && builder.includes('const gpuDebugRendererInfo=profileDiagnosticsEnabled?'), 'GPU profiling and adapter queries must remain opt-in with Inspector/profile mode, not active in every normal session.');
 assert.ok(builder.includes('gpuTimerQueryStatus:!profileDiagnosticsEnabled?') && builder.includes('gpuContextLifecycle'), 'Runtime diagnostics must distinguish disabled profiling from unsupported timers and record WebGL context loss/restoration.');
 assert.ok(builder.includes('perf_gpu_query_marker') && builder.includes("if(perfAuditScenario==='sin seleccionar')return null;") && builder.includes('perf_audit_record_marker') && builder.includes("if(perfAuditScenario==='sin seleccionar')return;"), 'The normal render loop must not initialize GPU timer queries or write audit samples until an explicit performance-audit scenario is selected.');
+assert.ok(builder.includes('perf_render_loop_marker') && builder.includes("performanceAuditActive=perfAuditScenario!=='sin seleccionar'") && builder.includes('if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}'), 'The normal render loop must not even call audit helpers unless a diagnostic scenario is explicitly active.');
 assert.ok(builder.includes('if(profileDiagnosticsEnabled||gpuTimerQueryAutoEnabled)'), 'The native profiling stack must remain available when diagnostics are explicitly requested.');
 assert.ok(builder.includes('highHeadroomQualityMobile?deviceDpr:1.45'), 'Flagship Quality must use the physical device DPR, not a capped internal scale.');
 assert.ok(atmosphere.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high atmosphere tier.');
