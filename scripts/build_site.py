@@ -5237,10 +5237,10 @@ function getWorldPhaseTimingSnapshot(){
      
      'float nwDx=nwX-norseWaterFocus.x;float nwDz=nwZ-norseWaterFocus.y;\n'+
      'float nwDistanceSq=nwDx*nwDx+nwDz*nwDz;\n'+
-     'float nwFadeT=clamp((norseWaterDetailRadiusSq-nwDistanceSq)/max(0.0001,nwRadiusSq*0.45),0.0,1.0);\n'+
+     'float nwFadeT=clamp((norseWaterDetailRadiusSq-nwDistanceSq)/max(0.0001,norseWaterDetailRadiusSq*0.45),0.0,1.0);\n'+
      'float nwFade=nwFadeT*nwFadeT*(3.0-2.0*nwFadeT)*norseWaterDetailEnabled;\n'+
      'float nwFadeDx=0.0;float nwFadeDz=0.0;\n'+
-     'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,nwRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,nwRadiusSq*0.45);}\n'+
+     'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,norseWaterDetailRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,norseWaterDetailRadiusSq*0.45);}\n'+
      'float nwP0=nwX*0.014+nwZ*0.018+norseWaterTime*0.48;\n'+
      'float nwP1=nwX*0.024+nwZ*0.018+norseWaterTime*0.82;\n'+
      'float nwP2=nwX*(-0.018)+nwZ*0.036-norseWaterTime*0.73;\n'+
@@ -5276,7 +5276,7 @@ function getWorldPhaseTimingSnapshot(){
      'nwSlopeZ+=(nwDetailSlopeZ*nwFade+nwDetailTotal*nwFadeDz)*norseWaterShortScale;\n'+
      'if(nwHeight>nwCap){nwSlopeX*=1.0-nwCoast;nwSlopeZ*=1.0-nwCoast;}\n'+
      '#ifdef VERTEXCOLOR\n'+
-     'float nwInDetail=1.0-step(nwRadiusSq,nwDistanceSq);\n'+
+     'float nwInDetail=1.0-step(norseWaterDetailRadiusSq,nwDistanceSq);\n'+
      'float nwCrestLight=min(0.34,(nwS3Cubed*0.25+nwS4Cubed*0.09)*norseWaterCrestStrength*nwInDetail);\n'+
      'colorUpdated.rgb=min(vec3(1.0),colorUpdated.rgb*(vec3(1.0)+vec3(nwCrestLight,nwCrestLight*0.92,nwCrestLight*0.78)));\n'+
      '#endif\n'+
