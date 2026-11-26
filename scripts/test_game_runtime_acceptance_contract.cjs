@@ -7,8 +7,16 @@ const smoke = fs.readFileSync('scripts/player-startup-smoke.mjs', 'utf8');
 const dialogueRuntime = fs.readFileSync('scripts/npc-dialogue-runtime.js', 'utf8');
 const startupReadiness = fs.readFileSync('scripts/startup-readiness-core.cjs', 'utf8');
 const release = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
+const serviceWorker = fs.readFileSync('sw.js', 'utf8');
 const httpsServer = fs.readFileSync('scripts/start_https_static_server.py', 'utf8');
 
+assert.ok(serviceWorker.includes('"./assets/vendor/babylon.js"') &&
+  serviceWorker.includes('"./assets/vendor/babylonjs.loaders.min.js"') &&
+  serviceWorker.includes('"./assets/vendor/meshopt_decoder.js"'),
+  'The offline shell must precache Babylon core, glTF loader and meshopt.');
+assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.js")') &&
+  serviceWorker.includes('cacheFirst(request, SHELL_CACHE)'),
+  'Offline startup must resolve the engine from the service worker shell cache.');
 assert.match(release, /Test runtime and offline Service Worker publication gate/);
 assert.match(release, /node scripts\/test_game_runtime_acceptance_contract\.cjs/);
 assert.match(release, /Validate the local HTTPS acceptance server/);
