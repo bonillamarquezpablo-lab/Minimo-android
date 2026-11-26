@@ -63,7 +63,7 @@ assert.ok(anchorBuilder.includes('transformFallbacks') && anchorBuilder.includes
   'NPC overlay anchor recovery must expose transform fallback and health-bar reattachment diagnostics.');
 
 
-assert.ok(anchorBuilder.includes("now-p.__elsnVisualAuditAt<1200") &&
+assert.ok(anchorBuilder.includes("now-parts.__elsnVisualAuditAt<1200") &&
   anchorBuilder.includes("visualAuditCacheHits++") &&
   anchorBuilder.includes("visualAuditRuns++") &&
   anchorBuilder.includes("recordFrameMaintenanceTiming('npcVisualRecoveryAudit',auditStarted)") &&
