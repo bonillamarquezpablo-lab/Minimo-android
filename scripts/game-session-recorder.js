@@ -1519,6 +1519,7 @@
         ? current.finalWorldInspection.terrainObjects.candidateCount : null
     };
     state.session = null;
+    state.sessionStartedPerformanceAt = 0;
   }
 
   function monitorGameState() {
