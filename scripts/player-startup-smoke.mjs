@@ -198,6 +198,11 @@ async function main() {
       } : {}),
       ignoreHTTPSErrors: true
     });
+    await context.addInitScript(() => {
+      const navigatorPrototype=Object.getPrototypeOf(navigator);
+      Object.defineProperty(navigatorPrototype,'deviceMemory',{configurable:true,get:()=>12});
+      Object.defineProperty(navigatorPrototype,'hardwareConcurrency',{configurable:true,get:()=>8});
+    });
     manifest.deviceProfile = MOBILE_PROFILE
       ? { name: 'Xiaomi 12X emulation', viewport: '393x873 CSS px', deviceScaleFactor: 2.75, userAgent: 'Android 12 / 2201123G' }
       : { name: 'Desktop Chromium', viewport: '960x540 CSS px', deviceScaleFactor: 1 };
@@ -743,6 +748,13 @@ async function main() {
     manifest.worldUpdateWaitMs = Number((performance.now() - worldUpdateWaitStartedAt).toFixed(1));
     manifest.worldUpdateCountAtCapture = await page.evaluate(() =>
       window.getGameHealthDebug()?.worldUpdateCount ?? null);
+    const renderResolution=await page.evaluate(()=>window.__ELSN_RENDER_RESOLUTION?.()||null);
+    assert.ok(renderResolution,'Falta la telemetría del framebuffer de Babylon.');
+    assert.ok(Number.isFinite(renderResolution.renderWidth)&&Number.isFinite(renderResolution.renderHeight)&&renderResolution.renderWidth>0&&renderResolution.renderHeight>0,
+      'La resolución real del framebuffer no es válida: '+JSON.stringify(renderResolution));
+    assert.equal(renderResolution.fullNativeResolution,true,
+      'El perfil Calidad de esta prueba debe dibujar a resolución física nativa: '+JSON.stringify(renderResolution));
+    manifest.renderResolution=renderResolution;
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
