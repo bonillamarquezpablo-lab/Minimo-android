@@ -23,6 +23,7 @@ for(const marker of [
   'p99Ms:at(.99)',
   'worldPhases:getWorldPhaseTimingSnapshot()',
   'getPerformanceSnapshot()',
+  'gpuContextLifecycle'
   'window.__ELSN_WILDLIFE_DIAGNOSTICS__',
   'wildlifeUpdatePerfSamples=new Float32Array(120)',
   'npcDialogue:window.__ELSN_NPC_DIALOGUES__',
@@ -75,6 +76,8 @@ assert.ok(builder.includes('gpuTimerQueryExtensionName') && builder.includes('gp
   builder.includes('gpuTimerQueryStatus') && builder.includes('maxRenderbufferSize') &&
   builder.includes('maxViewportDims'),
   'GPU telemetry must identify timer-query availability, adapter identity when exposed, and hardware limits.');
+assert.ok(recorder.includes('contextLifecycle: runtime.gpuContextLifecycle') && recorder.includes('contextLifecycle: latestGpuSample'), 'Session reports must persist WebGL context loss and restoration events.');
+assert.ok(builder.includes('window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;') && builder.includes("gpuContextCanvas.addEventListener('webglcontextlost'") && builder.includes("gpuContextCanvas.addEventListener('webglcontextrestored'"), 'The runtime must observe WebGL context loss, creation failure and restoration without taking over Babylon recovery.');
 assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
   recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
   recorder.includes('timerQueryStatus'),
