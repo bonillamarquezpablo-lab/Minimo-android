@@ -3613,7 +3613,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
 """
     npc_overlay_anchor_marker = " // High-mesh-count spatial selection for Babylon.js."
     npc_overlay_anchor_code = r""" const npcOverlayAnchorActors=new Set();
- const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:"",zeroVisibleActors:0,recoveredActors:0,recoveredMeshes:0};
+ const npcOverlayAnchorStats={created:0,repaired:0,measurements:0,measurementFallbacks:0,invalid:0,healthReattachments:0,badgeReattachments:0,lastSweepCount:0,lastMeasuredHeight:null,lastError:"",zeroVisibleActors:0,recoveredActors:0,recoveredMeshes:0,visualAuditRuns:0,visualAuditCacheHits:0};
  function ensureNpcOverlayAnchor(parts,force=false){
   const root=parts&&parts.root;if(!root||root.isDisposed?.()){npcOverlayAnchorStats.invalid++;return null;}
   try{
@@ -3655,13 +3655,19 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    parts.overlayAnchor=anchor;npcOverlayAnchorActors.add(parts);return anchor;
   }catch(e){npcOverlayAnchorStats.lastError=String(e&&e.message||e).slice(0,180);return null;}
  }
- function recoverNpcActorVisuals(parts){
+ function recoverNpcActorVisuals(parts,nowMs){
   const real=parts&&parts.realHuman;if(!real)return{visible:0,repaired:0};
+  const now=Number.isFinite(nowMs)?nowMs:performance.now();
+  if(Number.isFinite(parts.__elsnVisualAuditAt)&&now-parts.__elsnVisualAuditAt<1200&&Number.isFinite(parts.__elsnVisualAuditVisibleCount)){
+   npcOverlayAnchorStats.visualAuditCacheHits++;return{visible:parts.__elsnVisualAuditVisibleCount,repaired:0,cached:true};
+  }
+  parts.__elsnVisualAuditAt=now;npcOverlayAnchorStats.visualAuditRuns++;
+  const auditStarted=performance.now();
   let meshes=Array.isArray(real.meshes)?real.meshes:[],visual=real.visualBody||real.modelRoot||parts.body||null;
   if(!meshes.length&&visual&&typeof visual.getChildMeshes==="function")try{meshes=visual.getChildMeshes(false);}catch(_){}
   const isVisible=mesh=>!!mesh&&!mesh.isDisposed?.()&&(typeof mesh.isEnabled!=="function"||mesh.isEnabled())&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.001;
   let visible=0;for(const mesh of meshes)if(isVisible(mesh))visible++;
-  if(visible>0){const fallback=parts.proceduralFallbackBody;if(fallback&&!fallback.isDisposed?.()&&typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);return{visible,repaired:0};}
+  if(visible>0){parts.__elsnVisualAuditVisibleCount=visible;const fallback=parts.proceduralFallbackBody;if(fallback&&!fallback.isDisposed?.()&&typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);recordFrameMaintenanceTiming('npcVisualRecoveryAudit',auditStarted);return{visible,repaired:0};}
   npcOverlayAnchorStats.zeroVisibleActors++;
   let repaired=0;
   for(const node of [real.visualBody,real.modelRoot,...(Array.isArray(real.roots)?real.roots:[])]){
@@ -3679,8 +3685,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   }else if(visible>0&&fallback&&!fallback.isDisposed?.()){
    try{if(typeof fallback.setEnabled==="function"&&fallback.isEnabled())fallback.setEnabled(false);}catch(_){}
   }
+  parts.__elsnVisualAuditVisibleCount=visible;
   if(repaired>0)npcOverlayAnchorStats.recoveredActors++;
   npcOverlayAnchorStats.recoveredMeshes+=repaired;
+  recordFrameMaintenanceTiming('npcVisualRecoveryAudit',auditStarted);
   return{visible,repaired};
  }
  function maintainNpcOverlayAnchors(nowMs){
@@ -3694,7 +3702,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     let position=null;try{position=r.getAbsolutePosition?.()||r.position||null;}catch(_){}
     if(position){const dx=position.x-focus.x,dz=position.z-focus.z;if(dx*dx+dz*dz<=5184){
      try{if(typeof r.setEnabled==="function"&&!r.isEnabled())r.setEnabled(true);}catch(_){}
-     const repair=recoverNpcActorVisuals(p);if(repair.visible===0)zeroVisible++;if(repair.repaired>0){recoveredActors++;recoveredMeshes+=repair.repaired;}
+     const repair=recoverNpcActorVisuals(p,now);if(repair.visible===0)zeroVisible++;if(repair.repaired>0){recoveredActors++;recoveredMeshes+=repair.repaired;}
     }}
    }
    ensureNpcOverlayAnchor(p);count++;
