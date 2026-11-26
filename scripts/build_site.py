@@ -3040,35 +3040,46 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.361; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.362; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.361\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.362\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.361.")
-    html = html.replace("0.6.274", "0.6.361")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.362.")
+    html = html.replace("0.6.274", "0.6.362")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'69',build:'0.6.361'"
+    diagnostic_build_replacement = "reportVersion:'70',build:'0.6.362'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.361 para normalizar.")
-    game_version = "0.6.361"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.362 para normalizar.")
+    game_version = "0.6.362"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
     quality_profile_marker = r"""const qualityDpr=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile ? .62 : (constrainedHardware ? .78 : (isTouchDevice ? 1.0 : 1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);"""
     quality_profile_code = r"""const highTierGpuMatch=/Adreno.*(?:7[5-9]\d|8\d\d)|Mali[- ]?G7\d{2}|Xclipse.*(?:9\d{2}|1\d{3})/i.test(graphicsRenderer);
  const highHeadroomQualityMobile=!!(!isPerformanceMode&&isTouchDevice&&!constrainedHardware&&((reportedMemory>=8&&(Number(navigator.hardwareConcurrency)||0)>=8)||highTierGpuMatch));
- // Quality fixes its native render scale at startup. Runtime FPS drops must never lower image quality.
- const qualityDpr=isPerformanceMode
-  ?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35))))))
-  :Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65);"""
+ const qualityLabParams=new URLSearchParams(window.location.search);
+ const qualityLabEnabled=qualityLabParams.get('debug')==='1';
+ const qualityLabDprOptions=[1.8,2.1,2.5,3.0,3.75];
+ const qualityLabRequestedDpr=Number(qualityLabParams.get('renderDpr'));
+ const qualityLabRequestedMsaaRaw=Number(qualityLabParams.get('msaa'));
+ const qualityLabRequestedMsaa=qualityLabRequestedMsaaRaw===2||qualityLabRequestedMsaaRaw===4?qualityLabRequestedMsaaRaw:2;
+ let qualityLabSharpenActive=qualityLabParams.has('sharpen')?qualityLabParams.get('sharpen')==='1':true;
+ let qualityLabAdaptiveActive=false;
+ const qualityDprDefault=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);
+ const qualityDpr=(!isPerformanceMode&&qualityLabEnabled&&qualityLabDprOptions.some(value=>Math.abs(value-qualityLabRequestedDpr)<.001))?Math.min(deviceDpr,qualityLabRequestedDpr):qualityDprDefault;
+ const legacyQualityDpr=qualityDpr;
+ const fsr1InputScale=.87;
+ let qualityLabFsrRcasSharpness=qualityLabSharpenActive?.42:2.0;
+ const qualityLabFsr1Requested=!!(qualityLabEnabled&&qualityLabParams.get('fsr1')==='1');
+ const fsr1Candidate=!!(qualityLabFsr1Requested&&engine._gl&&typeof engine._gl.texStorage2D==='function'&&B.PostProcess&&B.PassPostProcess&&B.Effect&&B.Effect.ShadersStore);"""
     if html.count(quality_profile_marker) != 1:
         raise SystemExit("No se encontró exactamente una política original de resolución.")
     html = html.replace(quality_profile_marker, quality_profile_code, 1)
@@ -3078,18 +3089,16 @@ function updateWildlife(dt){
     render_scale_marker = "engine.setHardwareScalingLevel(renderScale);"
     render_resolution_code = """engine.setHardwareScalingLevel(renderScale);
  window.__ELSN_RENDER_RESOLUTION=()=>{
-  const cssWidth=Math.max(1,Math.round(canvas.clientWidth||canvas.width/deviceDpr));
-  const cssHeight=Math.max(1,Math.round(canvas.clientHeight||canvas.height/deviceDpr));
+  const physicalDpr=Math.max(1,Number(window.devicePixelRatio)||deviceDpr);
+  const cssWidth=Math.max(1,Math.round(canvas.clientWidth||canvas.width/physicalDpr));
+  const cssHeight=Math.max(1,Math.round(canvas.clientHeight||canvas.height/physicalDpr));
   const renderWidth=Math.max(1,Math.round(engine.getRenderWidth()));
   const renderHeight=Math.max(1,Math.round(engine.getRenderHeight()));
-  const expectedDeviceWidth=Math.max(1,Math.round(cssWidth*deviceDpr));
-  const expectedDeviceHeight=Math.max(1,Math.round(cssHeight*deviceDpr));
-  const fullNativeResolution=Math.abs(renderWidth-expectedDeviceWidth)<=1&&Math.abs(renderHeight-expectedDeviceHeight)<=1;
-  return {profile:activeGraphicsProfile,devicePixelRatio:deviceDpr,renderDpr:qualityDpr,
-   effectiveRenderDprX:Number((renderWidth/cssWidth).toFixed(3)),effectiveRenderDprY:Number((renderHeight/cssHeight).toFixed(3)),
-   cssWidth,cssHeight,renderWidth,renderHeight,expectedDeviceWidth,expectedDeviceHeight,
-   pixelCoverage:Number(((renderWidth*renderHeight)/(expectedDeviceWidth*expectedDeviceHeight)).toFixed(4)),
-   fullNativeResolution};
+  const physicalPixelWidth=Math.max(1,Math.round(cssWidth*physicalDpr));
+  const physicalPixelHeight=Math.max(1,Math.round(cssHeight*physicalDpr));
+  const renderPixels=renderWidth*renderHeight,physicalPixels=physicalPixelWidth*physicalPixelHeight;
+  const physicalPixelCoveragePct=Number((renderPixels/Math.max(1,physicalPixels)*100).toFixed(2));
+  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive};
  };"""
     if html.count(render_scale_marker) != 1:
         raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
@@ -3302,7 +3311,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
 
     health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
-    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,physicalPixelCoveragePct:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalPixelCoveragePct:null,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
     if html.count(health_memory_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
     html = html.replace(health_memory_marker, health_memory_replacement, 1)
@@ -3313,7 +3322,40 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"
     if html.count(legacy_fsr_guard) != 1:
         raise SystemExit("No se encontró exactamente un bloque FSR heredado para proteger.")
-    html = html.replace(legacy_fsr_guard, "if(false){", 1)
+    html = html.replace(legacy_fsr_guard, "if(!fsr1Candidate)window.__ELSN_FSR1={enabled:false,method:'native',reason:qualityLabFsr1Requested?'FSR1 no compatible con este contexto WebGL':'apagado por defecto'};\n  if(fsr1Candidate){", 1)
+
+    fsr_msaa_marker = "fsr1SourcePostProcess.samples=Math.max(1,Math.min(2,maxFsrSamples));"
+    if html.count(fsr_msaa_marker) != 1:
+        raise SystemExit("No se encontró el MSAA original del bloque FSR1.")
+    html = html.replace(fsr_msaa_marker, "fsr1SourcePostProcess.samples=Math.max(1,Math.min(qualityLabRequestedMsaa,maxFsrSamples));", 1)
+
+    fsr_sharpness_marker = "effect.setFloat('sharpness',.42);"
+    if html.count(fsr_sharpness_marker) != 1:
+        raise SystemExit("No se encontró el RCAS sharpness original.")
+    html = html.replace(fsr_sharpness_marker, "effect.setFloat('sharpness',qualityLabFsrRcasSharpness);", 1)
+
+    fsr_status_marker = "window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',outputDpr:qualityDpr,inputScale:()=>fsr1InputScale,effectiveSourceDpr:()=>Number((qualityDpr*fsr1InputScale).toFixed(3)),source:()=>({width:fsr1SourcePostProcess.width,height:fsr1SourcePostProcess.height}),output:()=>({width:fsr1RcasPostProcess.width,height:fsr1RcasPostProcess.height})};"
+    fsr_status_code = "window.__ELSN_FSR1={enabled:true,method:'EASU + RCAS',outputDpr:()=>qualityDprCurrent,inputScale:()=>fsr1InputScale,effectiveSourceDpr:()=>Number((qualityDprCurrent*fsr1InputScale).toFixed(3)),source:()=>({width:fsr1SourcePostProcess.width,height:fsr1SourcePostProcess.height}),output:()=>({width:fsr1RcasPostProcess.width,height:fsr1RcasPostProcess.height}),samples:()=>fsr1SourcePostProcess.samples,setMsaa:value=>{fsr1SourcePostProcess.samples=Math.max(1,Math.min(Number(value)||2,maxFsrSamples));},setSharpen:enabled=>{qualityLabFsrRcasSharpness=enabled?.42:2.0;}};"
+    if html.count(fsr_status_marker) != 1:
+        raise SystemExit("No se encontró el estado FSR1 original.")
+    html = html.replace(fsr_status_marker, fsr_status_code, 1)
+
+    capture_buffer_marker = "preserveDrawingBuffer:testModeEnabled"
+    if html.count(capture_buffer_marker) != 1:
+        raise SystemExit("No se encontró la configuración única de captura del motor.")
+    html = html.replace(capture_buffer_marker, "preserveDrawingBuffer:testModeEnabled||new URLSearchParams(window.location.search).get('debug')==='1'", 1)
+
+    quality_lab_marker = " const skyTexture=new B.DynamicTexture('NordicCloudSky'"
+    quality_lab_path = ROOT / "scripts" / "quality-render-lab.js"
+    if not quality_lab_path.is_file():
+        raise SystemExit("Falta scripts/quality-render-lab.js.")
+    quality_lab_source = quality_lab_path.read_text(encoding="utf-8")
+    if "window.__ELSN_QUALITY_LAB_INSTALL=install;" not in quality_lab_source:
+        raise SystemExit("El laboratorio gráfico no expone su instalador.")
+    if html.count(quality_lab_marker) != 1:
+        raise SystemExit("No se encontró el punto único de inserción del laboratorio gráfico.")
+    quality_lab_bridge = quality_lab_source + "\n;window.__ELSN_QUALITY_LAB_INSTALL({enabled:qualityLabEnabled,options:qualityLabDprOptions,deviceDpr,canvas,engine,scene,camera,renderPipeline,getDpr:()=>qualityDprCurrent,setDpr:value=>{const next=Math.max(1.8,Math.min(deviceDpr,Number(value)||1.8));engine.setHardwareScalingLevel(1/next);qualityDprCurrent=next;return next;},getResolution:()=>window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,getMsaa:()=>window.__ELSN_FSR1&&window.__ELSN_FSR1.enabled?window.__ELSN_FSR1.samples():Number(renderPipeline&&renderPipeline.samples)||1,setMsaa:value=>{const cap=Math.max(1,Number(engine.getCaps&&engine.getCaps().maxMSAASamples)||1),actual=Math.max(1,Math.min(Number(value)||2,cap));if(renderPipeline)renderPipeline.samples=actual;if(window.__ELSN_FSR1&&window.__ELSN_FSR1.enabled)window.__ELSN_FSR1.setMsaa(actual);return actual;},getSharpen:()=>qualityLabSharpenActive,setSharpen:enabled=>{qualityLabSharpenActive=!!enabled;if(window.__ELSN_FSR1&&window.__ELSN_FSR1.enabled)window.__ELSN_FSR1.setSharpen(qualityLabSharpenActive);return qualityLabSharpenActive;},getAdaptive:()=>qualityLabAdaptiveActive,setAdaptive:enabled=>{qualityLabAdaptiveActive=!!enabled&&!isPerformanceMode;return qualityLabAdaptiveActive;},getFsr:()=>!!(window.__ELSN_FSR1&&window.__ELSN_FSR1.enabled),gpuInfo:()=>({renderer:graphicsRenderer,vendor:graphicsVendor,webglVersion:graphicsVersion})});\n"
+    html = html.replace(quality_lab_marker, quality_lab_bridge + quality_lab_marker, 1)
 
     # Instrumentación nativa de Babylon disponible solo para inspector/perfil.
     scene_marker = "const scene=new B.Scene(engine);"
@@ -4252,7 +4294,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la calidad y resolución nativa permanecen bloqueadas. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution),renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la escala de Calidad permanece fija salvo que el laboratorio adaptativo esté activado. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,qualityScaleFixed:!qualityLabAdaptiveActive,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
@@ -4437,7 +4479,7 @@ function getFrameMaintenanceTimingSnapshot(){
         ),
         (
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?1:4,maxSamples));",
-            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
+            "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples));",
             "enable 2x MSAA on high-headroom touch devices",
         ),
         (
@@ -4471,7 +4513,7 @@ function getFrameMaintenanceTimingSnapshot(){
             "restore the original high-quality mobile shadow refresh cadence",
         ),
         (
-            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));",
+            "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples));",
             "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
             "use native 2x MSAA and restrained sharpening for flagship mobile without a second spatial upscaling pass",
         ),
