@@ -5331,6 +5331,21 @@ function getWorldPhaseTimingSnapshot(){
  }"""
     html = html[:water_animation_start] + water_animation_replacement + html[water_animation_end:]
 
+
+    water_perf_vertices_marker = "waterVertices:waterPositions.length/3"
+    if html.count(water_perf_vertices_marker) != 1:
+        raise SystemExit("No se encontró el contador del agua en la auditoría de rendimiento.")
+    html = html.replace(water_perf_vertices_marker, "waterVertices:waterBase.length/3", 1)
+
+    water_coast_diagnostics_marker = "waterTotalVertices:waterPositions.length/3,waterPhaseCacheVertices:waterWaveBasis.length/WATER_WAVE_STRIDE"
+    if html.count(water_coast_diagnostics_marker) != 1:
+        raise SystemExit("No se encontró el diagnóstico de buffers antiguos del océano.")
+    html = html.replace(
+        water_coast_diagnostics_marker,
+        "waterTotalVertices:waterBase.length/3,waterPhaseCacheVertices:0,waterGpuMode:(window.__ELSN_WATER_GPU__&&window.__ELSN_WATER_GPU__.mode)||'unavailable'",
+        1
+    )
+
     water_gpu_required_markers = (
         "function waterHeight(x,z,t=oceanTime,detailFade)",
         "ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1)",
