@@ -22,6 +22,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;",
     "if(perfAuditScenario==='sin seleccionar')return null;",
     "if(perfAuditScenario==='sin seleccionar')return;",
+    "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
     "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
     "fullNativeResolution",
     "expectedDeviceWidth",
