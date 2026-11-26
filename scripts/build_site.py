@@ -5206,7 +5206,7 @@ function getWorldPhaseTimingSnapshot(){
     {name:'norseWaterDetailRadiusSq',size:1,type:'float'},{name:'norseWaterDetailEnabled',size:1,type:'float'},
     {name:'norseWaterTideOffset',size:1,type:'float'},{name:'norseWaterSeaLevel',size:1,type:'float'},
     {name:'norseWaterCrestStrength',size:1,type:'float'},{name:'norseWaterShortScale',size:1,type:'float'}
-   ],vertex:'#ifdef NORSE_WATER_GPU\nuniform float norseWaterTime;\nuniform vec2 norseWaterFocus;\nuniform float norseWaterDetailRadius;\nuniform float norseWaterDetailEnabled;\nuniform float norseWaterTideOffset;\nuniform float norseWaterSeaLevel;\nuniform float norseWaterCrestStrength;\nuniform float norseWaterShortScale;\n#endif'};
+   ],vertex:'#ifdef NORSE_WATER_GPU\nuniform float norseWaterTime;\nuniform vec2 norseWaterFocus;\nuniform float norseWaterDetailRadiusSq;\nuniform float norseWaterDetailEnabled;\nuniform float norseWaterTideOffset;\nuniform float norseWaterSeaLevel;\nuniform float norseWaterCrestStrength;\nuniform float norseWaterShortScale;\n#endif'};
   }
   _bindWater(uniformBuffer){
    if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
