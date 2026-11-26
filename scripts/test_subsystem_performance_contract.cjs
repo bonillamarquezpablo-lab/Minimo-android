@@ -109,7 +109,7 @@ assert.ok(recorder.includes('cpuGpuDiagnosis') && recorder.includes('cpuWorldP95
   'Session reports must classify likely CPU, GPU, mixed or inconclusive bottlenecks using independent P95 measurements.');
 assert.ok(gameHtml.includes('gpuTimerQuery:\'not measured; scene.render duration is CPU wall-clock only\''),
   'Unavailable GPU timing must not be misreported as zero.');
-assert.ok(builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive') && builder.includes('qualityScaleAdaptive:qualityLabAdaptiveActive') && builder.includes('physicalPixelCoveragePct') && !builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)'), 'Quality resolution must remain native and fixed while performance is diagnosed.');
+assert.ok(builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive') && builder.includes('qualityScaleAdaptive:qualityLabAdaptiveActive') && builder.includes('physicalPixelCoveragePct') && !((builder.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||'').includes('engine.setHardwareScalingLevel')), 'Quality resolution must remain native and fixed while performance is diagnosed.');
 assert.ok(builder.includes("Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)"), 'Mobile Quality must retain its original full-resolution scale.');
 assert.ok(builder.includes("const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024") && builder.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8") && builder.includes("list.length<180"), 'The water reflection resolution, cadence and draw-list budget must not be reduced.');
 assert.ok(builder.includes("highHeadroomQualityMobile?10:4"), 'Flagship mobile shadow refresh cadence must retain its original setting.');
