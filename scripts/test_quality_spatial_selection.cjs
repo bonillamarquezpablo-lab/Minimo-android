@@ -23,15 +23,15 @@ for(const marker of [
   'scene.onMeshRemovedObservable.add',
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,spatialDynamicReasonForMesh(mesh)||'created-after-octree',true);});",
   "mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic'",
-  'function buildSpatialSelectionOctree()',
-  'const freezeSpatialStaticWorldMatrices=()=>{',
+  'async function buildSpatialSelectionOctree()',
+  'const freezeSpatialStaticWorldMatrices=async()=>{',
   'mesh.computeWorldMatrix(true)',
   'mesh.freezeWorldMatrix(worldMatrix)',
   'mesh.isWorldMatrixFrozen===true',
   'staticWorldMatrixFreezeMs=Number((performance.now()-startedAt).toFixed(2))',
   'mesh.unfreezeWorldMatrix()',
   'spatialSelectionStats.staticWorldMatricesFrozen=frozen',
-  'freezeSpatialStaticWorldMatrices();',
+  'await freezeSpatialStaticWorldMatrices();',
   'const installSpatialDynamicCandidateFilter=()=>{',
   'const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;',
   'scene.getActiveMeshCandidates=()=>{',
@@ -46,6 +46,8 @@ for(const marker of [
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
+  'meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs',
+  'meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs',
   'meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
@@ -121,3 +123,11 @@ assert.ok(dynamicFilterSource.includes('const isDynamic=spatialDynamicMeshSet.ha
 assert.equal((dynamicFilterSource.match(/scene\.getRenderId\(\)/g)||[]).length,1,'Do not call Scene.getRenderId for every dynamic mesh.');
 assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\.has\(mesh\)/g)||[]).length,1,'Do not repeat dynamic-set lookups for selected meshes.');
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
+
+
+assert.ok(builder.includes('const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;') &&
+  builder.includes('await yieldSpatialWorkFrame();') &&
+  builder.includes('const initialDynamicCount=octree.dynamicContent.length') &&
+  !builder.includes('Array.from(octree.dynamicContent)') &&
+  !builder.includes('scene.meshes.slice()'),
+  'The spatial index preparation must yield between bounded work slices and avoid full-size temporary arrays.');
