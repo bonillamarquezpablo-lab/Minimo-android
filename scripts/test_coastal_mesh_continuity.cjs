@@ -25,10 +25,10 @@ assert.ok(build.includes('thresholdMeters=.05'),
   'Cross-mesh seam tolerance must be fixed at 5 cm.');
 assert.ok(build.includes('auditCoastalMeshContinuity:(islandIndex=null)=>auditCoastalMeshContinuity(islandIndex)'),
   'The browser test API must expose the cross-mesh audit.');
-assert.ok(release.includes('EXPECTED_VERSION = "0.6.361"'));
+assert.ok(release.includes('EXPECTED_VERSION = "0.6.362"'));
 assert.ok(release.includes('rows=isPerformanceMode?13:(isTouchDevice?32:48)'),
   'Release validation must require the high-detail coast resolution while retaining the low-memory profile.');
-assert.ok(build.includes('html = html.replace("0.6.274", "0.6.361")'));
+assert.ok(build.includes('html = html.replace("0.6.274", "0.6.362")'));
 assert.ok(release.includes('SAGA DEL NORTE · CAPÍTULO I'));
 assert.ok(release.includes('if f"<title>EL SIN NOMBRE · Capítulo I: Un hombre sin tierra · {EXPECTED_VERSION}</title>" not in index_html:'));
 
@@ -46,4 +46,4 @@ assert.ok(build.includes('class NordicWaterGpuPlugin extends B.MaterialPluginBas
 assert.ok(build.includes('function waterHeight(x,z,t=oceanTime,detailFade)') &&
   build.includes("analyticGameplaySampler:'waterHeight'"),
   'The coast and vessel simulation must retain its canonical analytical wave sampler.');
-console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm seam audit, GPU ocean and 0.6.361 release.');
+console.log('COASTAL MESH CONTINUITY CONTRACT OK: single seabed profile, 5 cm seam audit, GPU ocean and 0.6.362 release.');
