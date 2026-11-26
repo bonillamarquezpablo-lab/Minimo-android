@@ -5206,7 +5206,7 @@ function getWorldPhaseTimingSnapshot(){
     {name:'norseWaterDetailRadius',size:1,type:'float'},{name:'norseWaterDetailEnabled',size:1,type:'float'},
     {name:'norseWaterTideOffset',size:1,type:'float'},{name:'norseWaterSeaLevel',size:1,type:'float'},
     {name:'norseWaterCrestStrength',size:1,type:'float'},{name:'norseWaterShortScale',size:1,type:'float'}
-   ],vertex:'#ifdef NORSE_WATER_GPU\\nuniform float norseWaterTime;\\nuniform vec2 norseWaterFocus;\\nuniform float norseWaterDetailRadius;\\nuniform float norseWaterDetailEnabled;\\nuniform float norseWaterTideOffset;\\nuniform float norseWaterSeaLevel;\\nuniform float norseWaterCrestStrength;\\nuniform float norseWaterShortScale;\\n#endif'};
+   ],vertex:'#ifdef NORSE_WATER_GPU\nuniform float norseWaterTime;\nuniform vec2 norseWaterFocus;\nuniform float norseWaterDetailRadius;\nuniform float norseWaterDetailEnabled;\nuniform float norseWaterTideOffset;\nuniform float norseWaterSeaLevel;\nuniform float norseWaterCrestStrength;\nuniform float norseWaterShortScale;\n#endif'};
   }
   _bindWater(uniformBuffer){
    if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
@@ -5228,58 +5228,58 @@ function getWorldPhaseTimingSnapshot(){
    return {
     CUSTOM_VERTEX_DEFINITIONS:'attribute float norseWaterCoastalCap;',
     CUSTOM_VERTEX_UPDATE_POSITION:
-     '#ifdef NORSE_WATER_GPU\\n'+
-     'float nwX=positionUpdated.x;float nwZ=positionUpdated.z;\\n'+
-     'float nwSlopeX=0.0;float nwSlopeZ=0.0;float nwDetailSlopeX=0.0;float nwDetailSlopeZ=0.0;\\n'+
-     'float nwRadiusSq=norseWaterDetailRadius*norseWaterDetailRadius;\\n'+
-     'float nwDx=nwX-norseWaterFocus.x;float nwDz=nwZ-norseWaterFocus.y;\\n'+
-     'float nwDistanceSq=nwDx*nwDx+nwDz*nwDz;\\n'+
-     'float nwFadeT=clamp((nwRadiusSq-nwDistanceSq)/max(0.0001,nwRadiusSq*0.45),0.0,1.0);\\n'+
-     'float nwFade=nwFadeT*nwFadeT*(3.0-2.0*nwFadeT)*norseWaterDetailEnabled;\\n'+
-     'float nwFadeDx=0.0;float nwFadeDz=0.0;\\n'+
-     'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,nwRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,nwRadiusSq*0.45);}\\n'+
-     'float nwP0=nwX*0.014+nwZ*0.018+norseWaterTime*0.48;\\n'+
-     'float nwP1=nwX*0.024+nwZ*0.018+norseWaterTime*0.82;\\n'+
-     'float nwP2=nwX*(-0.018)+nwZ*0.036-norseWaterTime*0.73;\\n'+
-     'float nwP3=nwX*0.066+nwZ*0.044+norseWaterTime*1.28;\\n'+
-     'float nwP4=nwX*0.145-nwZ*0.145-norseWaterTime*1.82;\\n'+
-     'float nwP5=nwX*(0.76*0.185)+nwZ*(-1.13*0.185)+norseWaterTime*2.15;\\n'+
-     'float nwP6=nwX*0.235+nwZ*0.18+norseWaterTime*2.8;\\n'+
-     'float nwS0=sin(nwP0);float nwC0=cos(nwP0);\\n'+
-     'float nwS1=sin(nwP1);float nwC1=cos(nwP1);\\n'+
-     'float nwS2=sin(nwP2);float nwC2=cos(nwP2);\\n'+
-     'float nwS3=sin(nwP3);float nwC3=cos(nwP3);\\n'+
-     'float nwS4=sin(nwP4);float nwC4=cos(nwP4);\\n'+
-     'float nwS5=sin(nwP5);float nwC5=cos(nwP5);\\n'+
-     'float nwS6=sin(nwP6);float nwC6=cos(nwP6);\\n'+
-     'float nwBase=nwS0*0.145+nwS1*0.365+nwS2*0.275;\\n'+
-     'float nwDetail=nwS3*0.185+nwS4*0.105+nwS5*0.064+nwS6*0.040;\\n'+
-     'float nwCrest=pow(max(0.0,nwS3),3.0)*0.072*norseWaterCrestStrength;\\n'+
-     'float nwShortCrest=pow(max(0.0,nwS4),3.0)*0.044*norseWaterCrestStrength;\\n'+
-     'float nwDetailTotal=nwDetail+nwCrest+nwShortCrest;\\n'+
-     'float nwHeight=norseWaterTideOffset+nwBase+nwDetailTotal*nwFade*norseWaterShortScale;\\n'+
-     'float nwCap=norseWaterSeaLevel+0.38;float nwCoast=clamp(norseWaterCoastalCap,0.0,1.0);\\n'+
-     'positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast);\\n'+
-     'nwSlopeX=nwC0*0.014*0.145+nwC1*0.024*0.365+nwC2*(-0.018)*0.275;\\n'+
-     'nwSlopeZ=nwC0*0.018*0.145+nwC1*0.018*0.365+nwC2*0.036*0.275;\\n'+
-     'nwDetailSlopeX=nwC3*0.066*0.185+nwC4*0.145*0.105+nwC5*(0.76*0.185)*0.064+nwC6*0.235*0.040;\\n'+
-     'nwDetailSlopeZ=nwC3*0.044*0.185+nwC4*(-0.145)*0.105+nwC5*(-1.13*0.185)*0.064+nwC6*0.18*0.040;\\n'+
-     'nwDetailSlopeX+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.066*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*0.145*0.044*norseWaterCrestStrength:0.0);\\n'+
-     'nwDetailSlopeZ+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.044*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*(-0.145)*0.044*norseWaterCrestStrength:0.0);\\n'+
-     'nwSlopeX+=(nwDetailSlopeX*nwFade+nwDetailTotal*nwFadeDx)*norseWaterShortScale;\\n'+
-     'nwSlopeZ+=(nwDetailSlopeZ*nwFade+nwDetailTotal*nwFadeDz)*norseWaterShortScale;\\n'+
-     'if(nwHeight>nwCap){nwSlopeX*=1.0-nwCoast;nwSlopeZ*=1.0-nwCoast;}\\n'+
-     '#ifdef VERTEXCOLOR\\n'+
-     'float nwInDetail=1.0-step(nwRadiusSq,nwDistanceSq);\\n'+
-     'float nwCrestLight=min(0.34,(pow(max(0.0,nwS3),3.0)*0.25+pow(max(0.0,nwS4),3.0)*0.09)*norseWaterCrestStrength*nwInDetail);\\n'+
-     'colorUpdated.rgb=min(vec3(1.0),colorUpdated.rgb*(vec3(1.0)+vec3(nwCrestLight,nwCrestLight*0.92,nwCrestLight*0.78)));\\n'+
-     '#endif\\n'+
+     '#ifdef NORSE_WATER_GPU\n'+
+     'float nwX=positionUpdated.x;float nwZ=positionUpdated.z;\n'+
+     'float nwSlopeX=0.0;float nwSlopeZ=0.0;float nwDetailSlopeX=0.0;float nwDetailSlopeZ=0.0;\n'+
+     'float nwRadiusSq=norseWaterDetailRadius*norseWaterDetailRadius;\n'+
+     'float nwDx=nwX-norseWaterFocus.x;float nwDz=nwZ-norseWaterFocus.y;\n'+
+     'float nwDistanceSq=nwDx*nwDx+nwDz*nwDz;\n'+
+     'float nwFadeT=clamp((nwRadiusSq-nwDistanceSq)/max(0.0001,nwRadiusSq*0.45),0.0,1.0);\n'+
+     'float nwFade=nwFadeT*nwFadeT*(3.0-2.0*nwFadeT)*norseWaterDetailEnabled;\n'+
+     'float nwFadeDx=0.0;float nwFadeDz=0.0;\n'+
+     'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,nwRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,nwRadiusSq*0.45);}\n'+
+     'float nwP0=nwX*0.014+nwZ*0.018+norseWaterTime*0.48;\n'+
+     'float nwP1=nwX*0.024+nwZ*0.018+norseWaterTime*0.82;\n'+
+     'float nwP2=nwX*(-0.018)+nwZ*0.036-norseWaterTime*0.73;\n'+
+     'float nwP3=nwX*0.066+nwZ*0.044+norseWaterTime*1.28;\n'+
+     'float nwP4=nwX*0.145-nwZ*0.145-norseWaterTime*1.82;\n'+
+     'float nwP5=nwX*(0.76*0.185)+nwZ*(-1.13*0.185)+norseWaterTime*2.15;\n'+
+     'float nwP6=nwX*0.235+nwZ*0.18+norseWaterTime*2.8;\n'+
+     'float nwS0=sin(nwP0);float nwC0=cos(nwP0);\n'+
+     'float nwS1=sin(nwP1);float nwC1=cos(nwP1);\n'+
+     'float nwS2=sin(nwP2);float nwC2=cos(nwP2);\n'+
+     'float nwS3=sin(nwP3);float nwC3=cos(nwP3);\n'+
+     'float nwS4=sin(nwP4);float nwC4=cos(nwP4);\n'+
+     'float nwS5=sin(nwP5);float nwC5=cos(nwP5);\n'+
+     'float nwS6=sin(nwP6);float nwC6=cos(nwP6);\n'+
+     'float nwBase=nwS0*0.145+nwS1*0.365+nwS2*0.275;\n'+
+     'float nwDetail=nwS3*0.185+nwS4*0.105+nwS5*0.064+nwS6*0.040;\n'+
+     'float nwCrest=pow(max(0.0,nwS3),3.0)*0.072*norseWaterCrestStrength;\n'+
+     'float nwShortCrest=pow(max(0.0,nwS4),3.0)*0.044*norseWaterCrestStrength;\n'+
+     'float nwDetailTotal=nwDetail+nwCrest+nwShortCrest;\n'+
+     'float nwHeight=norseWaterTideOffset+nwBase+nwDetailTotal*nwFade*norseWaterShortScale;\n'+
+     'float nwCap=norseWaterSeaLevel+0.38;float nwCoast=clamp(norseWaterCoastalCap,0.0,1.0);\n'+
+     'positionUpdated.y=mix(nwHeight,min(nwHeight,nwCap),nwCoast);\n'+
+     'nwSlopeX=nwC0*0.014*0.145+nwC1*0.024*0.365+nwC2*(-0.018)*0.275;\n'+
+     'nwSlopeZ=nwC0*0.018*0.145+nwC1*0.018*0.365+nwC2*0.036*0.275;\n'+
+     'nwDetailSlopeX=nwC3*0.066*0.185+nwC4*0.145*0.105+nwC5*(0.76*0.185)*0.064+nwC6*0.235*0.040;\n'+
+     'nwDetailSlopeZ=nwC3*0.044*0.185+nwC4*(-0.145)*0.105+nwC5*(-1.13*0.185)*0.064+nwC6*0.18*0.040;\n'+
+     'nwDetailSlopeX+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.066*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*0.145*0.044*norseWaterCrestStrength:0.0);\n'+
+     'nwDetailSlopeZ+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.044*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*(-0.145)*0.044*norseWaterCrestStrength:0.0);\n'+
+     'nwSlopeX+=(nwDetailSlopeX*nwFade+nwDetailTotal*nwFadeDx)*norseWaterShortScale;\n'+
+     'nwSlopeZ+=(nwDetailSlopeZ*nwFade+nwDetailTotal*nwFadeDz)*norseWaterShortScale;\n'+
+     'if(nwHeight>nwCap){nwSlopeX*=1.0-nwCoast;nwSlopeZ*=1.0-nwCoast;}\n'+
+     '#ifdef VERTEXCOLOR\n'+
+     'float nwInDetail=1.0-step(nwRadiusSq,nwDistanceSq);\n'+
+     'float nwCrestLight=min(0.34,(pow(max(0.0,nwS3),3.0)*0.25+pow(max(0.0,nwS4),3.0)*0.09)*norseWaterCrestStrength*nwInDetail);\n'+
+     'colorUpdated.rgb=min(vec3(1.0),colorUpdated.rgb*(vec3(1.0)+vec3(nwCrestLight,nwCrestLight*0.92,nwCrestLight*0.78)));\n'+
+     '#endif\n'+
      '#endif',
     CUSTOM_VERTEX_UPDATE_NORMAL:
-     '#ifdef NORSE_WATER_GPU\\n'+
-     '#ifdef NORMAL\\n'+
-     'normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ));\\n'+
-     '#endif\\n'+
+     '#ifdef NORSE_WATER_GPU\n'+
+     '#ifdef NORMAL\n'+
+     'normalUpdated=normalize(vec3(-nwSlopeX,1.0,-nwSlopeZ));\n'+
+     '#endif\n'+
      '#endif'
    };
   }
