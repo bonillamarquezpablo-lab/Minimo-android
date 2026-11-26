@@ -11,12 +11,12 @@ for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
-  'qualityScaleAdaptive:false',
+  'qualityScaleAdaptive:qualityLabAdaptiveActive',
   'const targetFrameRate=120;',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
-  'qualityScaleLockedForSession:true',
+  'qualityScaleFixed:!qualityLabAdaptiveActive',
   'window.__ELSN_RENDER_RESOLUTION=()=>{',
   'const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?',
   'const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;',
@@ -34,9 +34,9 @@ for(const marker of [
   'customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null',
   'window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;',
   "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
-  'nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)',
-  'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
-  'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
+  'physicalPixelCoveragePct',
+  'FPS bajo; la escala de Calidad permanece fija',
+  'renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
   'nordicWaterMirror.refreshRate=isTouchDevice?12:8',
@@ -49,14 +49,17 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleLockedForSession:true') && builder.includes('qualityScaleAdaptive:false') && builder.includes('nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)'), 'Quality must preserve the native render scale for the whole session.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive') && builder.includes('qualityScaleAdaptive:qualityLabAdaptiveActive') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve the native render scale for the whole session.');
 assert.ok(!builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && !builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleLockedForSession:true'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
+assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
-assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report actual framebuffer dimensions and whether they match the physical panel resolution.');
-assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
-assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
+assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('physicalPixelCoveragePct') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report actual framebuffer dimensions and whether they match the physical panel resolution.');
+assert.ok(builder.includes('qualityLabFsr1Requested') && builder.includes('const fsr1InputScale=.87;') && builder.includes('if(fsr1Candidate){'), 'FSR1 must remain available behind the explicit debug opt-in.');
+const lab=fs.readFileSync('scripts/quality-render-lab.js','utf8');
+for(const marker of ['BENCHMARK_MS=15000','PRESETS=[1.8,2.1,2.5,3.0,3.75]','CROP_OUTPUT_PIXELS=768','p95<14','p95>18','navigator.clipboard.writeText'])assert.ok(lab.includes(marker),'Missing quality lab feature: '+marker);
+assert.ok(!lab.includes('localStorage'),'The quality lab must not persist settings by default.');
+assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(!fsr1Candidate)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
 assert.ok(builder.includes('class NordicWaterGpuPlugin extends B.MaterialPluginBase') &&
   builder.includes('CUSTOM_VERTEX_UPDATE_POSITION') && builder.includes('CUSTOM_VERTEX_UPDATE_NORMAL') &&
