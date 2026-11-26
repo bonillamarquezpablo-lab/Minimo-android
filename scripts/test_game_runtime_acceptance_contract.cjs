@@ -45,9 +45,9 @@ assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'/,
   'Release may skip the duplicate online warm boot, but must keep the offline Service Worker restart.');
-assert.match(release, /offline: \\$\\{\\{ steps\\.scope\\.outputs\\.offline \\$\\}\\}/,
+assert.match(release, /offline: \$\{\{ steps\.scope\.outputs\.offline \}\}/,
   'The release classifier must expose the deep offline acceptance scope.');
-assert.match(release, /PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: \\$\\{\\{ needs\\.changes\\.outputs\\.offline != 'true' \\$\\}\\}/,
+assert.match(release, /PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: \$\{\{ needs\.changes\.outputs\.offline != 'true' \}\}/,
   'Routine gameplay updates should use the fast offline cache smoke; SW/boot changes keep the full offline restart.');
 assert.ok(smoke.includes("process.env.PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART === 'true'") &&
   smoke.includes("mode: 'offline-service-worker-cache-smoke'") &&
