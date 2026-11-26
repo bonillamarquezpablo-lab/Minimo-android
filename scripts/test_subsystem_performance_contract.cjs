@@ -226,5 +226,31 @@ assert.ok(builder.includes("grassTileReadyCount=0")&&builder.includes("if(!desir
   !builder.includes("function updateActiveIslandGrass(dt){\\n  if(isPerformanceMode)return;"),
   'Grass sector scheduling must handle both graphics profiles, discard stale island work and keep a bounded reusable tile cache.');
 
+for(const marker of [
+  "const GRASS_TILE_SIZE_METERS=GRASS_STREAM_RECENTER_DISTANCE",
+  "function buildGrassTile(tile)",
+  "function primeGrassTiles(islandIndex,focusX,focusZ)",
+  "function collectGrassTileTargets(islandIndex,focusX,focusZ,includeAhead=true)",
+  "mode:'deterministic-tile-streaming'",
+  "grassTileCache",
+  "grassTileQueue",
+  "grassTileBuildMaxMs",
+  "grassTileRequestedIslandIndex",
+  "grassPlacementGridSharedCache",
+  "landSampleSide=9",
+  "tileOptions.landFraction",
+  "tileOptions.minX",
+  "tileOptions.maxX",
+  "tileOptions.tileX",
+  "tileOptions.tileZ",
+  "grassTileSeed",
+  "qualityGeometryPreserved:true",
+  "GRASS_STREAM_RECENTER_DISTANCE=56;"
+]) assert.ok(builder.includes(marker),'Grass tile streaming contract is missing: '+marker);
+assert.ok(builder.includes("grassTileReadyCount=0")&&builder.includes("if(!desiredKeys||!desiredKeys.size)return;")&&
+  builder.includes("if(tile.islandIndex!==grassTileRequestedIslandIndex)")&&
+  !builder.includes("function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"),
+  'Grass sector scheduling must handle both graphics profiles, discard stale island work and keep a bounded reusable tile cache.');
+
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
