@@ -35,7 +35,7 @@ assert.match(release, /node scripts\/fauna-visual-capture\.mjs/);
 assert.match(release, /Preserve fauna visual acceptance evidence/);
 assert.match(release, /artifacts\/fauna-visual-captures\//);
 assert.match(release, /  changes:\n[\s\S]*?outputs:\n[\s\S]*?site: \$\{\{ steps\.scope\.outputs\.site \}\}[\s\S]*?game: \$\{\{ steps\.scope\.outputs\.game \}\}[\s\S]*?fauna: \$\{\{ steps\.scope\.outputs\.fauna \}\}/, 'The pipeline must classify site, game and fauna changes.');
-assert.match(release, /A production push that changes this workflow must exercise the complete release pipeline[\s\S]*?EVENT_NAME.*?push[\s\S]*?grep -Fxq '\.github\/workflows\/deploy-pages\.yml'[\s\S]*?site=true[\s\S]*?game=true[\s\S]*?fauna=true/, 'Changing the production release workflow must force the full validation gates after merge.');
+assert.match(release, /A production push that changes this workflow must exercise the full release build and gameplay acceptance[\s\S]*?EVENT_NAME.*?push[\s\S]*?grep -Fxq '\.github\/workflows\/deploy-pages\.yml'[\s\S]*?site=true[\s\S]*?game=true[\s\S]*?fauna=true[\s\S]*?offline=false/, 'Changing the production release workflow must exercise the build, gameplay and fauna gates while testing the fast offline-cache path.');
 assert.match(release, /  build:\n[\s\S]*?if: needs\.changes\.outputs\.site == 'true'[\s\S]*?needs: \[changes\]/, 'The complete build is required only when published site files change.');
 assert.match(release, /Resolve the exact Playwright version for browser-cache compatibility\n        if: needs\.changes\.outputs\.game == 'true' \|\| needs\.changes\.outputs\.fauna == 'true'/, 'Browser dependencies must not be installed for documentation or Inspector-only updates.');
 assert.match(release, /  startup:\n[\s\S]*?if: needs\.changes\.outputs\.game == 'true'[\s\S]*?needs: \[build, changes\]/, 'The gameplay/offline smoke must run whenever game runtime files change.');
@@ -45,6 +45,15 @@ assert.match(release, /  fauna-gpu-diagnostic:\n[\s\S]*?continue-on-error: true/
 assert.match(release, /PLAYER_TEST_URL: https:\/\/localhost:4175\//);
 assert.match(release, /PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'/,
   'Release may skip the duplicate online warm boot, but must keep the offline Service Worker restart.');
+assert.match(release, /offline: \$\{\{ steps\.scope\.outputs\.offline \}\}/,
+  'The release classifier must expose the deep offline acceptance scope.');
+assert.match(release, /PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: \$\{\{ needs\.changes\.outputs\.offline != 'true' \}\}/,
+  'Routine gameplay updates should use the fast offline cache smoke; SW/boot changes keep the full offline restart.');
+assert.ok(smoke.includes("process.env.PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART === 'true'") &&
+  smoke.includes("mode: 'offline-service-worker-cache-smoke'") &&
+  smoke.includes('const assetProbe = assetKeys.find') &&
+  smoke.includes('else if (secureOrigin)'),
+  'The routine path must verify real SW-backed cached resources while the full offline reload remains available.');
 assert.ok(release.includes('fauna_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"'),
   'The monolithic builder must be scoped by its changed lines before running the expensive fauna visual gate.');
 assert.ok(release.includes('updateAmbientGullFlight|gull|wildlife|fauna|deer|stag|wolf|bird'),

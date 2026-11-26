@@ -1499,7 +1499,60 @@ async function main() {
   
     }
 
-    if (secureOrigin) {
+    if (secureOrigin && process.env.PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART === 'true') {
+      const offlineStartedAt = performance.now();
+      await context.setOffline(true);
+      const cacheCheck = await page.evaluate(async () => {
+        const cacheNames = await caches.keys();
+        const shellName = cacheNames.find(name => name.startsWith('el-sin-nombre-shell-'));
+        const assetName = cacheNames.find(name => name.startsWith('el-sin-nombre-assets-'));
+        const shell = shellName ? await caches.open(shellName) : null;
+        const assets = assetName ? await caches.open(assetName) : null;
+        const shellDocumentCached = !!(shell && await shell.match(new URL('./index.html', location.href).toString()));
+        const assetKeys = assets ? await assets.keys() : [];
+        const assetProbe = assetKeys.find(request => new URL(request.url).pathname.includes('/assets/'))?.url || null;
+        const requiredRequests = [
+          './assets/vendor/babylon.js',
+          './assets/vendor/babylonjs.loaders.min.js',
+          './assets/vendor/meshopt_decoder.js',
+          './scripts/game-session-recorder.js'
+        ];
+        if (assetProbe) requiredRequests.push(assetProbe);
+        const requests = await Promise.all(requiredRequests.map(async relativePath => {
+          const response = await fetch(new URL(relativePath, location.href).toString(), { cache: 'no-store' });
+          return { path: relativePath, status: response.status, ok: response.ok,
+            contentType: response.headers.get('content-type') || null };
+        }));
+        const registration = await navigator.serviceWorker.getRegistration();
+        return {
+          online: navigator.onLine,
+          controlled: !!navigator.serviceWorker.controller,
+          controllerState: navigator.serviceWorker.controller?.state || null,
+          registrationState: registration?.active?.state || null,
+          cacheNames,
+          shellDocumentCached,
+          assetCachePresent: !!assetName,
+          assetProbe,
+          requests
+        };
+      });
+      manifest.offlineReload = {
+        enabled: true,
+        fullRestart: false,
+        mode: 'offline-service-worker-cache-smoke',
+        durationMs: Number((performance.now() - offlineStartedAt).toFixed(1)),
+        ...cacheCheck
+      };
+      assert.equal(cacheCheck.online, false, 'La comprobación rápida no quedó realmente sin conexión.');
+      assert.equal(cacheCheck.controlled, true, 'La pestaña perdió el control del Service Worker durante la prueba offline.');
+      assert.equal(cacheCheck.registrationState, 'activated', 'El Service Worker no sigue activo en el smoke offline.');
+      assert.equal(cacheCheck.shellDocumentCached, true, 'No existe una copia verificada del shell en la caché offline.');
+      assert.equal(cacheCheck.assetCachePresent, true, 'No existe la caché de recursos del juego.');
+      assert.ok(cacheCheck.assetProbe, 'La caché del juego no contiene ningún recurso para probar sin conexión.');
+      assert.ok(cacheCheck.requests.every(item => item.ok && item.status === 200),
+        'El Service Worker no pudo servir todos los recursos críticos sin conexión: ' + JSON.stringify(cacheCheck.requests));
+      await context.setOffline(false);
+    } else if (secureOrigin) {
       const offlineStartedAt = performance.now();
       manifest.offlineReload = { enabled: true, navigation: 'pending', worldReady: false };
       await context.setOffline(true);

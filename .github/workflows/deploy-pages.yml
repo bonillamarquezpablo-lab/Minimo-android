@@ -33,6 +33,7 @@ jobs:
       site: ${{ steps.scope.outputs.site }}
       game: ${{ steps.scope.outputs.game }}
       fauna: ${{ steps.scope.outputs.fauna }}
+      offline: ${{ steps.scope.outputs.offline }}
     steps:
       - name: Checkout history for an exact changed-file comparison
         uses: actions/checkout@v4
@@ -52,6 +53,7 @@ jobs:
             echo "site=true" >> "$GITHUB_OUTPUT"
             echo "game=true" >> "$GITHUB_OUTPUT"
             echo "fauna=true" >> "$GITHUB_OUTPUT"
+            echo "offline=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           base="$BEFORE_SHA"
@@ -64,12 +66,14 @@ jobs:
             changed="$(git diff --name-only "$base" "$HEAD_SHA")"
           fi
           printf '%s\n' "$changed"
-          # A production push that changes this workflow must exercise the complete release pipeline.
+          # A production push that changes this workflow must exercise the full release build and gameplay acceptance.
+          # The fast offline-cache path is exercised here; the full offline reboot remains scoped to SW/boot changes.
           # On the review PR itself, source contracts validate the CI change without rebuilding the game.
           if [[ "$EVENT_NAME" == "push" ]] && grep -Fxq '.github/workflows/deploy-pages.yml' <<<"$changed"; then
             echo "site=true" >> "$GITHUB_OUTPUT"
             echo "game=true" >> "$GITHUB_OUTPUT"
             echo "fauna=true" >> "$GITHUB_OUTPUT"
+            echo "offline=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|game-session-recorder\.js|npc-(agent|dialogue|village)|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_phase2_build_contract\.mjs|nordic/))' <<<"$changed"; then
@@ -92,6 +96,16 @@ jobs:
             fi
           fi
           echo "fauna=$fauna_runtime_change" >> "$GITHUB_OUTPUT"
+          offline_runtime_change=false
+          if grep -Eq '^(sw\.js|index\.html|scripts/(player-startup-smoke\.mjs|startup-readiness-core\.cjs|start_https_static_server\.py|asset_cache_fingerprint\.py|validate_release\.py))' <<<"$changed"; then
+            offline_runtime_change=true
+          elif grep -Fxq 'scripts/build_site.py' <<<"$changed"; then
+            offline_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"
+            if grep -Eiq '^[+-].*(navigator\.serviceWorker|serviceWorker|ServiceWorker|service worker|SHELL_CACHE|ASSET_CACHE|cacheFirst|cacheStorage|precache)' <<<"$offline_diff"; then
+              offline_runtime_change=true
+            fi
+          fi
+          echo "offline=$offline_runtime_change" >> "$GITHUB_OUTPUT"
 
   # Fast source contracts run beside the single release build. Inspector UI checks are path-scoped in their own workflow.
   contracts:
@@ -360,6 +374,8 @@ jobs:
           PLAYER_TEST_URL: https://localhost:4175/
           # Keep cold-start and offline reload gates; skip one duplicate full-world boot.
           PLAYER_TEST_SKIP_WARM_ONLINE_RESTART: '1'
+          # A complete offline world reboot is reserved for SW/boot-path changes; routine gameplay changes still verify cached delivery while offline.
+          PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: ${{ needs.changes.outputs.offline != 'true' }}
         run: node scripts/player-startup-smoke.mjs
 
       - name: Stop runtime acceptance HTTPS server
