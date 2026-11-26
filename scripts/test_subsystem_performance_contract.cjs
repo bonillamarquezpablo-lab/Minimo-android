@@ -77,6 +77,8 @@ assert.ok(builder.includes('gpuTimerQueryExtensionName') && builder.includes('gp
   builder.includes('maxViewportDims'),
   'GPU telemetry must identify timer-query availability, adapter identity when exposed, and hardware limits.');
 assert.ok(recorder.includes('contextLifecycle: runtime.gpuContextLifecycle') && recorder.includes('contextLifecycle: latestGpuSample'), 'Session reports must persist WebGL context loss and restoration events.');
+assert.ok(recorder.includes('renderPipeline: runtime.renderPipelineDiagnostics') && recorder.includes('renderPipeline: latestGpuSample'), 'Session reports must persist the effective MSAA, post-processing, shadow-map, caster and render-target configuration.');
+assert.ok(builder.includes('msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))') && builder.includes('shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null'), 'The render pipeline snapshot must expose effective MSAA and the real shadow caster list without mutating rendering state.');
 assert.ok(builder.includes('window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;') && builder.includes("gpuContextCanvas.addEventListener('webglcontextlost'") && builder.includes("gpuContextCanvas.addEventListener('webglcontextrestored'"), 'The runtime must observe WebGL context loss, creation failure and restoration without taking over Babylon recovery.');
 assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
   recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
