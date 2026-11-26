@@ -115,12 +115,12 @@ const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.
 const rasterCaptureEnd=capture.indexOf('if(backgroundPng){',rasterCaptureStart);
 const rasterCaptureBlock=capture.slice(rasterCaptureStart,rasterCaptureEnd);
 assert.ok(capture.includes("source:'same-frame-projected-animal-bounds-raster-diff'") &&
-  capture.includes('changedPixels>=140') && capture.includes('fillRatio>=.008') &&
+  capture.includes('changedPixels>=140') && capture.includes('rasterFillRatio>=.015') && capture.includes('projectedFillRatio:number(projectedFillRatio)') && capture.includes('rasterBoundsSamples') &&
   capture.includes('B.Vector3.Project') && capture.includes('backgroundPng=captureFrame();') &&
   rasterCaptureStart>=0 && rasterCaptureEnd>rasterCaptureStart &&
   !rasterCaptureBlock.includes('requestAnimationFrame') &&
   capture.includes('view.imageIntegrity?.valid===true'),
-  'Four-view fauna captures must compare actor-visible and actor-hidden pixels inside the projected animal bounds, without counting water/sky animation drift; empty captures must fail.');
+  'Four-view fauna captures must compare actor-visible and actor-hidden pixels, validate actual raster silhouette density, retain projected-AABB ratio diagnostics, and reject empty captures.');
 assert.ok(capture.includes('measuredBounds:animal.bounds') &&
   capture.includes('const min=measuredBounds?.min,max=measuredBounds?.max'),
   'The capture camera must frame the same corrected skinned world bounds as the anatomical report, not stale bind-pose AABBs.');
