@@ -68,7 +68,8 @@ assert.doesNotMatch(saveSessionSource,/structuredClone/,"Periodic persistence mu
 assert.match(source,/function queueIdlePersistence\\(\\)/);
 assert.match(source,/window\\.requestIdleCallback\\(run, \\{ timeout: 5000 \\}\\)/);
 assert.match(source,/function cancelQueuedPersistence\\(\\)/);
-assert.match(source,/sceneInventory = \\{ capturedAt: sample\\.capturedAt, dynamicMeshSamplesByReason: inventory \\}/);
+assert.match(source,/sceneInventory = \\{ capturedAt: sample\\.capturedAt, dynamicMeshSamplesByReason: inventorySnapshot \\}/);
+assert.match(source,/window\\.structuredClone\\(inventory\\)/,"The one-time scene inventory must be detached from the live renderer object.");
 assert.match(source,/delete sample\\.scene\\.meshSelectionDynamicSamplesByReason/);
 assert.match(source,/state\\.sessionStartedPerformanceAt/);
 const observerStart=source.indexOf("function installLongTaskObserver()");
