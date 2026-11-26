@@ -458,6 +458,7 @@
         sceneRenderMeasurement: "CPU-side Babylon instrumentation; not GPU elapsed time",
         detailedProfileEnabled: runtime.profileDiagnosticsEnabled === true,
         device: runtime.gpuDeviceTelemetry && typeof runtime.gpuDeviceTelemetry === "object" ? runtime.gpuDeviceTelemetry : null,
+        renderPipeline: runtime.renderPipelineDiagnostics && typeof runtime.renderPipelineDiagnostics === "object" ? runtime.renderPipelineDiagnostics : null,
         contextLifecycle: runtime.gpuContextLifecycle && typeof runtime.gpuContextLifecycle === "object" ? runtime.gpuContextLifecycle : null
       },
       sceneTimings: {
@@ -1316,6 +1317,7 @@
         frameMaximumMs: gpu.length ? Math.max(...gpu) : null,
         sceneRenderMedianMs: medianSceneRender,
         device: latestGpuDevice,
+        renderPipeline: latestGpuSample && latestGpuSample.gpu ? latestGpuSample.gpu.renderPipeline : null,
         contextLifecycle: latestGpuSample && latestGpuSample.gpu ? latestGpuSample.gpu.contextLifecycle : null,
         measurementNote: gpu.length ? "GPU timer-query values measured by the graphics driver." :
           gpuTimerQueryStatus === "unsupported" ? "GPU timer queries are unavailable on this browser/device; CPU and frame timing remain separate." :
