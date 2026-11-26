@@ -3524,6 +3524,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      if(!base||!Array.isArray(base.data)||!Number.isFinite(base.length)||scene.skipFrustumClipping||
         !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
      const startedAt=performance.now();
+     // The Babylon render id is constant for this candidate pass; cache it once
+     // rather than calling Scene.getRenderId for every actor mesh.
+     const currentRenderId=scene.getRenderId();
      let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0;
      // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
      // Compact that frame-local result in place: no extra list, no scene mutation,
@@ -3532,11 +3535,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
       const mesh=base.data[index];
       if(!mesh)continue;
       let keep=true;
-      if(spatialDynamicMeshSet.has(mesh)){
+      const isDynamic=spatialDynamicMeshSet.has(mesh);
+      if(isDynamic){
        dynamicCandidates++;
        if(mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'&&
           !mesh.alwaysSelectAsActiveMesh&&
-          !(mesh.__elsnSpatialFreshUntilRenderId>=scene.getRenderId())&&
+          !(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
           !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
           typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
         try{
@@ -3550,7 +3554,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
       if(keep){
        base.data[writeIndex]=mesh;
        writeIndex++;
-       if(spatialDynamicMeshSet.has(mesh))selected++;
+       if(isDynamic)selected++;
       }else{
        culled++;
       }
