@@ -83,14 +83,14 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
-  buildSite.includes("function updateAmbientGullFlight(nowSeconds){") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};") &&
+  buildSite.includes("function updateAmbientGullFlight(nowSeconds){") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,visualHierarchyRefreshes:0,frozenVisualNodesRecovered:0,visualPositionStalls:0,stalledBirds:0,lastTimestamp:null,lastError:null};") &&
   buildSite.includes("flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);") &&
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
   !buildSite.includes("Seagull_Flight_Loop_") &&
   !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
   "The gull must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.");
-assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=socket||realPlayerModelPivot;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to player space.");
+assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=realPlayerModelPivot;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to the stable model pivot.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
   "Transparent ground effects in rendering group 1 must preserve opaque-world depth.");
 assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyRadius+otherRadius)*1.12") &&
@@ -99,8 +99,8 @@ assert.ok(buildSite.includes("minGapMeters:6.5") && buildSite.includes("(canopyR
 assert.ok(atmosphereSource.includes("profile.exposure = 1.035") && atmosphereSource.includes("imageConfig.contrast = 1.10") &&
   !atmosphereSource.includes("this.scene.imageProcessingConfiguration.exposure = lighting.exposure"),
   "Dusk must not rewrite shared image-processing settings on every visual update.");
-assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=socket||realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=socket||realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
-  'The equipped club must stay under the moving player model hierarchy rather than a detached world-space anchor.');
+assert.ok(buildSite.includes('weapon_parent_marker') && buildSite.includes('realWeaponHolder.parent=realPlayerModelPivot;') && buildSite.includes('weapon_sync_parent_marker') && buildSite.includes('const holderParent=realPlayerModelPivot;') && indexHtml.includes('holderParent.getWorldMatrix().clone()') && indexHtml.includes('realWeaponAnchorType=\'club-local-player-anchor\'') && indexHtml.includes('TransformCoordinates(gripWorld,inverseParent)'),
+  'The equipped club must remain under the stable player model pivot while its grip is calculated from the animated hand.');
 assert.ok(indexHtml.includes('function hideFactionBadge(parts)') && indexHtml.includes('hideFactionBadge(e.parts)') && indexHtml.includes('hideFactionBadge(fallen.parts)'),
   'Faction markers and health overlays must be cleaned when a guard dies or its corpse is retired.');
 assert.ok(indexHtml.includes('if(!sameIsland&&!grassStreamPromise)') && indexHtml.includes('if(sameIsland){grassSameIslandSkipCount++;return;}') && indexHtml.includes('grassStreamBuildCount++'),
