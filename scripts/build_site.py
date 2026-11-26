@@ -3321,7 +3321,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  // Preserve opaque-scene depth for transparent footprints and ground effects.
  scene.setRenderingAutoClearDepthStencil(1,false,false,false);
  // Optional Babylon-native profiler. Normal gameplay keeps instrumentation disabled.
- const profileDiagnosticsEnabled=!!(testModeEnabled||new URLSearchParams(window.location.search).get('profile')==='1');
+ const profileDiagnosticsEnabled=new URLSearchParams(window.location.search).get('profile')==='1';
  const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?(()=>{try{if(!graphicsContext)return null;if(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)return graphicsContext.getExtension('EXT_disjoint_timer_query_webgl2')?'EXT_disjoint_timer_query_webgl2':null;return graphicsContext.getExtension('EXT_disjoint_timer_query')?'EXT_disjoint_timer_query':null;}catch(_){return null;}})():null;
  const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;
  const gpuDebugRendererInfo=profileDiagnosticsEnabled?(()=>{try{return graphicsContext&&graphicsContext.getExtension('WEBGL_debug_renderer_info')||null;}catch(_){return null;}})():null;
