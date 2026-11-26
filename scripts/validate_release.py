@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.356"
+EXPECTED_VERSION = "0.6.357"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.getGameVisualActorDiagnostics=()=>{",
@@ -26,10 +26,11 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "gullWingFlapObserver=scene.onBeforeRenderObservable.add",
     "function maintainActiveEnemyVisuals(nowMs){",
     "maintainActiveEnemyVisuals(now);",
-    "const holderParent=socket||realPlayerModelPivot;",
+    "const holderParent=equippedWeapon==='club'?realPlayerModelPivot:(socket||realPlayerModelPivot);",
     "realWeaponHolder.parent=socket||realPlayerModelPivot;",
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
-    "updateAmbientGullFlight(now*.001);",
+    "updateAmbientGullFlight(now);",
+    "gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__",
     "b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);",
     "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}",
     "const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);",
@@ -531,6 +532,10 @@ def main() -> None:
         fail(f"Se esperaba la versión {EXPECTED_VERSION}, se encontró {version}.")
 
     sw = read_text("sw.js")
+    if not all(marker in sw for marker in ('"./assets/vendor/babylon.js"', '"./assets/vendor/babylonjs.loaders.min.js"', '"./assets/vendor/meshopt_decoder.js"')):
+        fail("El motor Babylon, el cargador glTF y meshopt deben quedar precargados para el arranque offline.")
+    if 'url.pathname.endsWith("/assets/vendor/babylon.js")' not in sw or "cacheFirst(request, SHELL_CACHE)" not in sw:
+        fail("Los recursos centrales de Babylon deben servirse desde la caché de shell en el reinicio offline.")
     if f'el-sin-nombre-shell-{version}' not in sw:
         fail("La caché de shell del service worker no coincide con la versión.")
     if not re.search(r'const ASSET_CACHE = "el-sin-nombre-assets-[0-9a-f]{16}";', sw):
@@ -658,7 +663,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'64',build:'0.6.356'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'65',build:'0.6.357'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -942,8 +947,8 @@ def main() -> None:
     weapon_anchor_start = index_html.find("function syncRealWeaponAnchor(")
     weapon_anchor_end = index_html.find("function updateRealWeaponPose(", weapon_anchor_start)
     weapon_anchor_source = index_html[weapon_anchor_start:weapon_anchor_end]
-    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=socket||realPlayerModelPivot;" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
-        fail("El arma equipada debe usar el espacio del socket animado de la mano en las poses primaria y de reserva.")
+    if weapon_anchor_start < 0 or weapon_anchor_end <= weapon_anchor_start or "const holderParent=equippedWeapon==='club'?realPlayerModelPivot:(socket||realPlayerModelPivot);" not in weapon_anchor_source or "if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;" not in weapon_anchor_source or "holderParent.getWorldMatrix().clone()" not in weapon_anchor_source or "const inverseParent=realPlayerModelPivot.getWorldMatrix().clone()" in weapon_anchor_source:
+        fail("El palo inicial debe usar el espacio del pivote del modelo y recalcular su pose desde la mano animada; las demás armas conservan el socket.")
     if "e.parts.alive=false;" not in index_html or "guard.parts.alive=true;" not in index_html or "setFactionBadge(guard.parts,'friendly');" not in index_html or "hideFactionBadge(parts);crewman.landed=false;" not in index_html:
         fail("Los indicadores de guerreros deben seguir el estado de muerte, reclutamiento y embarque de cada entidad.")
     if "gripWorld.addInPlace(modelForward.scale(.075))" not in index_html or "const localGrip=B.Vector3.TransformCoordinates(gripWorld,inverseParent);" not in index_html or "const localAxis=B.Vector3.TransformNormal(stickAxis,inverseParent).normalize();" not in index_html or "B.Vector3.Distance(gripWorld,pivotPosition)>2.25" not in index_html:
@@ -1060,7 +1065,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'64',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'65',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
