@@ -2,7 +2,7 @@
  'use strict';
  const PRESETS=[1.8,2.1,2.5,3.0,3.75];
  const BENCHMARK_MS=15000;
- const CROP_OUTPUT_PIXELS=768;
+ const CROP_ZOOM=2;
  function install(ctx){
   if(!ctx||!ctx.enabled||typeof document==='undefined'||document.getElementById('elsnQualityLab'))return;
   const panel=document.createElement('section');
@@ -20,7 +20,7 @@
   msaa.addEventListener('change',()=>{const actual=ctx.setMsaa(Number(msaa.value));const url=new URL(location.href);url.searchParams.set('msaa',String(msaa.value));history.replaceState(null,'',url.toString());status.textContent='MSAA aplicado: '+actual+'× (límite real del dispositivo).';});
   sharp.addEventListener('change',()=>{ctx.setSharpen(sharp.value==='1');const url=new URL(location.href);url.searchParams.set('sharpen',sharp.value);history.replaceState(null,'',url.toString());status.textContent='Nitidez RCAS: '+(sharp.value==='1'?'activada':'desactivada')+'. Solo afecta cuando FSR1 está activo.';});
   adaptive.addEventListener('change',()=>{ctx.setAdaptive(adaptive.checked);if(adaptive.checked)startAdaptive();});
-  $('[data-close]').addEventListener('click',()=>panel.remove());
+  $('[data-close]').addEventListener('click',()=>{ctx.setAdaptive(false);panel.remove();});
   let adaptiveRunning=false,adaptiveFrames=[],adaptiveLast=0,adaptiveLastChange=0;
   function startAdaptive(){
    if(adaptiveRunning||!ctx.getAdaptive())return;
@@ -49,9 +49,9 @@
     const image=new Image();
     image.onload=()=>{
      try{
-      const output=document.createElement('canvas'),size=CROP_OUTPUT_PIXELS;
-      output.width=size;output.height=Math.round(size*image.height/image.width);
+      const output=document.createElement('canvas');
       const sourceX=image.width*.25,sourceY=image.height*.25,sourceWidth=image.width*.5,sourceHeight=image.height*.5;
+      output.width=Math.round(sourceWidth*CROP_ZOOM);output.height=Math.round(sourceHeight*CROP_ZOOM);
       output.getContext('2d',{alpha:false}).drawImage(image,sourceX,sourceY,sourceWidth,sourceHeight,0,0,output.width,output.height);
       output.toBlob(blob=>blob?resolve(URL.createObjectURL(blob)):reject(new Error('No se pudo generar el PNG.')),'image/png');
      }catch(error){reject(error);}
