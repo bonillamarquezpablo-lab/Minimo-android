@@ -716,7 +716,9 @@
     // This bounded mesh-name inventory is descriptive, not a per-frame metric. Keep it once per session instead of duplicating ~10 KB in every sample.
     const inventory = sample.scene && sample.scene.meshSelectionDynamicSamplesByReason;
     if (inventory && !state.session.sceneInventory) {
-      state.session.sceneInventory = { capturedAt: sample.capturedAt, dynamicMeshSamplesByReason: inventory };
+      const inventorySnapshot = typeof window.structuredClone === "function"
+        ? window.structuredClone(inventory) : JSON.parse(JSON.stringify(inventory));
+      state.session.sceneInventory = { capturedAt: sample.capturedAt, dynamicMeshSamplesByReason: inventorySnapshot };
     }
     if (sample.scene && Object.prototype.hasOwnProperty.call(sample.scene, "meshSelectionDynamicSamplesByReason")) {
       delete sample.scene.meshSelectionDynamicSamplesByReason;
