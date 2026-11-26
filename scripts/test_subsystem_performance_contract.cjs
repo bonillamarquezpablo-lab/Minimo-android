@@ -247,9 +247,13 @@ for(const marker of [
   "qualityGeometryPreserved:true",
   "GRASS_STREAM_RECENTER_DISTANCE=56;"
 ]) assert.ok(builder.includes(marker),'Grass tile streaming contract is missing: '+marker);
-assert.ok(builder.includes("grassTileReadyCount=0")&&builder.includes("if(!desiredKeys||!desiredKeys.size)return;")&&
+const grassTileRuntimeStart=builder.indexOf("const GRASS_TILE_SIZE_METERS=GRASS_STREAM_RECENTER_DISTANCE");
+const grassTileRuntimeEnd=builder.indexOf("spawnNaturalVegetationAndFauna();",grassTileRuntimeStart);
+const grassTileRuntime=builder.slice(grassTileRuntimeStart,grassTileRuntimeEnd);
+assert.ok(grassTileRuntimeStart>=0&&grassTileRuntimeEnd>grassTileRuntimeStart&&
+  builder.includes("grassTileReadyCount=0")&&builder.includes("if(!desiredKeys||!desiredKeys.size)return;")&&
   builder.includes("if(tile.islandIndex!==grassTileRequestedIslandIndex)")&&
-  !builder.includes("function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"),
+  !grassTileRuntime.includes("function updateActiveIslandGrass(dt){\n  if(isPerformanceMode)return;"),
   'Grass sector scheduling must handle both graphics profiles, discard stale island work and keep a bounded reusable tile cache.');
 
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
