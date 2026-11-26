@@ -92,6 +92,7 @@ assert.ok(capture.includes('const FAUNA_ROSTER_TIMEOUT_MS = 240000') && capture.
   'Fauna inspection must allow the complete blocking startup window before declaring the roster missing.');
 assert.ok(capture.includes('getChildMeshes'));
 assert.ok(capture.includes('const subjectMeshes=new Set(meshes)') &&
+  capture.includes('let parent=mesh.parent,depth=0') && capture.includes('subjectMeshes.add(parent)') &&
   capture.includes('const sceneMeshVisibility=(scene.meshes||[]).map(mesh=>({') &&
   capture.includes('if(!subjectMeshes.has(entry.mesh))') &&
   capture.includes('entry.mesh.isVisible=false') &&
