@@ -26,6 +26,8 @@ for(const marker of [
   'gpuContextLifecycle',
   'perf_gpu_query_marker',
   'perf_audit_record_marker',
+  'perf_render_loop_marker',
+  'performanceAuditActive=perfAuditScenario',
   "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'window.__ELSN_WILDLIFE_DIAGNOSTICS__',
   'wildlifeUpdatePerfSamples=new Float32Array(120)',
@@ -84,6 +86,7 @@ assert.ok(recorder.includes('renderPipeline: runtime.renderPipelineDiagnostics')
 assert.ok(builder.includes('msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))') && builder.includes('shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null'), 'The render pipeline snapshot must expose effective MSAA and the real shadow caster list without mutating rendering state.');
 assert.ok(builder.includes('window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;') && builder.includes("gpuContextCanvas.addEventListener('webglcontextlost'") && builder.includes("gpuContextCanvas.addEventListener('webglcontextrestored'"), 'The runtime must observe WebGL context loss, creation failure and restoration without taking over Babylon recovery.');
 assert.ok(builder.includes("if(perfAuditScenario==='sin seleccionar')return null;") && builder.includes("if(perfAuditScenario==='sin seleccionar')return;"), 'The always-running game loop must bypass GPU timer queries and audit writes when no audit scenario is selected.');
+assert.ok(builder.includes('perf_render_loop_marker') && builder.includes("performanceAuditActive=perfAuditScenario!=='sin seleccionar'") && builder.includes('if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}'), 'The idle frame path must skip audit helper calls entirely.');
 assert.ok(builder.includes("perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;"), 'GPU timer-query handles must be invalidated across WebGL context loss/restoration and lazily recreated by the next explicit audit.');
 assert.ok(recorder.includes('frameP95Ms') && recorder.includes('frameP99Ms') &&
   recorder.includes('frameMaximumMs') && recorder.includes('measurementNote') &&
