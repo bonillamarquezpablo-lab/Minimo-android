@@ -1309,8 +1309,8 @@ def main() -> None:
         fail("El Galaxy A12 Nacho SM-A127 / Exynos 850 no tiene un perfil de Rendimiento específico.")
     if "ultraLowEndIslandStreaming=!!(isPerformanceMode&&(isUltraLowEndMobile||isGalaxyA12NachoPerformance))" not in index_html:
         fail("El Galaxy A12 Nacho no activa el streaming visual de la isla ocupada.")
-    if "isGalaxyA12NachoPerformance?32:" not in index_html or "isGalaxyA12NachoPerformance?1/5:" not in index_html:
-        fail("El perfil A12 Nacho no aplica los límites de malla de agua y actualización previstos.")
+    if "isGalaxyA12NachoPerformance?32:" not in index_html or "WATER_DETAIL_RADIUS=isPerformanceMode?(isConstrainedMobile?90:" not in index_html or "uniform float norseWaterDetailRadius" not in index_html:
+        fail("El perfil A12 Nacho debe conservar su malla de 32 subdivisiones y limitar el detalle próximo del shader GPU.")
     if "shadowGen=(!isConstrainedMobile||isUltraLowEndMobile||isGalaxyA12LowEndMobile)" not in index_html or "const enterRadius=isConstrainedMobile?58:175" not in index_html:
         fail("El perfil A10/A12 no activa sombras dinámicas acotadas por distancia.")
     if "const warriorPartsToLoad=humanEnemyParts.filter(p=>/^VillageGuard0_/" not in index_html or "const civilianPartsToLoad=humanCivilianParts.slice(0,lowMemoryNpcBudget?1:2)" not in index_html or "const lowMemoryNpcBudget=!!(isUltraLowEndMobile||isGalaxyA12LowEndMobile||isGalaxyA12NachoPerformance)" not in index_html:
