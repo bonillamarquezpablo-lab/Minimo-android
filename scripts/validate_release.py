@@ -589,6 +589,11 @@ def main() -> None:
     if "function findRightGripBones" not in index_html or "applyRealPlayerClubGripPose" not in index_html:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     graphics_quality_markers = (
+        "window.__ELSN_RENDER_RESOLUTION=()=>{",
+        "fullNativeResolution",
+        "expectedDeviceWidth",
+        "expectedDeviceHeight",
+        "highHeadroomQualityMobile?deviceDpr:1.45",
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
@@ -608,12 +613,12 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityScaleLockedForSession:true" not in index_html or "qualityScaleAdaptive:false" not in index_html or "nativeResolutionPreserved:true" not in index_html:
+    if "qualityScaleLockedForSession:true" not in index_html or "qualityScaleAdaptive:false" not in index_html or "nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)" not in index_html:
         fail("El perfil Calidad debe conservar la resolución nativa durante toda la sesión y medir los cuellos de botella sin degradarla.")
     if "engine.setHardwareScalingLevel(1/qualityDprCurrent)" in index_html or "qualityDprSlowSamples" in index_html:
         fail("El runtime no puede reducir la resolución nativa automáticamente.")
     mobile_gpu_budget_markers = (
-        "highHeadroomQualityMobile?1.80:1.45",
+        "highHeadroomQualityMobile?deviceDpr:1.45",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
         "nordicWaterMirror.refreshRate=isTouchDevice?12:8",
         "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))",
