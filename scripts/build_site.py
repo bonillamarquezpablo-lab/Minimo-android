@@ -4584,9 +4584,12 @@ function getFrameMaintenanceTimingSnapshot(){
     const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
     b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
     b.flightElapsed=flightElapsed;
-    b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
-    b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
-    if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
+    const captureLocked=window.__ELSN_FAUNA_CAPTURE_LOCK__===String(b.root.name||'');
+    if(!captureLocked){
+     b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
+     b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
+     if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
+    }
     b.root.computeWorldMatrix(true);
     const visualRefresh=refreshGullVisualHierarchy(b.flightRig&&b.flightRig.visualRoot);
     gullFlightRenderState.visualHierarchyRefreshes+=visualRefresh.refreshed;
@@ -4594,7 +4597,7 @@ function getFrameMaintenanceTimingSnapshot(){
     const visualRoot=b.flightRig&&b.flightRig.visualRoot;
     if(visualRoot&&typeof visualRoot.getAbsolutePosition==='function'){
      const visualPosition=visualRoot.getAbsolutePosition(),previousVisual=b.flightVisualLastPosition;
-     if(previousVisual){
+     if(previousVisual&&!captureLocked){
       const visualDx=visualPosition.x-previousVisual.x,visualDy=visualPosition.y-previousVisual.y,visualDz=visualPosition.z-previousVisual.z;
       b.flightVisualLastStepMeters=Math.sqrt(visualDx*visualDx+visualDy*visualDy+visualDz*visualDz);
       if(b.flightVisualLastStepMeters<.0001)gullFlightRenderState.visualPositionStalls++;
@@ -4602,7 +4605,7 @@ function getFrameMaintenanceTimingSnapshot(){
      b.flightVisualLastPosition={x:visualPosition.x,y:visualPosition.y,z:visualPosition.z};
     }
     const previous=b.flightLastPosition;
-    if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
+    if(previous&&!captureLocked){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
     b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
     if(b.procedural&&b.left&&b.right){
      b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
