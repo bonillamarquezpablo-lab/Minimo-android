@@ -145,5 +145,15 @@ assert.ok(builder.includes('distanceSquared=dx*dx+dz*dz;') &&
 
 for(const marker of ['frameMaintenanceTimingStats=Object.create(null)','getFrameMaintenanceTimingSnapshot()', "recordFrameMaintenanceTiming('gullFlight'", "recordFrameMaintenanceTiming('enemyVisualRecovery'", "recordFrameMaintenanceTiming('npcOverlayMaintenance'", 'preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()']) assert.ok(builder.includes(marker),'Missing pre-world frame timing marker: '+marker);
 assert.ok(recorder.includes('preWorldMaintenanceMs') && recorder.includes('cpuPreWorldP95Ms'),'Session recorder must include pre-world CPU in its bottleneck diagnosis.');
+
+const grassWindClassStart=builder.indexOf('class NordicGrassWindPlugin');
+const grassWindClassEnd=builder.indexOf('const grassWindPlugin=new NordicGrassWindPlugin(gm);',grassWindClassStart);
+const grassWindBindingBlock=builder.slice(grassWindClassStart,grassWindClassEnd);
+assert.ok(builder.includes('let grassWindCachedFrameId=-1,grassWindCachedTime=0;') &&
+  builder.includes("const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;") &&
+  builder.includes("uniformBuffer.updateFloat('grassWindTime',grassWindTimeForCurrentFrame());") &&
+  grassWindClassStart>=0 && grassWindClassEnd>grassWindClassStart &&
+  !grassWindBindingBlock.includes('performance.now()'),
+  'GPU grass wind time must be sampled once per Babylon scene frame, not once for each material/submesh bind.');
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
