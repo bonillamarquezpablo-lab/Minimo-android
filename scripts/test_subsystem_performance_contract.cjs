@@ -170,6 +170,22 @@ assert.ok(builder.includes('syncNordicWaterReflectionIsland()') &&
   builder.includes('if(foamWorkDue){') &&
   builder.includes("analyticGameplaySampler:'waterHeight'"),
   'GPU water deformation must preserve mirror scheduling, coastal foam and analytic gameplay sampling.');
+const waterGpuStart=builder.indexOf('class NordicWaterGpuPlugin extends B.MaterialPluginBase');
+const waterGpuEnd=builder.indexOf('const waterGpuPlugin=new NordicWaterGpuPlugin(M.water);',waterGpuStart);
+const waterGpuShaderBlock=builder.slice(waterGpuStart,waterGpuEnd);
+assert.ok(waterGpuStart>=0&&waterGpuEnd>waterGpuStart&&
+  waterGpuShaderBlock.includes('norseWaterDetailRadiusSq')&&
+  !waterGpuShaderBlock.includes('norseWaterDetailRadius*norseWaterDetailRadius'),
+  'The water vertex shader must receive the squared detail radius once instead of multiplying it per vertex.');
+assert.ok(waterGpuShaderBlock.includes('this._lastUniformBuffer===uniformBuffer')&&
+  waterGpuShaderBlock.includes('this._lastUniformFrame===frameId')&&
+  waterGpuShaderBlock.includes('this._lastUniformBuffer=uniformBuffer'),
+  'Water material uniforms must be bound at most once per scene frame for the same material UBO.');
+assert.ok(waterGpuShaderBlock.includes('nwS3Squared')&&waterGpuShaderBlock.includes('nwS4Squared')&&
+  waterGpuShaderBlock.includes('nwS3Cubed')&&waterGpuShaderBlock.includes('nwS4Cubed')&&
+  !/pow\\(max\\(0\\.0,nwS[34]\\),3\\.0\\)/.test(waterGpuShaderBlock),
+  'Water crest powers must be reused for height, normal derivatives and vertex-color crest highlights.');
+
 
 assert.ok(diagnosticsCore.includes('preWorldMaintenanceMs'),'Phase 1 diagnostics must retain pre-world maintenance CPU cost.');
 console.log('SUBSYSTEM PERFORMANCE CONTRACT: PASS (world phases, pre-world maintenance, atmosphere, hearths, wildlife, NPC dialogue, CPU and GPU timing).');
