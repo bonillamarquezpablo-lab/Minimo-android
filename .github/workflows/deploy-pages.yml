@@ -66,13 +66,14 @@ jobs:
             changed="$(git diff --name-only "$base" "$HEAD_SHA")"
           fi
           printf '%s\n' "$changed"
-          # A production push that changes this workflow must exercise the complete release pipeline.
+          # A production push that changes this workflow must exercise the full release build and gameplay acceptance.
+          # The fast offline-cache path is exercised here; the full offline reboot remains scoped to SW/boot changes.
           # On the review PR itself, source contracts validate the CI change without rebuilding the game.
           if [[ "$EVENT_NAME" == "push" ]] && grep -Fxq '.github/workflows/deploy-pages.yml' <<<"$changed"; then
             echo "site=true" >> "$GITHUB_OUTPUT"
             echo "game=true" >> "$GITHUB_OUTPUT"
             echo "fauna=true" >> "$GITHUB_OUTPUT"
-            echo "offline=true" >> "$GITHUB_OUTPUT"
+            echo "offline=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if grep -Eq '^(index\.html|sw\.js|assets/|inspector/|manifest\.webmanifest|guest-manifest\.webmanifest|guest-file-manifest\.webmanifest|invitado-manifest\.webmanifest|scripts/(build_site\.py|validate_release\.py|game-session-recorder\.js|npc-(agent|dialogue|village)|fauna-visual-capture\.mjs|test_fauna_visual_capture_contract\.cjs|test_phase2_build_contract\.mjs|nordic/))' <<<"$changed"; then
