@@ -3796,7 +3796,6 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # path remains the normal path; this idempotent hand-off is only its safety net.
     startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
     startup_handoff_replacement = """ if(!startScreenShown){
- if(!startScreenShown){
   try{
    if(!firstFrameRendered){
     if(!engine||engine.isDisposed&&engine.isDisposed())throw new Error('El motor Babylon ya no está disponible para el primer fotograma.');
