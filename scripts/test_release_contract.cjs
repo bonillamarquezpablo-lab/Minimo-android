@@ -135,7 +135,7 @@ assert.ok(buildSite.includes("const mirrorSize=isTouchDevice?(isConstrainedMobil
 assert.ok(buildSite.includes("highHeadroomQualityMobile?10:4"),"The original flagship mobile shadow-refresh cadence must be preserved.");
 assert.ok(buildSite.includes("qualityLabFsr1Requested") && buildSite.includes("const fsr1InputScale=.87;") && buildSite.includes("if(fsr1Candidate){"),"FSR1 must be gated behind the debug opt-in and reuse the original EASU+RCAS path.");
 const labSource=fs.readFileSync("scripts/quality-render-lab.js","utf8");
-assert.ok(labSource.includes("BENCHMARK_MS=15000") && labSource.includes("PRESETS=[1.8,2.1,2.5,3.0,3.75]") && labSource.includes("CROP_OUTPUT_PIXELS=768"),"The quality lab must benchmark for 15 s and export a 2x crop.");
+assert.ok(labSource.includes("BENCHMARK_MS=15000") && labSource.includes("PRESETS=[1.8,2.1,2.5,3.0,3.75]") && labSource.includes("CROP_ZOOM=2"),"The quality lab must benchmark for 15 s and export a 2x crop.");
 assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && buildSite.includes('html.replace(legacy_fsr_guard, "if(!fsr1Candidate)'),"The legacy FSR branch must be guarded before scene startup.");
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
