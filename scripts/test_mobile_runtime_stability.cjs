@@ -90,7 +90,7 @@ assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNo
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
 assert.ok(validator.includes('reportVersion:\'66\',build:\'0.6.358\''), 'Release must carry diagnostic report 65.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.358"'), 'Release validator must target version 0.6.358.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.359"'), 'Release validator must target version 0.6.359.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
