@@ -28,21 +28,18 @@
     dateStyle:"medium", timeStyle:"short"
   }) : "Fecha no disponible";
   const groups = [
-    { id:"performance", label:"Fluidez", hint:"Mide FPS, tirones y memoria",
-      description:"Comprueba cómo se mueve el juego y dónde aparecen las pausas.",
-      sections:[["diagnostico-en-vivo","Medir ahora"],["telemetria","Ver evolución"]] },
-    { id:"world", label:"Mundo 3D", hint:"Objetos, terreno e islas",
-      description:"Busca elementos flotantes, enterrados, colisiones y estructuras.",
-      sections:[["mundo","Revisar la escena"],["radar","Explorar las islas"]] },
-    { id:"evidence", label:"Aspecto", hint:"Luz, costa y gráficos",
-      description:"Compara el aspecto del juego entre versiones y momentos del día.",
-      sections:[["comparativa","Comparar imágenes"]] },
-    { id:"intelligence", label:"Personajes", hint:"NPC, patrulla y memoria",
-      description:"Consulta los recorridos, conversaciones y aprendizajes de los especialistas.",
-      sections:[["patrulla-exploradores","Ver patrulla"],["inteligencia-npc","Memoria de personajes"]] },
-    { id:"tests", label:"Pruebas", hint:"Comprobaciones y resultados",
-      description:"Inicia una auditoría cuando haga falta y sigue cada resultado desde aquí.",
-      sections:[["control","Gestionar pruebas"]] }
+    { id:"performance", label:"Rendimiento", hint:"Comprueba si el juego se atasca o pierde fluidez.",
+      description:"Mediciones en directo, historial, FPS, memoria y GPU.",
+      sections:[["diagnostico-en-vivo","Medir ahora"],["telemetria","Evolución"]] },
+    { id:"world", label:"Mundo y gráficos", hint:"Revisa el mundo, las islas y su aspecto.",
+      description:"Terreno, estructuras, objetos, agua, luz y comparaciones visuales.",
+      sections:[["mundo","Revisión 3D"],["radar","Islas"],["comparativa","Aspecto"]] },
+    { id:"people", label:"Personajes y fauna", hint:"Comprueba cómo se comportan los seres del mundo.",
+      description:"Patrullas, animales, diálogos, estado y memoria de los personajes.",
+      sections:[["patrulla-exploradores","Patrulla"],["inteligencia-npc","Personajes"]] },
+    { id:"tests", label:"Pruebas", hint:"Ejecuta comprobaciones cuando quieras revisar un cambio.",
+      description:"Pruebas automáticas, progreso, resultados e imágenes de evidencia.",
+      sections:[["control","Pruebas automáticas"]] }
   ];
   let activePage = 0;
   let latestReport = null;
@@ -65,47 +62,13 @@
     page.innerHTML = `
       <section class="wb-welcome">
         <div class="wb-welcome-copy">
-          <div class="workbench-kicker">EL SIN NOMBRE · CENTRO TODO EN UNO</div>
-          <h2 id="wbHomeTitle">¿Qué quieres revisar?</h2>
-          <p>Elige una tarea y te llevamos directamente a las herramientas necesarias. No hace falta conocer los términos técnicos.</p>
+          <div class="workbench-kicker">EL SIN NOMBRE · CENTRO DE INSPECCIÓN</div>
+          <h2 id="wbHomeTitle">Resumen del juego</h2>
+          <p>Primero verás cómo terminó tu última partida. Después puedes abrir cualquier revisión.</p>
         </div>
         <div class="wb-home-quick-status" id="wbReportState" role="status" aria-live="polite">
           <span class="wb-status-orbit" aria-hidden="true"></span>
           <span>Buscando el último informe de tu partida…</span>
-        </div>
-      </section>
-
-      <section class="wb-mode-section" aria-labelledby="wbModesTitle">
-        <div class="wb-section-title">
-          <div><span class="wb-card-eyebrow">ELIGE UNA HERRAMIENTA</span><h3 id="wbModesTitle">Empezar por una tarea</h3></div>
-          <span class="wb-section-note">5 modos · las funciones siguen conectadas</span>
-        </div>
-        <div class="wb-mode-grid">
-          <button class="wb-mode-card wb-mode-performance" type="button" data-open-page="1">
-            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M6 27h8l5-14 9 25 6-16h8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 7h32v34H8z" stroke="currentColor" stroke-opacity=".25" stroke-width="1.5" stroke-dasharray="3 4"/></svg></span>
-            <span class="wb-mode-copy"><strong>¿Va fluido?</strong><small>Mide FPS, encuentra tirones y revisa la memoria.</small></span>
-            <span class="wb-mode-action">Medir rendimiento <span aria-hidden="true">→</span></span>
-          </button>
-          <button class="wb-mode-card wb-mode-world" type="button" data-open-page="2">
-            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="m24 5 17 10v18L24 43 7 33V15L24 5Z" stroke="currentColor" stroke-width="2.5"/><path d="m7 15 17 10 17-10M24 25v18M16 10l17 10M32 10 15 20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
-            <span class="wb-mode-copy"><strong>¿Hay algo mal colocado?</strong><small>Revisa árboles, rocas, casas, terreno y las 13 islas.</small></span>
-            <span class="wb-mode-action">Revisar el mundo <span aria-hidden="true">→</span></span>
-          </button>
-          <button class="wb-mode-card wb-mode-visual" type="button" data-open-page="3">
-            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="5" y="8" width="38" height="31" rx="5" stroke="currentColor" stroke-width="2.5"/><path d="M24 9v29M11 31l8-9 6 5 7-10 7 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <span class="wb-mode-copy"><strong>¿Se ve como debería?</strong><small>Compara luz, agua, costa y capturas de versiones.</small></span>
-            <span class="wb-mode-action">Comparar aspecto <span aria-hidden="true">→</span></span>
-          </button>
-          <button class="wb-mode-card wb-mode-people" type="button" data-open-page="4">
-            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><circle cx="17" cy="16" r="7" stroke="currentColor" stroke-width="2.5"/><circle cx="34" cy="19" r="5" stroke="currentColor" stroke-width="2.5"/><path d="M4 40c1-8 5-12 13-12s12 4 13 12M29 31c7-2 13 1 15 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span>
-            <span class="wb-mode-copy"><strong>¿Qué hacen los personajes?</strong><small>Consulta patrullas, diálogos y memoria de NPC.</small></span>
-            <span class="wb-mode-action">Ver personajes <span aria-hidden="true">→</span></span>
-          </button>
-          <button class="wb-mode-card wb-mode-tests" type="button" data-open-page="5">
-            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M15 7h18M18 7v11L7 37a4 4 0 0 0 4 6h22a4 4 0 0 0 4-6L26 18V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 32h20M18 26h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
-            <span class="wb-mode-copy"><strong>¿Quieres probar un cambio?</strong><small>Prepara una auditoría y sigue sus resultados paso a paso.</small></span>
-            <span class="wb-mode-action">Abrir pruebas <span aria-hidden="true">→</span></span>
-          </button>
         </div>
       </section>
 
@@ -210,6 +173,35 @@
             <input id="wbReportImport" type="file" accept=".json,application/json" hidden>
           </div>
         </details>
+      </section>
+
+      <section class="wb-mode-section" aria-labelledby="wbModesTitle">
+        <div class="wb-section-title">
+          <div><span class="wb-card-eyebrow">ELIGE UNA HERRAMIENTA</span><h3 id="wbModesTitle">Empezar por una tarea</h3></div>
+          <span class="wb-section-note">4 áreas · todas las herramientas conectadas</span>
+        </div>
+        <div class="wb-mode-grid">
+          <button class="wb-mode-card wb-mode-performance" type="button" data-open-page="1">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M6 27h8l5-14 9 25 6-16h8" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 7h32v34H8z" stroke="currentColor" stroke-opacity=".25" stroke-width="1.5" stroke-dasharray="3 4"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Va fluido?</strong><small>Mide FPS, encuentra tirones y revisa la memoria.</small></span>
+            <span class="wb-mode-action">Medir rendimiento <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-world" type="button" data-open-page="2">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="m24 5 17 10v18L24 43 7 33V15L24 5Z" stroke="currentColor" stroke-width="2.5"/><path d="m7 15 17 10 17-10M24 25v18M16 10l17 10M32 10 15 20" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Cómo está el mundo?</strong><small>Revisa terreno, estructuras, islas, agua, luz y aspecto visual.</small></span>
+            <span class="wb-mode-action">Revisar el mundo <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-people" type="button" data-open-page="3" data-open-subview="patrulla-exploradores">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><circle cx="17" cy="16" r="7" stroke="currentColor" stroke-width="2.5"/><circle cx="34" cy="19" r="5" stroke="currentColor" stroke-width="2.5"/><path d="M4 40c1-8 5-12 13-12s12 4 13 12M29 31c7-2 13 1 15 8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Funcionan personajes y animales?</strong><small>Consulta patrullas, fauna, diálogos y memoria de los NPC.</small></span>
+            <span class="wb-mode-action">Ver personajes <span aria-hidden="true">→</span></span>
+          </button>
+          <button class="wb-mode-card wb-mode-tests" type="button" data-open-page="4">
+            <span class="wb-mode-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M15 7h18M18 7v11L7 37a4 4 0 0 0 4 6h22a4 4 0 0 0 4-6L26 18V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 32h20M18 26h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+            <span class="wb-mode-copy"><strong>¿Quieres comprobar un cambio?</strong><small>Ejecuta pruebas y revisa sus resultados y capturas.</small></span>
+            <span class="wb-mode-action">Abrir pruebas <span aria-hidden="true">→</span></span>
+          </button>
+        </div>
       </section>`;
     return page;
   }
@@ -234,7 +226,7 @@
       page.setAttribute("aria-label",group.label);
       const pageHead = node("div","workbench-page-heading");
       const copy = node("div","");
-      copy.append(node("div","workbench-kicker","HERRAMIENTA INTEGRADA"),
+      copy.append(node("div","workbench-kicker","ÁREA DE INSPECCIÓN"),
         node("h2","",group.label),node("p","",group.hint));
       pageHead.append(copy);
       const backButton = node("button","wb-back-home","← Inicio");
@@ -282,12 +274,12 @@
       deck.append(entry.page);
     });
     const modebar = node("div","workbench-modebar");
-    const modebarLabel = node("span","workbench-modebar-label","Modo de uso");
+    const modebarLabel = node("span","workbench-modebar-label","Mostrar");
     const modebarControls = node("div","workbench-modebar-controls");
-    const guidedButton = node("button","workbench-mode-button is-active","Guiado");
+    const guidedButton = node("button","workbench-mode-button is-active","Esencial");
     guidedButton.type = "button"; guidedButton.dataset.uiMode = "guided";
     guidedButton.setAttribute("aria-pressed","true");
-    const expertButton = node("button","workbench-mode-button","Experto");
+    const expertButton = node("button","workbench-mode-button","Completo");
     expertButton.type = "button"; expertButton.dataset.uiMode = "expert";
     expertButton.setAttribute("aria-pressed","false");
     const modeHint = node("span","workbench-mode-hint","Te mostramos primero lo esencial.");
@@ -354,8 +346,8 @@
     });
     const hint = $("workbenchModeHint");
     if (hint) hint.textContent = expert
-      ? "Todas las métricas, datos y controles avanzados están visibles."
-      : "Te mostramos primero lo esencial. Los detalles siguen disponibles.";
+      ? "Se muestran también todas las mediciones y controles avanzados."
+      : "Se muestran primero las conclusiones; el resto sigue disponible.";
     try { sessionStorage.setItem("elsn-inspector-ui-mode",expert?"expert":"guided"); } catch (_) {}
   }
 
