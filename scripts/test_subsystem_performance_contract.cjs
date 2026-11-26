@@ -118,6 +118,11 @@ for(const phase of [
   'environment / wildlife simulation'
 ]) assert.ok(builder.includes(phase), 'Environment profiling must split the measured water/world hotspot: '+phase);
 
+
+assert.ok(validator.includes('"if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"') &&
+  !validator.includes('"perf_render_loop_marker"'),
+  'Release validation must check the actual idle-frame guard emitted into the visual package, not a build-script variable name.');
+
 assert.ok(validator.includes('worldPhaseTimings:getWorldPhaseTimingSnapshot()'),
   'Release validation must require the per-phase timing telemetry.');
 
