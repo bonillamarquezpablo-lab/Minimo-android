@@ -19,6 +19,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?",
     "gpuContextCanvas.addEventListener('webglcontextlost'",
     "window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;",
+    "renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;",
     "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
     "fullNativeResolution",
     "expectedDeviceWidth",
