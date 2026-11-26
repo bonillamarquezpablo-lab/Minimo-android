@@ -469,6 +469,8 @@ async function main() {
           const ancestorsContain=(node,root)=>{let current=node,depth=0;while(current&&depth++<48){if(current===root)return true;current=current.parent;}return false;};
           const root=scene?.getTransformNodeByName?.(animalId);
           if(!scene||!root)throw new Error('No se encuentra la escena o el actor de fauna para capturar: '+animalId+' · api='+!!api);
+          const isBird=/^RealSeagullActor_\d+$/.test(animalId);
+          const previousFaunaCaptureLock=window.__ELSN_FAUNA_CAPTURE_LOCK__??null;
           root.computeWorldMatrix?.(true);
           const meshes=root.getChildMeshes?.(false)||[];
           const min=measuredBounds?.min,max=measuredBounds?.max;
@@ -502,6 +504,7 @@ async function main() {
           }
           let readback=null,cameraVerified=false,png=null,bindPosePng=null,imageIntegrity=null,temporaryCamera=null,previousCamera=null,previousActiveCameras=null;
           try{
+            if(isBird)window.__ELSN_FAUNA_CAPTURE_LOCK__=animalId;
             const B=window.BABYLON,canvas=document.getElementById('renderCanvas');
             if(!B?.UniversalCamera||!canvas)throw new Error('No se puede crear una cámara temporal Babylon para una captura visual aislada.');
             previousCamera=scene.activeCamera;
@@ -620,7 +623,7 @@ async function main() {
                 source:'same-frame-projected-animal-bounds-raster-diff',
                 valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&fillRatio>=.008
               };
-              if(!imageIntegrity.valid)throw new Error('La captura contiene muy poca silueta real del animal; no se acepta como PNG válido: '+animalId+' · '+JSON.stringify(imageIntegrity));
+              // Invalid raster frames are returned to Node for diagnosis; the strict gate remains outside.
             }
             if(!isBird&&angleDegrees===0){
               const canvas=document.getElementById('renderCanvas');
@@ -643,6 +646,7 @@ async function main() {
               }
             }
           }finally{
+            window.__ELSN_FAUNA_CAPTURE_LOCK__=previousFaunaCaptureLock;
             for(const entry of sceneMeshVisibility){
               if(!entry.mesh.isDisposed?.()){
                 entry.mesh.isVisible=entry.isVisible;
@@ -657,14 +661,22 @@ async function main() {
               // additional full SwiftShader frame solely for cleanup on every one of four views.
             }
           }
-          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng};
+          const debugMeshState=meshes.map(mesh=>({name:String(mesh.name||''),enabled:mesh.isEnabled?.()!==false,isVisible:mesh.isVisible!==false,visibility:Number(mesh.visibility??1),frozen:mesh._isWorldMatrixFrozen===true||mesh.isWorldMatrixFrozen===true,vertices:mesh.getTotalVertices?.()||0,indices:mesh.getTotalIndices?.()||0,absolute:mesh.getAbsolutePosition?.()?{x:number(mesh.getAbsolutePosition().x),y:number(mesh.getAbsolutePosition().y),z:number(mesh.getAbsolutePosition().z)}:null}));
+          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng,debugBackgroundPng:imageIntegrity?.valid?null:backgroundPng,debugMeshState,debugRootEnabled:root.isEnabled?.()!==false,captureLockApplied:isBird&&window.__ELSN_FAUNA_CAPTURE_LOCK__===animalId};
         },{animalId:animal.id,angleDegrees:angle.degrees,measuredBounds:animal.bounds},
         'view '+animal.id+'/'+angle.id,FAUNA_PAGE_EVALUATE_TIMEOUT_MS);
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
         const buffer=Buffer.from(match[1],'base64');
         assert.ok(buffer.length>1000,'PNG vacío o incompleto: '+animal.id+' / '+angle.id);
-        assert.ok(view.imageIntegrity?.valid===true,'La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
+        if(view.imageIntegrity?.valid!==true){
+          fs.writeFileSync(path.join(OUT,animal.id+'-'+angle.id+'-invalid-subject.png'),buffer);
+          const bgMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.debugBackgroundPng||'');
+          if(bgMatch)fs.writeFileSync(path.join(OUT,animal.id+'-'+angle.id+'-invalid-background.png'),Buffer.from(bgMatch[1],'base64'));
+          manifest.warnings.push({code:'fauna-capture-raster-failed',animal:animal.id,angle:angle.id,imageIntegrity:view.imageIntegrity,meshState:view.debugMeshState,rootEnabled:view.debugRootEnabled,captureLockApplied:view.captureLockApplied,camera:view.camera,readback:view.readback});
+          saveManifest();
+        }
+        assert.ok(view.imageIntegrity?.valid===true,'La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify({integrity:view.imageIntegrity,meshState:view.debugMeshState,rootEnabled:view.debugRootEnabled,captureLockApplied:view.captureLockApplied}));
         const file=animal.id+'-'+angle.id+'.png';
         fs.writeFileSync(path.join(OUT,file),buffer);
         manifest.captures.push({
