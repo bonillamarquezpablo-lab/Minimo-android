@@ -57,7 +57,7 @@ assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && buil
 assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('physicalPixelCoveragePct') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report actual framebuffer dimensions and whether they match the physical panel resolution.');
 assert.ok(builder.includes('qualityLabFsr1Requested') && builder.includes('const fsr1InputScale=.87;') && builder.includes('if(fsr1Candidate){'), 'FSR1 must remain available behind the explicit debug opt-in.');
 const lab=fs.readFileSync('scripts/quality-render-lab.js','utf8');
-for(const marker of ['BENCHMARK_MS=15000','PRESETS=[1.8,2.1,2.5,3.0,3.75]','CROP_OUTPUT_PIXELS=768','p95<14','p95>18','navigator.clipboard.writeText'])assert.ok(lab.includes(marker),'Missing quality lab feature: '+marker);
+for(const marker of ['BENCHMARK_MS=15000','PRESETS=[1.8,2.1,2.5,3.0,3.75]','CROP_ZOOM=2','p95<14','p95>18','navigator.clipboard.writeText'])assert.ok(lab.includes(marker),'Missing quality lab feature: '+marker);
 assert.ok(!lab.includes('localStorage'),'The quality lab must not persist settings by default.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(!fsr1Candidate)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
