@@ -88,7 +88,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
   !buildSite.includes("Seagull_Flight_Loop_") &&
-  !buildSite.includes("El GLB de gaviota no contiene el clip Fly obligatorio"),
+  buildSite.includes("El GLB de gaviota no contiene un clip Fly válido."),
   "The gull must be aligned horizontally and play the complete native GLB flight clip without constructing a redundant animation.");
 assert.ok(buildSite.includes("gullWingFlapObserver=scene.onBeforeRenderObservable.add") && buildSite.includes("function maintainActiveEnemyVisuals(nowMs){") && buildSite.includes("maintainActiveEnemyVisuals(now);") && buildSite.includes("const holderParent=realPlayerModelPivot;") && buildSite.includes("if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;"), "The build must recover invisible hostiles, restart stalled gull wing motion and anchor weapons to the stable model pivot.");
 assert.ok(buildSite.includes("scene.setRenderingAutoClearDepthStencil(1,false,false,false)"),
