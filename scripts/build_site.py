@@ -4295,7 +4295,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const fps=renderedFps||engine.getFps(),now=performance.now();
   if(fps<24&&now-lastQualityWarningAt>=4000){
    lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la escala de Calidad permanece fija salvo que el laboratorio adaptativo esté activado. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleLockedForSession:true,qualityScaleAdaptive:false,qualityScaleFixed:!qualityLabAdaptiveActive,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+   console.warn('EL SIN NOMBRE: FPS bajo; la escala de Calidad permanece fija salvo que el laboratorio adaptativo esté activado. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
   }
  }"""
     if html.count(quality_adaptive_marker) != 1:
