@@ -754,7 +754,9 @@ async function main() {
     assert.ok(closeHostiles.every(actor=>actor.rootEnabled&&actor.bodyEnabled&&actor.visibleMeshCount>0),'Hay un enemigo cercano con HUD/IA pero sin cuerpo 3D visible: '+JSON.stringify(closeHostiles));
     assert.equal(visualActorsBefore.gulls.length,5,'Calidad debe cargar las cinco gaviotas 3D: '+JSON.stringify(visualActorsBefore.gulls));
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
-    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.position?Math.round(bird.position.x*10)+':'+Math.round(bird.position.z*10):'missing'));
+    assert.ok(visualActorsBefore.playerClub.holderParentIsModelPivot,'El palo debe anclarse al pivote del modelo y seguir la mano mediante una pose recalculada.');
+    assert.ok(Number.isFinite(visualActorsBefore.playerClub.holderHandDistance)&&visualActorsBefore.playerClub.holderHandDistance<1.5,'El anclaje del palo se ha separado de la mano: '+JSON.stringify(visualActorsBefore.playerClub));
+    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.visualPosition?Math.round(bird.visualPosition.x*10)+':'+Math.round(bird.visualPosition.z*10):'missing'));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
     const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
     const gullFlightWaitStartedAt=performance.now();
@@ -769,7 +771,7 @@ async function main() {
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.position,b=bird?.position;
+          const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
           const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
@@ -783,7 +785,7 @@ async function main() {
         return {
           beforeTicks,render,
           birds:after.map((bird,index)=>{
-            const before=birds[index],a=before?.position,b=bird?.position;
+            const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
               beforePosition:a||null,afterPosition:b||null,
