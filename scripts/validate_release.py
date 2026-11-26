@@ -691,7 +691,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'67',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'68',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -779,8 +779,8 @@ def main() -> None:
     animate_start = index_html.find("function animateWater(dt)")
     animate_end = index_html.find("function rand(a,b)", animate_start)
     animate_body = index_html[animate_start:animate_end]
-    if animate_start < 0 or animate_end <= animate_start or "waterDetailHeightAtVertex" not in animate_body or "waterFarHeightAtVertex" not in animate_body:
-        fail("La animación base del oleaje debe conservar la caché de fases y el detalle de agua.")
+    if animate_start < 0 or animate_end <= animate_start or "window.__ELSN_WATER_GPU__" not in index_html or "class NordicWaterGpuPlugin extends B.MaterialPluginBase" not in index_html or "waterHeight(x,z,t=oceanTime,detailFade)" not in index_html:
+        fail("La animación base del oleaje debe conservar la superficie GPU y el muestreador analítico de física.")
     if "beachStateSampler" not in index_html or "foam=clamp(state.g,0.0,1.0)" not in index_html or "float laceNoise=fineFoam*.62+broadFoam*.38" not in index_html or "foamMask=clamp(foam*lace*broken*foamPulse*shoreFoamStrength" not in index_html:
         fail("La espuma de la orilla debe proceder del canal Foam de BeachState y de su encaje de shader.")
     if "for(const foam of tidalFoamMeshes)" not in index_html or "function buildTidalFoam(" not in index_html or "syncActiveTidalFoamIsland();" not in index_html:
@@ -1093,7 +1093,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'67',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'68',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
@@ -1177,8 +1177,8 @@ def main() -> None:
     shoreline_body = index_html[shoreline_start:shoreline_end]
     if shoreline_start < 0 or shoreline_end <= shoreline_start or "terrainHeightOnIsland(island,x,z)+terrainDeformationAt(islandIndex,x,z)" not in shoreline_body or "return terrainY-coastalWaterHeight(x,z,t);" not in shoreline_body or "surfaceLimitSq=(island.r*1.09)**2" in shoreline_body or ".42;" in shoreline_body:
         fail("La espuma de orilla debe cruzar el heightfield deformable y mantener el límite de tierra firme.")
-    if "waterWaveBasis=new Float32Array((waterBase.length/3)*WATER_WAVE_STRIDE)" not in index_html or "waterDetailHeightAtVertex(i/3,fade)" not in index_html or "waterFarHeightAtVertex(vertex)" not in index_html:
-        fail("El oleaje debe conservar sus mismas ondas usando la caché de fases espaciales.")
+    if "class NordicWaterGpuPlugin extends B.MaterialPluginBase" not in index_html or "CUSTOM_VERTEX_UPDATE_POSITION" not in index_html or "CUSTOM_VERTEX_UPDATE_NORMAL" not in index_html or "analyticGameplaySampler:'waterHeight'" not in index_html or "cpuMeshVertexEvaluations:0" not in index_html:
+        fail("El oleaje debe conservar las mismas ondas en GPU y mantener waterHeight como referencia analítica de costa y flotación.")
     if "const FOOTPRINT_ATLAS_SIZE=512,FOOTPRINT_WORLD_SIZE=16;" not in index_html or "createFootprintAtlas({size:FOOTPRINT_ATLAS_SIZE,worldSize:FOOTPRINT_WORLD_SIZE})" not in index_html or "NorseMovingFootprints" not in index_html:
         fail("Las huellas deben usar un atlas cartesiano móvil de 16x16m a 512x512.")
     if "footprintAtlas.stamp(x,z,heading,strength,currentTick)" not in index_html or "footprintAtlas.recenter(x,z)" not in index_html:
