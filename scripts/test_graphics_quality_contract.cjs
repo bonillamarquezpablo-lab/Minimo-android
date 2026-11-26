@@ -31,6 +31,7 @@ for(const marker of [
   'shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null',
   'customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null',
   'window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;',
+  "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)',
   'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
