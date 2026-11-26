@@ -100,7 +100,7 @@ jobs:
             offline_runtime_change=true
           elif grep -Fxq 'scripts/build_site.py' <<<"$changed"; then
             offline_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"
-            if grep -Eiq '^[+-].*(navigator\\.serviceWorker|serviceWorker|ServiceWorker|service worker|SHELL_CACHE|ASSET_CACHE|cacheFirst|cacheStorage|precache)' <<<"$offline_diff"; then
+            if grep -Eiq '^[+-].*(navigator\.serviceWorker|serviceWorker|ServiceWorker|service worker|SHELL_CACHE|ASSET_CACHE|cacheFirst|cacheStorage|precache)' <<<"$offline_diff"; then
               offline_runtime_change=true
             fi
           fi
