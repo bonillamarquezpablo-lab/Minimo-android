@@ -1966,7 +1966,7 @@ function setLoadingProgress(value,label){
     # uploaded independently under the same per-frame CPU budget; live cover remains visible
     # until the replacement tile ring is complete.
     grass_tile_signature_marker = "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false){"
-    grass_tile_signature_replacement = "async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false,tileOptions=null){"
+    grass_tile_signature_replacement = "let grassPlacementGridSharedCache=null,grassPlacementGridSharedSignature='';\n async function createRealGrass(onlyIslandIndex=null,focusX=null,focusZ=null,staging=false,tileOptions=null){"
     if html.count(grass_tile_signature_marker) != 1:
         raise SystemExit("No se encontró la firma única del generador de hierba para el modo por sectores.")
     html = html.replace(grass_tile_signature_marker, grass_tile_signature_replacement, 1)
@@ -1985,6 +1985,36 @@ function setLoadingProgress(value,label){
     grass_function_end = html.index("async function streamActiveIslandGrass(", grass_function_start)
     grass_function = html[grass_function_start:grass_function_end]
     grass_function = re.sub(r"\brand\(", "grassRand(", grass_function).replace("Math.random()", "grassRandom()")
+    grass_grid_start_marker = "  const grassPlacementCellSize=12,grassPlacementGrid=new Map();"
+    grass_grid_end_marker = "  function grassPlacementBlocked(x,z){"
+    grass_grid_start = grass_function.find(grass_grid_start_marker)
+    grass_grid_end = grass_function.find(grass_grid_end_marker, grass_grid_start)
+    if grass_grid_start < 0 or grass_grid_end <= grass_grid_start:
+        raise SystemExit("No se encontró el índice espacial reutilizable de colocación de hierba.")
+    grass_grid_replacement = """  const grassPlacementCellSize=12,grassPlacementKey=(cx,cz)=>cx*100000+cz;
+  const grassPlacementSignature=[trees.length,rocks.length,worldColliders.length,settlements.length].join(':');
+  if(!grassPlacementGridSharedCache||grassPlacementGridSharedSignature!==grassPlacementSignature){
+   const nextGrassPlacementGrid=new Map();
+   const addGrassPlacement=(kind,ref,minX,minZ,maxX,maxZ)=>{
+    const x0=Math.floor(minX/grassPlacementCellSize),x1=Math.floor(maxX/grassPlacementCellSize),z0=Math.floor(minZ/grassPlacementCellSize),z1=Math.floor(maxZ/grassPlacementCellSize);
+    for(let cx=x0;cx<=x1;cx++)for(let cz=z0;cz<=z1;cz++){const key=grassPlacementKey(cx,cz);let bucket=nextGrassPlacementGrid.get(key);if(!bucket){bucket=[];nextGrassPlacementGrid.set(key,bucket);}bucket.push({kind,ref});}
+   };
+   for(const tree of trees){const r=(tree.radius||.6)+.48;addGrassPlacement('tree',tree,tree.x-r,tree.z-r,tree.x+r,tree.z+r);}
+   for(const rock of rocks){const r=(rock.radius||.75)+.30;addGrassPlacement('rock',rock,rock.x-r,rock.z-r,rock.x+r,rock.z+r);}
+   for(const collider of worldColliders){if(collider.active===false)continue;const ex=(collider.type==='circle'?collider.r:collider.hx)+.25,ez=(collider.type==='circle'?collider.r:collider.hz)+.25;addGrassPlacement('world',collider,collider.x-ex,collider.z-ez,collider.x+ex,collider.z+ez);}
+   grassPlacementGridSharedCache=nextGrassPlacementGrid;
+   grassPlacementGridSharedSignature=grassPlacementSignature;
+  }
+  const grassPlacementGrid=grassPlacementGridSharedCache;
+"""
+    grass_function = grass_function[:grass_grid_start] + grass_grid_replacement + grass_function[grass_grid_end:]
+    for old_marker, new_marker in [
+        ("if(dx0*dx0+dz0*dz0>radius*radius)continue;", "if(!tileOptions&&dx0*dx0+dz0*dz0>radius*radius)continue;"),
+        ("if(dx*dx+dz*dz>radius*radius)continue;", "if(!tileOptions&&dx*dx+dz*dz>radius*radius)continue;"),
+    ]:
+        if grass_function.count(old_marker) != 1:
+            raise SystemExit("No se encontró exactamente un filtro circular dentro del generador de hierba.")
+        grass_function = grass_function.replace(old_marker, new_marker, 1)
     html = html[:grass_function_start] + grass_function + html[grass_function_end:]
 
     grass_tile_material_marker = "const gm=new B.StandardMaterial('NordicGroundCoverMaterial',scene);if(!staging)grassBatchMaterial=gm;else if(grassStagingResources)grassStagingResources.material=gm;"
@@ -2057,7 +2087,7 @@ function setLoadingProgress(value,label){
     grass_tile_runtime_code = """ const GRASS_TILE_SIZE_METERS=GRASS_STREAM_RECENTER_DISTANCE;
  const GRASS_TILE_RING_RADIUS=1;
  const grassTileCache=new Map();
- let grassTileQueue=[],grassTileBuildPromise=null,grassTileBuildingKey=null,grassTileActiveIslandIndex=-1;
+ let grassTileQueue=[],grassTileBuildPromise=null,grassTileBuildingKey=null,grassTileActiveIslandIndex=-1,grassTileRequestedIslandIndex=-1,grassTileReadyCount=0;
  let grassTileLastFocusX=NaN,grassTileLastFocusZ=NaN,grassTileBuildLastMs=0,grassTileBuildMaxMs=0,grassTileBuildCount=0,grassTileBuildFailures=0,grassTileLastFailure='';
  let grassTileDesiredKeys=new Set();
  const grassTileKey=(islandIndex,tileX,tileZ)=>islandIndex+':'+tileX+':'+tileZ;
@@ -2123,9 +2153,15 @@ function setLoadingProgress(value,label){
   grassTileCache.delete(entry.key);
  }
  function pruneGrassTileCache(islandIndex,desiredKeys){
+  if(!desiredKeys||!desiredKeys.size)return;
   const allReady=[...desiredKeys].every(key=>grassTileCache.has(key));
-  if(!allReady)return;
-  for(const entry of [...grassTileCache.values()])if(entry.islandIndex!==islandIndex||!desiredKeys.has(entry.key))disposeGrassTile(entry);
+  const stale=[...grassTileCache.values()].filter(entry=>!desiredKeys.has(entry.key));
+  if(allReady){
+   for(const entry of stale)disposeGrassTile(entry);
+  }else if(grassTileCache.size>desiredKeys.size+4){
+   stale.sort((a,b)=>(a.builtAt||0)-(b.builtAt||0));
+   while(grassTileCache.size>desiredKeys.size+4&&stale.length)disposeGrassTile(stale.shift());
+  }
   refreshGrassTileAggregates();
  }
  async function buildGrassTile(tile){
@@ -2134,6 +2170,11 @@ function setLoadingProgress(value,label){
   try{
    const tileOptions={tileSize:GRASS_TILE_SIZE_METERS,tileX:tile.tileX,tileZ:tile.tileZ,minX:tile.minX,minZ:tile.minZ,maxX:tile.maxX,maxZ:tile.maxZ,centerX:tile.centerX,centerZ:tile.centerZ,seed:tile.seed,material:grassBatchMaterial};
    const staged=await createRealGrass(tile.islandIndex,tile.centerX,tile.centerZ,true,tileOptions);
+   if(tile.islandIndex!==grassTileRequestedIslandIndex){
+    for(const mesh of staged.meshes||[])try{if(mesh&&!(mesh.isDisposed&&mesh.isDisposed()))mesh.dispose(false,false);}catch(_){}
+    if(staged.material&&staged.material!==previousMaterial)try{staged.material.dispose(false,false);}catch(_){}
+    return null;
+   }
    if(!grassBatchMaterial)grassBatchMaterial=staged.material;
    if(staged.material!==grassBatchMaterial)throw new Error('El material compartido de hierba cambió entre sectores.');
    for(const batch of staged.batches){
@@ -2162,6 +2203,7 @@ function setLoadingProgress(value,label){
   }
  }
  async function primeGrassTiles(islandIndex,focusX,focusZ){
+  grassTileRequestedIslandIndex=islandIndex;
   const tiles=collectGrassTileTargets(islandIndex,focusX,focusZ,false);
   if(!tiles.length)throw new Error('No hay sectores de hierba válidos alrededor de la posición inicial.');
   for(const tile of tiles){
@@ -2180,14 +2222,14 @@ function setLoadingProgress(value,label){
  }
  window.__ELSN_GRASS_TILE_STREAMING__=getGrassTileStreamingSnapshot;
  function updateActiveIslandGrass(dt){
-  if(isPerformanceMode)return;
   qualityGrassLodAccumulator+=Math.max(0,Math.min(.10,dt||0));
   if(qualityGrassLodAccumulator<.22)return;
   qualityGrassLodAccumulator%=.22;
   const focus=player.root.position;let currentIsland=-1,bestRatio=Infinity;
   for(let i=0;i<land.length;i++){const island=land[i],ratio=Math.hypot(focus.x-island.x,focus.z-island.z)/island.r;if(ratio<bestRatio){bestRatio=ratio;currentIsland=i;}}
   if(bestRatio>(onShip?2.0:1.09))currentIsland=-1;
-  if(currentIsland<0)return;
+  if(currentIsland<0){grassTileRequestedIslandIndex=-1;return;}
+  grassTileRequestedIslandIndex=currentIsland;
   const targets=collectGrassTileTargets(currentIsland,focus.x,focus.z,true);
   grassTileLastFocusX=focus.x;grassTileLastFocusZ=focus.z;
   grassTileDesiredKeys=new Set(targets.map(tile=>tile.key));
