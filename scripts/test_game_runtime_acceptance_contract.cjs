@@ -51,7 +51,7 @@ assert.match(release, /PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: \$\{\{ needs\.chan
   'Routine gameplay updates should use the fast offline cache smoke; SW/boot changes keep the full offline restart.');
 assert.ok(smoke.includes("process.env.PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART === 'true'") &&
   smoke.includes("mode: 'offline-service-worker-cache-smoke'") &&
-  smoke.includes("'./assets/models/Seagull.glb'") &&
+  smoke.includes('const assetProbe = assetKeys.find') &&
   smoke.includes('else if (secureOrigin)'),
   'The routine path must verify real SW-backed cached resources while the full offline reload remains available.');
 assert.ok(release.includes('fauna_diff="$(git diff --unified=0 "$base" "$HEAD_SHA" -- scripts/build_site.py)"'),
