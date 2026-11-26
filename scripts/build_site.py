@@ -3073,7 +3073,7 @@ function updateWildlife(dt){
  const qualityLabRequestedMsaa=qualityLabRequestedMsaaRaw===2||qualityLabRequestedMsaaRaw===4?qualityLabRequestedMsaaRaw:2;
  let qualityLabSharpenActive=qualityLabParams.has('sharpen')?qualityLabParams.get('sharpen')==='1':true;
  let qualityLabAdaptiveActive=false;
- const qualityDprDefault=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35)))))):Math.min(deviceDpr,isTouchDevice?1.80:1.85);
+ const qualityDprDefault=isPerformanceMode?Math.min(deviceDpr,isUltraLowEndMobile?.52:(isGalaxyA12NachoPerformance?.54:(isGalaxyA12LowEndMobile?.58:(isConstrainedMobile?.62:(constrainedHardware?.78:(isTouchDevice?1.0:1.35)))))):Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65);
  const qualityDpr=(!isPerformanceMode&&qualityLabEnabled&&qualityLabDprOptions.some(value=>Math.abs(value-qualityLabRequestedDpr)<.001))?Math.min(deviceDpr,qualityLabRequestedDpr):qualityDprDefault;
  const legacyQualityDpr=qualityDpr;
  const fsr1InputScale=.87;
@@ -3099,7 +3099,7 @@ function updateWildlife(dt){
   const physicalPixelHeight=Math.max(1,Math.round(cssHeight*physicalDpr));
   const renderPixels=renderWidth*renderHeight,physicalPixels=physicalPixelWidth*physicalPixelHeight;
   const physicalPixelCoveragePct=Number((renderPixels/Math.max(1,physicalPixels)*100).toFixed(2));
-  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive};
+  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,qualityDprDefault,highHeadroomQualityMobile,constrainedHardware,reportedMemory,hardwareConcurrency:Number(navigator.hardwareConcurrency)||null,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive};
  };"""
     if html.count(render_scale_marker) != 1:
         raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
