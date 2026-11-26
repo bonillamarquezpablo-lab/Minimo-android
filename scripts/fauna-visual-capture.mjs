@@ -491,6 +491,15 @@ async function main() {
           // clumps with CPU skinning + SwiftShader makes each screenshot needlessly costly.
           // Restore every mesh flag before returning to the real game scene.
           const subjectMeshes=new Set(meshes);
+          // Keep mesh ancestors of the animal too: some GLBs use a zero-vertex Mesh as the
+          // negative-scale root. Hiding that container also culls its skinned child mesh.
+          for(const mesh of meshes){
+            let parent=mesh.parent,depth=0;
+            while(parent&&parent!==root&&depth++<48){
+              if(typeof parent.getTotalVertices==='function')subjectMeshes.add(parent);
+              parent=parent.parent;
+            }
+          }
           const sceneMeshVisibility=(scene.meshes||[]).map(mesh=>({
             mesh,isVisible:mesh.isVisible,visibility:mesh.visibility
           }));
