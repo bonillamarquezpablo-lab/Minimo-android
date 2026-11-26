@@ -5195,7 +5195,7 @@ function getWorldPhaseTimingSnapshot(){
  // El atributo costero se calcula una sola vez; no se envían posiciones ni normales cada fotograma.
  ground.setVerticesData('norseWaterCoastalCap',waterCoastalCapStrength,false,1);
  class NordicWaterGpuPlugin extends B.MaterialPluginBase{
-  constructor(material){super(material,'NordicWaterGpu',210,{NORSE_WATER_GPU:true});this._enable(true);}
+  constructor(material){super(material,'NordicWaterGpu',210,{NORSE_WATER_GPU:true});this._lastUniformBuffer=null;this._lastUniformFrame=-1;this._enable(true);}
   getClassName(){return 'NordicWaterGpuPlugin';}
   isCompatible(shaderLanguage){return shaderLanguage===B.ShaderLanguage.GLSL;}
   prepareDefines(defines){defines.NORSE_WATER_GPU=true;}
@@ -5203,23 +5203,26 @@ function getWorldPhaseTimingSnapshot(){
   getUniforms(){
    return {ubo:[
     {name:'norseWaterTime',size:1,type:'float'},{name:'norseWaterFocus',size:2,type:'vec2'},
-    {name:'norseWaterDetailRadius',size:1,type:'float'},{name:'norseWaterDetailEnabled',size:1,type:'float'},
+    {name:'norseWaterDetailRadiusSq',size:1,type:'float'},{name:'norseWaterDetailEnabled',size:1,type:'float'},
     {name:'norseWaterTideOffset',size:1,type:'float'},{name:'norseWaterSeaLevel',size:1,type:'float'},
     {name:'norseWaterCrestStrength',size:1,type:'float'},{name:'norseWaterShortScale',size:1,type:'float'}
    ],vertex:'#ifdef NORSE_WATER_GPU\nuniform float norseWaterTime;\nuniform vec2 norseWaterFocus;\nuniform float norseWaterDetailRadius;\nuniform float norseWaterDetailEnabled;\nuniform float norseWaterTideOffset;\nuniform float norseWaterSeaLevel;\nuniform float norseWaterCrestStrength;\nuniform float norseWaterShortScale;\n#endif'};
   }
   _bindWater(uniformBuffer){
    if(!uniformBuffer||typeof uniformBuffer.updateFloat!=='function')return;
+   const frameId=typeof scene.getFrameId==='function'?scene.getFrameId():NaN;
+   if(Number.isFinite(frameId)&&this._lastUniformBuffer===uniformBuffer&&this._lastUniformFrame===frameId)return;
    const focusX=Number.isFinite(waterFocusX)?waterFocusX:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.x:(onShip?ship.position.x:player.root.position.x));
    const focusZ=Number.isFinite(waterFocusZ)?waterFocusZ:(scene.activeCamera&&scene.activeCamera.position?scene.activeCamera.position.z:(onShip?ship.position.z:player.root.position.z));
    uniformBuffer.updateFloat('norseWaterTime',oceanTime);
    if(typeof uniformBuffer.updateFloat2==='function')uniformBuffer.updateFloat2('norseWaterFocus',focusX,focusZ);
-   uniformBuffer.updateFloat('norseWaterDetailRadius',WATER_DETAIL_RADIUS);
+   uniformBuffer.updateFloat('norseWaterDetailRadiusSq',WATER_DETAIL_RADIUS_SQ);
    uniformBuffer.updateFloat('norseWaterDetailEnabled',coastalDiagnosticOverrides.disableNearWaterDetail?0:1);
    uniformBuffer.updateFloat('norseWaterTideOffset',tideOffsetAt(oceanTime));
    uniformBuffer.updateFloat('norseWaterSeaLevel',Number(ground.position.y)||0);
    uniformBuffer.updateFloat('norseWaterCrestStrength',Number(oceanDepthSettings.waveCrestStrength)||0);
    uniformBuffer.updateFloat('norseWaterShortScale',coastalDiagnosticOverrides.disableShortVertexWaves?0:1);
+   this._lastUniformBuffer=uniformBuffer;this._lastUniformFrame=frameId;
   }
   bindForSubMesh(uniformBuffer){this._bindWater(uniformBuffer);}
   hardBindForSubMesh(uniformBuffer){this._bindWater(uniformBuffer);}
@@ -5231,10 +5234,10 @@ function getWorldPhaseTimingSnapshot(){
      '#ifdef NORSE_WATER_GPU\n'+
      'float nwX=positionUpdated.x;float nwZ=positionUpdated.z;\n'+
      'float nwSlopeX=0.0;float nwSlopeZ=0.0;float nwDetailSlopeX=0.0;float nwDetailSlopeZ=0.0;\n'+
-     'float nwRadiusSq=norseWaterDetailRadius*norseWaterDetailRadius;\n'+
+     
      'float nwDx=nwX-norseWaterFocus.x;float nwDz=nwZ-norseWaterFocus.y;\n'+
      'float nwDistanceSq=nwDx*nwDx+nwDz*nwDz;\n'+
-     'float nwFadeT=clamp((nwRadiusSq-nwDistanceSq)/max(0.0001,nwRadiusSq*0.45),0.0,1.0);\n'+
+     'float nwFadeT=clamp((norseWaterDetailRadiusSq-nwDistanceSq)/max(0.0001,nwRadiusSq*0.45),0.0,1.0);\n'+
      'float nwFade=nwFadeT*nwFadeT*(3.0-2.0*nwFadeT)*norseWaterDetailEnabled;\n'+
      'float nwFadeDx=0.0;float nwFadeDz=0.0;\n'+
      'if(nwFadeT>0.0&&nwFadeT<1.0&&norseWaterDetailEnabled>0.5){nwFadeDx=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDx)/max(0.0001,nwRadiusSq*0.45);nwFadeDz=6.0*nwFadeT*(1.0-nwFadeT)*(-2.0*nwDz)/max(0.0001,nwRadiusSq*0.45);}\n'+
@@ -5254,8 +5257,11 @@ function getWorldPhaseTimingSnapshot(){
      'float nwS6=sin(nwP6);float nwC6=cos(nwP6);\n'+
      'float nwBase=nwS0*0.145+nwS1*0.365+nwS2*0.275;\n'+
      'float nwDetail=nwS3*0.185+nwS4*0.105+nwS5*0.064+nwS6*0.040;\n'+
-     'float nwCrest=pow(max(0.0,nwS3),3.0)*0.072*norseWaterCrestStrength;\n'+
-     'float nwShortCrest=pow(max(0.0,nwS4),3.0)*0.044*norseWaterCrestStrength;\n'+
+     'float nwS3Positive=max(0.0,nwS3);float nwS4Positive=max(0.0,nwS4);\n'+
+     'float nwS3Squared=nwS3Positive*nwS3Positive;float nwS4Squared=nwS4Positive*nwS4Positive;\n'+
+     'float nwS3Cubed=nwS3Squared*nwS3Positive;float nwS4Cubed=nwS4Squared*nwS4Positive;\n'+
+     'float nwCrest=nwS3Cubed*0.072*norseWaterCrestStrength;\n'+
+     'float nwShortCrest=nwS4Cubed*0.044*norseWaterCrestStrength;\n'+
      'float nwDetailTotal=nwDetail+nwCrest+nwShortCrest;\n'+
      'float nwHeight=norseWaterTideOffset+nwBase+nwDetailTotal*nwFade*norseWaterShortScale;\n'+
      'float nwCap=norseWaterSeaLevel+0.38;float nwCoast=clamp(norseWaterCoastalCap,0.0,1.0);\n'+
@@ -5264,14 +5270,14 @@ function getWorldPhaseTimingSnapshot(){
      'nwSlopeZ=nwC0*0.018*0.145+nwC1*0.018*0.365+nwC2*0.036*0.275;\n'+
      'nwDetailSlopeX=nwC3*0.066*0.185+nwC4*0.145*0.105+nwC5*(0.76*0.185)*0.064+nwC6*0.235*0.040;\n'+
      'nwDetailSlopeZ=nwC3*0.044*0.185+nwC4*(-0.145)*0.105+nwC5*(-1.13*0.185)*0.064+nwC6*0.18*0.040;\n'+
-     'nwDetailSlopeX+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.066*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*0.145*0.044*norseWaterCrestStrength:0.0);\n'+
-     'nwDetailSlopeZ+=(nwS3>0.0?3.0*nwS3*nwS3*nwC3*0.044*0.072*norseWaterCrestStrength:0.0)+(nwS4>0.0?3.0*nwS4*nwS4*nwC4*(-0.145)*0.044*norseWaterCrestStrength:0.0);\n'+
+     'nwDetailSlopeX+=3.0*nwS3Squared*nwC3*0.066*0.072*norseWaterCrestStrength+3.0*nwS4Squared*nwC4*0.145*0.044*norseWaterCrestStrength;\n'+
+     'nwDetailSlopeZ+=3.0*nwS3Squared*nwC3*0.044*0.072*norseWaterCrestStrength+3.0*nwS4Squared*nwC4*(-0.145)*0.044*norseWaterCrestStrength;\n'+
      'nwSlopeX+=(nwDetailSlopeX*nwFade+nwDetailTotal*nwFadeDx)*norseWaterShortScale;\n'+
      'nwSlopeZ+=(nwDetailSlopeZ*nwFade+nwDetailTotal*nwFadeDz)*norseWaterShortScale;\n'+
      'if(nwHeight>nwCap){nwSlopeX*=1.0-nwCoast;nwSlopeZ*=1.0-nwCoast;}\n'+
      '#ifdef VERTEXCOLOR\n'+
      'float nwInDetail=1.0-step(nwRadiusSq,nwDistanceSq);\n'+
-     'float nwCrestLight=min(0.34,(pow(max(0.0,nwS3),3.0)*0.25+pow(max(0.0,nwS4),3.0)*0.09)*norseWaterCrestStrength*nwInDetail);\n'+
+     'float nwCrestLight=min(0.34,(nwS3Cubed*0.25+nwS4Cubed*0.09)*norseWaterCrestStrength*nwInDetail);\n'+
      'colorUpdated.rgb=min(vec3(1.0),colorUpdated.rgb*(vec3(1.0)+vec3(nwCrestLight,nwCrestLight*0.92,nwCrestLight*0.78)));\n'+
      '#endif\n'+
      '#endif',
