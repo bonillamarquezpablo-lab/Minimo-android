@@ -89,8 +89,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'64\',build:\'0.6.356\''), 'Release must carry diagnostic report 64.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.356"'), 'Release validator must target version 0.6.356.');
+assert.ok(validator.includes('reportVersion:\'65\',build:\'0.6.357\''), 'Release must carry diagnostic report 64.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.357"'), 'Release validator must target version 0.6.356.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -209,7 +209,7 @@ const weaponAnchorStart=source.indexOf('function syncRealWeaponAnchor(');
 const weaponAnchorEnd=source.indexOf('function updateRealWeaponPose(',weaponAnchorStart);
 const weaponAnchorSource=source.slice(weaponAnchorStart,weaponAnchorEnd);
 assert.ok(weaponAnchorStart>=0&&weaponAnchorEnd>weaponAnchorStart,'The real weapon anchor implementation must remain present.');
-assert.ok(builder.includes('weapon_parent_marker')&&builder.includes('realWeaponHolder.parent=socket||realPlayerModelPivot;')&&builder.includes('weapon_sync_parent_marker')&&builder.includes('const holderParent=socket||realPlayerModelPivot;')&&builder.includes('if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;'),'The weapon must use the animated hand socket for both its actual parent and local-space grip calculations, with the player pivot only as fallback.');
+assert.ok(builder.includes('weapon_parent_marker')&&builder.includes('realWeaponHolder.parent=realPlayerModelPivot;')&&builder.includes('weapon_sync_parent_marker')&&builder.includes('const holderParent=realPlayerModelPivot;')&&builder.includes('if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;'),'The weapon must be a child of the stable model pivot while its local grip transform is calculated from the live animated hand.');
 assert.ok(builder.includes('weapon_grip_guard_marker')&&builder.includes('B.Vector3.Distance(gripWorld,pivotPosition)>2.25')&&builder.includes('if(realWeaponHolder.parent!==holderParent)realWeaponHolder.parent=holderParent;'),'The grip must be range-checked and recalibrated if the skeleton socket produces a bad world-space position.');
 assert.ok(source.includes("e.parts.alive=false;")&&source.includes("guard.parts.alive=true;"),'Dead and reset guards must synchronize their renderable actor lifecycle state.');
 assert.ok(source.includes("setFactionBadge(guard.parts,'friendly');"),'A recruited guard must switch its faction indicator to friendly.');
