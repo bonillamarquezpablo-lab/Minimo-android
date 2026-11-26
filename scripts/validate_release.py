@@ -16,6 +16,9 @@ EXPECTED_VERSION = "0.6.359"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
+    "const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?",
+    "gpuContextCanvas.addEventListener('webglcontextlost'",
+    "window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;",
     "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
     "fullNativeResolution",
     "expectedDeviceWidth",
