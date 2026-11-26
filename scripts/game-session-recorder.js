@@ -15,7 +15,7 @@
   const MAX_STORED_SESSIONS = 20;
   const RECOVERY_STORAGE_KEY = "elsn-game-session-recovery-v1";
   const MAX_RECOVERY_SAMPLES = 360;
-  const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, longTaskObserver: null };
+  const state = { db: null, opening: null, session: null, sampleTimer: null, persistTimer: null, monitorTimer: null, starting: false, saving: false, sampleQueued: false, sampleHandle: null, sampleHandleKind: null, persistQueued: false, persistHandle: null, persistHandleKind: null, sessionStartedPerformanceAt: 0, longTaskObserver: null };
 
   function number(value) {
     if (value === null || value === undefined || typeof value === "boolean" || value === "") return null;
@@ -209,6 +209,8 @@
         for (const entry of list.getEntries()) {
           const origin = number(window.performance && window.performance.timeOrigin);
           const start = number(entry.startTime);
+          // buffered long tasks from page loading are not gameplay stalls; only retain tasks that began after this session was initialized.
+          if (start === null || (state.sessionStartedPerformanceAt > 0 && start < state.sessionStartedPerformanceAt)) continue;
           const at = origin !== null && start !== null ? new Date(origin + start).toISOString() : new Date().toISOString();
           const attribution = Array.from(entry.attribution || []).slice(0, 3).map(item => ({
             name: text(item.name, 80),
@@ -247,12 +249,12 @@
       if (!state.session) return false;
     }
     const current = state.session;
-    const snapshot = typeof window.structuredClone === "function" ? window.structuredClone(current) : JSON.parse(JSON.stringify(current));
     const job = (async () => {
       const db = await openDatabase();
       const transaction = db.transaction(STORE, "readwrite");
       const done = transactionDone(transaction);
-      transaction.objectStore(STORE).put(snapshot);
+      // IndexedDB takes its own structured-clone snapshot at put(); avoid an additional full-report clone on the game thread.
+      transaction.objectStore(STORE).put(current);
       await done;
       return true;
     })();
@@ -616,6 +618,8 @@
         longTaskObserverSupported: false,
         deviceEvents: []
       };
+      state.sessionStartedPerformanceAt = window.performance && typeof window.performance.now === "function"
+        ? window.performance.now() : 0;
       installLongTaskObserver();
       appendSample(initial);
       await saveSession();
@@ -709,6 +713,14 @@
 
   function appendSample(sample) {
     if (!state.session || !sample) return;
+    // This bounded mesh-name inventory is descriptive, not a per-frame metric. Keep it once per session instead of duplicating ~10 KB in every sample.
+    const inventory = sample.scene && sample.scene.meshSelectionDynamicSamplesByReason;
+    if (inventory && !state.session.sceneInventory) {
+      state.session.sceneInventory = { capturedAt: sample.capturedAt, dynamicMeshSamplesByReason: inventory };
+    }
+    if (sample.scene && Object.prototype.hasOwnProperty.call(sample.scene, "meshSelectionDynamicSamplesByReason")) {
+      delete sample.scene.meshSelectionDynamicSamplesByReason;
+    }
     const previous = state.session.samples[state.session.samples.length - 1] || null;
     const currentDrawCalls = number(sample.scene && sample.scene.drawCalls);
     const previousDrawCalls = number(previous && previous.scene && previous.scene.drawCalls);
@@ -786,9 +798,58 @@
     appendSample(sample);
   }
 
+  function cancelQueuedPersistence() {
+    if (state.persistHandle !== null && state.persistHandle !== undefined) {
+      try {
+        if (state.persistHandleKind === "idle" && typeof window.cancelIdleCallback === "function") {
+          window.cancelIdleCallback(state.persistHandle);
+        } else if (state.persistHandleKind === "timeout") {
+          window.clearTimeout(state.persistHandle);
+        }
+      } catch (_) {}
+    }
+    state.persistHandle = null;
+    state.persistHandleKind = null;
+    state.persistQueued = false;
+  }
+
+  function queueIdlePersistence() {
+    if (!state.session || state.persistQueued || state.saving || document.visibilityState !== "visible") return;
+    state.persistQueued = true;
+    const run = deadline => {
+      state.persistHandle = null;
+      state.persistHandleKind = null;
+      state.persistQueued = false;
+      if (!state.session) return;
+      if (document.visibilityState !== "visible") {
+        persistSession();
+        return;
+      }
+      // Prefer an idle slice so IndexedDB serialization never competes with a busy render frame.
+      if (deadline && !deadline.didTimeout &&
+          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3) {
+        queueIdlePersistence();
+        return;
+      }
+      saveSession();
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      state.persistHandleKind = "idle";
+      state.persistHandle = window.requestIdleCallback(run, { timeout: 5000 });
+    } else {
+      state.persistHandleKind = "timeout";
+      state.persistHandle = window.setTimeout(() => run(null), 3000);
+    }
+  }
+
   function persistSession() {
-    if (!state.session || state.saving) return;
-    saveSession();
+    if (!state.session) return;
+    if (document.visibilityState === "visible") {
+      queueIdlePersistence();
+      return;
+    }
+    cancelQueuedPersistence();
+    if (!state.saving) saveSession();
   }
 
   function percentile(values, ratio) {
@@ -1433,6 +1494,7 @@
     state.sampleTimer = null;
     state.persistTimer = null;
     cancelQueuedIdleSample();
+    cancelQueuedPersistence();
     if (!state.session) return;
     const current = state.session;
     current.finishedAt = new Date().toISOString();
@@ -1489,6 +1551,7 @@
       queueIdleSample();
     });
     window.addEventListener("pagehide", () => {
+      cancelQueuedPersistence();
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       finishSession("pagehide");
     }, { once: true });
