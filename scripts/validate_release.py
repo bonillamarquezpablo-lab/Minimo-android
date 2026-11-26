@@ -756,7 +756,7 @@ def main() -> None:
             fail("Falta instrumentación/diagnóstico real de Babylon: " + marker)
     if "if(false){" in index_html or "if(fsr1Candidate){" not in index_html or "qualityLabFsr1Requested" not in index_html:
         fail("FSR1 debe estar disponible solo con debug=1 y fsr1=1.")
-    if "PRUEBA DE NITIDEZ" not in index_html or "BENCHMARK_MS=15000" not in index_html:
+    if "Prueba de nitidez" not in index_html or "BENCHMARK_MS=15000" not in index_html:
         fail("Falta el laboratorio gráfico con la prueba de 15 segundos.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
