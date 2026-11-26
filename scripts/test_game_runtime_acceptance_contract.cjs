@@ -111,6 +111,12 @@ assert.doesNotMatch(smoke, /campaignButton\.click\(\{\s*force:\s*true/,
 assert.match(smoke, /SKIP_WARM_ONLINE_RESTART/);
 assert.match(smoke, /context\.setOffline\(true\)/,
   'Skipping the redundant online warm boot must not skip the offline Service Worker restart.');
+assert.match(smoke, /introReady\|\|gameplayReady/,
+  'Offline startup may resume a saved game directly without reopening the new-campaign selector.');
+assert.match(smoke, /gameRunning:document\.body\.classList\.contains\('game-running'\)/);
+assert.match(smoke, /clubRasterProof\.changedPixels>=25/,
+  'The equipped club must contribute real pixels to the rendered game frame, not only visible-mesh flags.');
+assert.match(smoke, /same-frame-Babylon-render-difference/);
 assert.match(smoke, /STARTUP_RESTART_TIMEOUT_MS = 240000/);
 assert.match(smoke, /function waitForWorldReadyWithRecovery/);
 assert.match(smoke, /cachedStartupWaitRecoveredAfterRendererStall/);
