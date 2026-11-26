@@ -38,7 +38,7 @@ assert.ok(!builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
 assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleLockedForSession:true'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
-assert.ok(builder.includes('nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report actual framebuffer dimensions and whether they match the physical panel resolution.');
+assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)') && !builder.includes('setHardwareScalingLevel(1/qualityDprCurrent)'), 'The runtime must report actual framebuffer dimensions and whether they match the physical panel resolution.');
 assert.ok(!builder.includes('fsr1Candidate') && !builder.includes('fsr1InputScale'), 'No inactive FSR1 state may override native device resolution.');
 assert.ok(builder.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && builder.includes('html.replace(legacy_fsr_guard, "if(false){", 1)'), 'The obsolete FSR block must be guarded before scene construction.');
 assert.ok(gameSource.includes("antialias:activeGraphicsProfile!=='performance'"), 'Native engine antialiasing must remain enabled in Quality.');
@@ -54,4 +54,4 @@ assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), '
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, bounded adaptive Quality resolution, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
+console.log('OK graphics quality: native WebGL rendering, fixed native-DPR flagship Quality, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
