@@ -18,7 +18,12 @@ for(const marker of [
   'renderedFps||engine.getFps()',
   'qualityScaleLockedForSession:true',
   'window.__ELSN_RENDER_RESOLUTION=()=>{',
+  'const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?',
   'const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;',
+  'const gpuDebugRendererInfo=profileDiagnosticsEnabled?',
+  'gpuTimerQueryStatus:!profileDiagnosticsEnabled?',
+  'gpuContextCanvas.addEventListener(\'webglcontextrestored\'',
+  'window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;',
   'nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)',
   'FPS bajo; la calidad y resolución nativa permanecen bloqueadas.',
   'renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))',
@@ -47,7 +52,8 @@ assert.ok(gameSource.includes('const waterNormalLeftOffsets=new Uint32Array(wate
 assert.ok(gameSource.includes('waterNormalInvDx[count]=1/(waterBase[right]-waterBase[left]||1)'), 'Water normal grid spacing must be precomputed when the detail region changes.');
 assert.ok(gameSource.includes('const offset=waterActiveVertexOffsets[n],left=waterNormalLeftOffsets[n]'), 'Water normal updates must reuse cached neighbours instead of recalculating grid indices per frame.');
 assert.ok(gameSource.includes('targetFps:targetFrameRate') && gameSource.includes('framesOver90BudgetPct'), 'The runtime must report frame-budget diagnostics.');
-assert.ok(builder.includes('const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;'), 'GPU timer-query instrumentation must be opt-in with Inspector/profile mode, not active in every normal session.');
+assert.ok(builder.includes('const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;') && builder.includes('const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?') && builder.includes('const gpuDebugRendererInfo=profileDiagnosticsEnabled?'), 'GPU profiling and adapter queries must remain opt-in with Inspector/profile mode, not active in every normal session.');
+assert.ok(builder.includes('gpuTimerQueryStatus:!profileDiagnosticsEnabled?') && builder.includes('gpuContextLifecycle'), 'Runtime diagnostics must distinguish disabled profiling from unsupported timers and record WebGL context loss/restoration.');
 assert.ok(builder.includes('if(profileDiagnosticsEnabled||gpuTimerQueryAutoEnabled)'), 'The native profiling stack must remain available when diagnostics are explicitly requested.');
 assert.ok(builder.includes('highHeadroomQualityMobile?deviceDpr:1.45'), 'Flagship Quality must use the physical device DPR, not a capped internal scale.');
 assert.ok(atmosphere.includes("this.quality === 'mobile-high'"), 'Flagship touch devices must use the dedicated mobile-high atmosphere tier.');
