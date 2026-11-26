@@ -114,6 +114,10 @@ const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primi
 assert.ok(gullTriangles>0&&gullTriangles<=7000,'La nueva gaviota debe conservar una malla ligera y anatómica (triángulos medidos: '+gullTriangles+').');
 assert.ok((gullJson.materials||[]).length>0&&(gullJson.materials||[]).length<=2,'La gaviota debe conservar el material nativo de su plumaje.');
 assert.ok(html.includes("b.root.computeWorldMatrix(true)") && html.includes("b.root.unfreezeWorldMatrix()") && html.includes("flightLastStepMeters") && html.includes("function refreshGullVisualHierarchy(visualRoot){") && html.includes("const visualRefresh=refreshGullVisualHierarchy(b.flightRig&&b.flightRig.visualRoot);") && html.includes("flightVisualLastStepMeters") && html.includes("visualPositionStalls"), 'Gull flight must refresh and measure the actual imported visual hierarchy, not only its logical actor root.');
+assert.ok(buildSource.includes("const captureLocked=window.__ELSN_FAUNA_CAPTURE_LOCK__===String(b.root.name||'');") &&
+  buildSource.includes("if(!captureLocked){") &&
+  buildSource.includes("b.root.position.set(Math.cos(a)*radius-36"),
+  'The diagnostic capture may hold one selected bird only while framing; its regular orbit remains active in gameplay.');
 console.log('OK: bosque y mapas PBR intactos; gaviota anatómica con pivotes de alas/cola y escala física máxima 0,55 m.');
 console.log(JSON.stringify({models,gullBytes:gullData.length,gullTriangles,gullMaterials:gullJson.materials.length},null,2));
 
