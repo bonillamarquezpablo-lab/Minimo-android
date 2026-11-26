@@ -267,3 +267,9 @@ assert.ok(buildSite.includes('async function buildSpatialSelectionOctree()') &&
   buildSite.includes('meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs') &&
   buildSite.includes('meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs'),
   "The startup handoff must await a time-sliced spatial build and publish separate octree/classification timings.");
+
+
+const awaitedSpatialIndex=buildSite.indexOf("await buildSpatialSelectionOctree();");
+const readinessPublished=buildSite.indexOf("startupAssetsReady=true;",awaitedSpatialIndex);
+assert.ok(awaitedSpatialIndex>0&&readinessPublished>awaitedSpatialIndex,
+  "startupAssetsReady must remain false until the asynchronous spatial index is complete.");
