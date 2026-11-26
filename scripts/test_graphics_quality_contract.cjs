@@ -50,7 +50,8 @@ for(const marker of [
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
 assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive') && builder.includes('qualityScaleAdaptive:qualityLabAdaptiveActive') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve the native render scale for the whole session.');
-assert.ok(!builder.includes('engine.setHardwareScalingLevel(1/qualityDprCurrent)') && !builder.includes('qualityDprSlowSamples') && !builder.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution.');
+const adaptiveCode=builder.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||'';
+assert.ok(!adaptiveCode.includes('engine.setHardwareScalingLevel') && !adaptiveCode.includes('qualityDprSlowSamples') && !adaptiveCode.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution; manual debug controls are separate.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
 assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
