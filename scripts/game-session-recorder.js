@@ -577,8 +577,8 @@
       }
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       state.monitorTimer = null;
-      await openDatabase();
-      await pruneOldSessions();
+      // Start the report immediately; IndexedDB open and history pruning run in idle time.
+      state.prunedForSession = false;
       const build = document.querySelector('meta[name="el-sin-nombre-build"]');
       state.session = {
         schemaVersion: 1,
@@ -622,15 +622,17 @@
         ? window.performance.now() : 0;
       installLongTaskObserver();
       appendSample(initial);
-      await saveSession();
+      // Sampling starts before persistence; no IndexedDB work blocks session startup.
       state.sampleTimer = window.setInterval(queueIdleSample, SAMPLE_INTERVAL_MS);
       state.persistTimer = window.setInterval(persistSession, PERSIST_INTERVAL_MS);
       window.__ELSN_SESSION_RECORDER_STATUS__ = {
         active: true,
         sessionId: state.session.sessionId,
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
-        persistIntervalMs: PERSIST_INTERVAL_MS
+        persistIntervalMs: PERSIST_INTERVAL_MS,
+        persistenceMode: "idle"
       };
+      queueIdlePersistence();
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
     } finally {
@@ -818,7 +820,7 @@
   function queueIdlePersistence() {
     if (!state.session || state.persistQueued || state.saving || document.visibilityState !== "visible") return;
     state.persistQueued = true;
-    const run = deadline => {
+    const run = async deadline => {
       state.persistHandle = null;
       state.persistHandleKind = null;
       state.persistQueued = false;
@@ -827,20 +829,29 @@
         persistSession();
         return;
       }
-      // Prefer an idle slice so IndexedDB serialization never competes with a busy render frame.
+      // Keep database opening, pruning and IndexedDB serialization out of busy render frames.
       if (deadline && !deadline.didTimeout &&
           typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3) {
         queueIdlePersistence();
         return;
       }
-      saveSession();
+      try {
+        await openDatabase();
+        if (!state.prunedForSession) {
+          await pruneOldSessions();
+          state.prunedForSession = true;
+        }
+        await saveSession();
+      } catch (error) {
+        if (state.session) state.session.storageError = text(error && error.message || error, 180);
+      }
     };
     if (typeof window.requestIdleCallback === "function") {
       state.persistHandleKind = "idle";
-      state.persistHandle = window.requestIdleCallback(run, { timeout: 5000 });
+      state.persistHandle = window.requestIdleCallback(run, { timeout: 4000 });
     } else {
       state.persistHandleKind = "timeout";
-      state.persistHandle = window.setTimeout(() => run(null), 3000);
+      state.persistHandle = window.setTimeout(() => run(null), 2000);
     }
   }
 
