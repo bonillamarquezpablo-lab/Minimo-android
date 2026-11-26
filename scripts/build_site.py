@@ -3428,16 +3428,20 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
       mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||
       (Array.isArray(mesh.animations)&&mesh.animations.length)||
       typeof mesh.computeWorldMatrix!=='function'||typeof mesh.freezeWorldMatrix!=='function'){
-    skippedDynamic++;continue;
+    skippedDynamic++;
+   }else{
+    try{
+     if(mesh.isWorldMatrixFrozen===true)skippedDynamic++;
+     else{
+      // Pass the freshly computed matrix into freezeWorldMatrix so Babylon does not
+      // recompute it a second time. This preserves the complete parent/world transform.
+      const worldMatrix=mesh.computeWorldMatrix(true);
+      mesh.freezeWorldMatrix(worldMatrix);
+      frozen++;
+     }
+    }catch(_){errors++;}
    }
-   try{
-    if(mesh.isWorldMatrixFrozen===true){skippedDynamic++;continue;}
-    // Pass the freshly computed matrix into freezeWorldMatrix so Babylon does not
-    // recompute it a second time. This preserves the complete parent/world transform.
-    const worldMatrix=mesh.computeWorldMatrix(true);
-    mesh.freezeWorldMatrix(worldMatrix);
-    frozen++;
-   }catch(_){errors++;}
+   // Test the time budget for every visited mesh, including dynamic/skipped meshes.
    if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){
     await yieldSpatialWorkFrame();
     sliceStartedAt=performance.now();
