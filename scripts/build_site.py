@@ -875,7 +875,7 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
-    # 0.6.356: only live combat entities may own damage authority.
+    # 0.6.357: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
     if html.count(combat_damage_marker) != 1:
@@ -887,7 +887,7 @@ def main() -> None:
         raise SystemExit("No se encontró el filtro único de enemigos vivos.")
     html = html.replace(enemy_ai_alive_marker, enemy_ai_alive_replacement, 1)
 
-    # 0.6.356: unify all humanoid overlays under one measured anchor.
+    # 0.6.357: unify all humanoid overlays under one measured anchor.
     badge_kind_marker = "  const kind=faction==='friendly'?'friendly':'enemy';"
     if html.count(badge_kind_marker) != 1: raise SystemExit("Badge function marker not unique")
     html = html.replace(badge_kind_marker,badge_kind_marker+"\n  const overlayAnchor=ensureNpcOverlayAnchor(parts)||root;",1)
@@ -939,7 +939,7 @@ def main() -> None:
     if html.count(weapon_parent_marker) != 1:
         raise SystemExit("No se encontró la asignación única del anclaje del arma.")
     html = html.replace(weapon_parent_marker, "realWeaponHolder.parent=socket||realPlayerModelPivot;", 1)
-    weapon_sync_parent_marker = "const holderParent=socket||realPlayerModelPivot;"
+    weapon_sync_parent_marker = "const holderParent=equippedWeapon==='club'?realPlayerModelPivot:(socket||realPlayerModelPivot);"
     if html.count(weapon_sync_parent_marker) != 1:
         raise SystemExit("No se encontró el padre único del anclaje dinámico del arma.")
     html = html.replace(weapon_sync_parent_marker, "const holderParent=socket||realPlayerModelPivot;", 1)
@@ -3017,7 +3017,7 @@ function updateWildlife(dt){
             raise SystemExit("No se encontró </head> para instalar los estilos de diálogos NPC.")
         html = html.replace("</head>", dialogue_style_tag + chr(10) + "</head>", 1)
     for dialogue_tag in (
-        '<script src="./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7" defer></script>',
+        '<script src="./scripts/npc-village-brain-core.js?v=0.6.357-npcbrain7" defer></script>',
         '<script src="./scripts/npc-dialogue-core.js" defer></script>',
         '<script src="./scripts/npc-dialogue-runtime.js" defer></script>',
     ):
@@ -3030,25 +3030,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.356; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.357; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.356\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.357\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.356.")
-    html = html.replace("0.6.274", "0.6.356")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.357.")
+    html = html.replace("0.6.274", "0.6.357")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'64',build:'0.6.356'"
+    diagnostic_build_replacement = "reportVersion:'65',build:'0.6.357'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.356 para normalizar.")
-    game_version = "0.6.356"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.357 para normalizar.")
+    game_version = "0.6.357"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -4173,7 +4173,7 @@ function getFrameMaintenanceTimingSnapshot(){
 """
     frame_loop_marker = "engine.runRenderLoop(()=>{\n  const now=performance.now(),rawFrameMs=Math.max(0,now-last),dt=Math.max(0,Math.min(.10,rawFrameMs/1000));last=now;"
     frame_loop_replacement = frame_loop_marker
-    frame_loop_replacement = frame_maintenance_timing_code + "\n" + frame_loop_replacement + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  updateAmbientGullFlight(now*.001);recordFrameMaintenanceTiming('gullFlight',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
+    frame_loop_replacement = frame_maintenance_timing_code + "\n" + frame_loop_replacement + "\n  const preWorldMaintenanceStarted=performance.now();let maintenanceStarted=preWorldMaintenanceStarted;\n  /* Gull transforms are applied in onBeforeRender after Babylon animation evaluation. */\n  maintenanceStarted=performance.now();maintainActiveEnemyVisuals(now);recordFrameMaintenanceTiming('enemyVisualRecovery',maintenanceStarted);\n  maintenanceStarted=performance.now();maintainNpcOverlayAnchors(now);recordFrameMaintenanceTiming('npcOverlayMaintenance',maintenanceStarted);\n  lastPreWorldMaintenanceMs=performance.now()-preWorldMaintenanceStarted;recordFrameMaintenanceTiming('total',preWorldMaintenanceStarted);"
     if html.count(frame_loop_marker) != 1:
         raise SystemExit("No se encontró el bucle nativo de Babylon para preservar la frecuencia de refresco del dispositivo.")
     html = html.replace(frame_loop_marker, frame_loop_replacement, 1)
@@ -4595,7 +4595,10 @@ function getFrameMaintenanceTimingSnapshot(){
  }
  const gullWingBindPose=new WeakMap();
  const gullWingFlapObserver=scene.onBeforeRenderObservable.add(()=>{
-  const now=performance.now()*.001;
+  const flightUpdateStartedAt=performance.now();
+  const now=flightUpdateStartedAt*.001;
+  updateAmbientGullFlight(now);
+  recordFrameMaintenanceTiming('gullFlight',flightUpdateStartedAt);
   for(const bird of ambientBirds||[]){
    const rig=bird&&bird.flightRig,flight=rig&&rig.animationGroup;if(!rig)continue;
    const targets=flight&&Array.isArray(flight.targetedAnimations)?flight.targetedAnimations:[];
@@ -4686,15 +4689,18 @@ function getFrameMaintenanceTimingSnapshot(){
   const enabled=node=>!!node&&(typeof node.isEnabled!=='function'||node.isEnabled());
   const visible=mesh=>!!mesh&&!mesh.isDisposed?.()&&enabled(mesh)&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01;
   const clubMeshes=realWeaponGroups&&realWeaponGroups.club&&realWeaponGroups.club.getChildMeshes?realWeaponGroups.club.getChildMeshes(false):[];
+  try{realWeaponHolder?.computeWorldMatrix?.(true);realHandNode?.computeWorldMatrix?.(true);realPlayerModelPivot?.computeWorldMatrix?.(true);}catch(_){}
+  const clubHolderPosition=realWeaponHolder?.getAbsolutePosition?.()||null,clubHandPosition=realHandNode?.getAbsolutePosition?.()||null;
+  const clubHolderHandDistance=clubHolderPosition&&clubHandPosition?B.Vector3.Distance(clubHolderPosition,clubHandPosition):null;
   const guards=(humanEnemyParts||[]).filter(parts=>/^VillageGuard0_/.test(String(parts&&parts.name||'')));
   const homeWarriors=guards.map(parts=>{
    const real=parts.realHuman,meshes=real&&Array.isArray(real.meshes)?real.meshes:[];
    return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
   });
   const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
-  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;try{rig?.visualRoot?.computeWorldMatrix?.(true);}catch(_){}const visual=rig?.visualRoot?.getAbsolutePosition?.()||null;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,visualPosition:visual?{x:visual.x,y:visual.y,z:visual.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
   const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
-  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
+  return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor',holderParentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot),holderHandDistance:clubHolderHandDistance,holderPosition:clubHolderPosition?{x:clubHolderPosition.x,y:clubHolderPosition.y,z:clubHolderPosition.z}:null,handPosition:clubHandPosition?{x:clubHandPosition.x,y:clubHandPosition.y,z:clubHandPosition.z}:null},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
     if html.count(world_snapshot_marker) != 1:
