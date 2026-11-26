@@ -62,6 +62,19 @@ assert.ok(anchorBuilder.includes('parts.factionBadge.position.set(0,.34,0)') && 
 assert.ok(anchorBuilder.includes('transformFallbacks') && anchorBuilder.includes('healthReattachments'),
   'NPC overlay anchor recovery must expose transform fallback and health-bar reattachment diagnostics.');
 
+
+assert.ok(anchorBuilder.includes("now-p.__elsnVisualAuditAt<1200") &&
+  anchorBuilder.includes("visualAuditCacheHits++") &&
+  anchorBuilder.includes("visualAuditRuns++") &&
+  anchorBuilder.includes("recordFrameMaintenanceTiming('npcVisualRecoveryAudit',auditStarted)") &&
+  anchorBuilder.includes("recoverNpcActorVisuals(p,now)"),
+  'NPC mesh-visibility recovery must retain its automatic repair path while reusing a short-lived visibility audit between sweeps.');
+assert.ok(builder.includes("nowMs-(parts.__elsnEnemyMeshAuditAt||0)>=1200") &&
+  builder.includes("recordFrameMaintenanceTiming('enemyMeshVisibilityAudit',meshAuditStarted)") &&
+  builder.includes("recordFrameMaintenanceTiming('enemyFallbackMeshAudit',meshAuditStarted)") &&
+  builder.includes("nowMs-enemyVisualRecoveryAt<350") &&
+  anchorBuilder.includes("now-(npcOverlayAnchorStats.lastSweepAt||0)<500"),
+  'Enemy/NPC hierarchy repair cadence must remain active while expensive full mesh visibility scans are throttled and separately measured.');
 assert.ok(dialogue.includes('lastPositioningMs') &&
   dialogue.includes('maxPositioningMs') &&
   dialogue.includes('lastProjection'),
