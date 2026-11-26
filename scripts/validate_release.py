@@ -662,6 +662,7 @@ def main() -> None:
         "babylonOctreeBuildMs",
         "dynamicClassificationMs",
         "await freezeSpatialStaticWorldMatrices()",
+        "await buildSpatialSelectionOctree();\n   startupAssetsReady=true;",
         "scene.onNewMeshAddedObservable.add",
         "scene.onMeshRemovedObservable.add",
         "async function buildSpatialSelectionOctree()",
