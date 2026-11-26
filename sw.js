@@ -1,8 +1,8 @@
 /* EL SIN NOMBRE — same-origin asset cache for GitHub Pages. */
-const SHELL_CACHE = "el-sin-nombre-shell-0.6.357-npcbrain7-diag3";
+const SHELL_CACHE = "el-sin-nombre-shell-0.6.357-npcbrain7-diag4";
 const ASSET_CACHE = "el-sin-nombre-assets-pending-build-0.6.357";
 const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-0128ca51-v1";
-const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./icon.svg"];
+const SHELL_FILES = ["./index.html", "./guest.html", "./guest/index.html", "./invitado/index.html", "./manifest.webmanifest", "./guest-manifest.webmanifest", "./invitado-manifest.webmanifest", "./guest-file-manifest.webmanifest", "./scripts/nordic/beach-state.js", "./scripts/nordic/coastal-interaction.js", "./scripts/nordic/navigation-suite.js", "./scripts/nordic/atmosphere-system.js", "./scripts/nordic/world-inspection.js", "./scripts/npc-agent-core.js", "./scripts/npc-agent-runtime.js", "./scripts/game-session-recorder.js", "./scripts/npc-village-brain-core.js?v=0.6.356-npcbrain7", "./scripts/npc-dialogue-core.js", "./scripts/npc-dialogue-runtime.js", "./scripts/npc-dialogue.css", "./assets/vendor/babylon.js", "./assets/vendor/babylonjs.loaders.min.js", "./assets/vendor/meshopt_decoder.js", "./icon.svg"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -163,6 +163,13 @@ self.addEventListener("fetch", event => {
   // The Nordic simulation modules are part of the offline game shell, not generic media assets.
   // Serve them from the shell cache first so a cached game never boots without its runtime APIs.
   if (url.pathname.includes("/scripts/nordic/") || url.pathname.endsWith("/scripts/npc-agent-core.js") || url.pathname.endsWith("/scripts/npc-agent-runtime.js") || url.pathname.endsWith("/scripts/game-session-recorder.js") || url.pathname.endsWith("/scripts/npc-village-brain-core.js") || url.pathname.endsWith("/scripts/npc-dialogue.css")) {
+    event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
+    return;
+  }
+
+  // Core Babylon runtime must be installed with the shell: the first page load is not yet SW-controlled,
+  // so caching it only on fetch would leave an offline reload without the engine.
+  if (url.pathname.endsWith("/assets/vendor/babylon.js") || url.pathname.endsWith("/assets/vendor/babylonjs.loaders.min.js") || url.pathname.endsWith("/assets/vendor/meshopt_decoder.js")) {
     event.respondWith(cacheFirst(request, SHELL_CACHE).catch(() => Response.error()));
     return;
   }
