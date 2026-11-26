@@ -175,7 +175,8 @@ const waterGpuEnd=builder.indexOf('const waterGpuPlugin=new NordicWaterGpuPlugin
 const waterGpuShaderBlock=builder.slice(waterGpuStart,waterGpuEnd);
 assert.ok(waterGpuStart>=0&&waterGpuEnd>waterGpuStart&&
   waterGpuShaderBlock.includes('norseWaterDetailRadiusSq')&&
-  !waterGpuShaderBlock.includes('norseWaterDetailRadius*norseWaterDetailRadius'),
+  !waterGpuShaderBlock.includes('norseWaterDetailRadius*norseWaterDetailRadius')&&
+  !waterGpuShaderBlock.includes('nwRadiusSq'),
   'The water vertex shader must receive the squared detail radius once instead of multiplying it per vertex.');
 assert.ok(waterGpuShaderBlock.includes('this._lastUniformBuffer===uniformBuffer')&&
   waterGpuShaderBlock.includes('this._lastUniformFrame===frameId')&&
