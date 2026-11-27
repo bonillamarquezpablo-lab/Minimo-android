@@ -803,8 +803,10 @@ async function main() {
     assert.ok(renderResolution,'Falta la telemetría del framebuffer de Babylon.');
     assert.ok(Number.isFinite(renderResolution.renderWidth)&&Number.isFinite(renderResolution.renderHeight)&&renderResolution.renderWidth>0&&renderResolution.renderHeight>0,
       'La resolución real del framebuffer no es válida: '+JSON.stringify(renderResolution));
-    assert.equal(renderResolution.fullNativeResolution,true,
-      'El perfil Calidad de esta prueba debe dibujar a resolución física nativa: '+JSON.stringify(renderResolution));
+    assert.equal(renderResolution.renderWidth,renderResolution.physicalPixelWidth,
+      'El perfil Calidad debe dibujar al ancho físico nativo: '+JSON.stringify(renderResolution));
+    assert.equal(renderResolution.renderHeight,renderResolution.physicalPixelHeight,
+      'El perfil Calidad debe dibujar al alto físico nativo: '+JSON.stringify(renderResolution));
     manifest.renderResolution=renderResolution;
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
