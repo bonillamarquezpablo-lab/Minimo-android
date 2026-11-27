@@ -24,6 +24,11 @@ assert.ok(buildSite.includes("spatialVegetationMotionPattern=/^(?:mixedForestTre
 assert.ok(buildSite.includes("created-after-octree") && buildSite.includes("octree-initial-dynamic"),"New meshes and Babylon initial dynamic entries must be tracked.");
 assert.ok(indexHtml.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),"Felled trees must be transferred to dynamic octree selection before falling.");
 assert.ok(buildSite.includes('buildSpatialSelectionOctree();'),"The spatial index must be built before the campaign selector is shown.");
+assert.ok(buildSite.includes("window.__ELSN_STARTUP_HANDOFF__={phase:'entered'") &&
+  buildSite.includes("phase='spatial-index'") && buildSite.includes("phase='reveal-selector'") &&
+  buildSite.includes("phase='world-ready'") &&
+  buildSite.includes("window.__ELSN_SPATIAL_BUILD_PROGRESS__"),
+  "Startup diagnostics must distinguish resource completion, spatial indexing and selector handoff.");
 
 const startupCoastWarmupStart=buildSite.indexOf('startup_coast_warmup_code = """');
 const startupCoastWarmupEnd=buildSite.indexOf('if html.count(fauna_scene_marker)',startupCoastWarmupStart);
