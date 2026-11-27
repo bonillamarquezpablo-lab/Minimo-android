@@ -36,6 +36,7 @@ for(const marker of [
   'window.__ELSN_GPU_CONTEXT_LIFECYCLE=gpuContextLifecycle;',
   "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'physicalPixelCoveragePct',
+  'fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight',
   'FPS bajo; la escala de Calidad permanece fija',
   'renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
