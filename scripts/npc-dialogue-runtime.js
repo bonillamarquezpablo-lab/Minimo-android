@@ -254,7 +254,6 @@ function updateWorldBubble(slot,s){
  try{if(typeof window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__==="function")overlayAnchor=window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__(parts)||overlayAnchor;}catch(_){}
  if(isDisposed(overlayAnchor)||(typeof overlayAnchor.getScene==="function"&&overlayAnchor.getScene()!==s.scene))overlayAnchor=root;
  const bubbleHead=liveHeadNode(parts,s.scene);
- const bubbleAnchor=bubbleHead||overlayAnchor;
  const bubbleAnchorMode=bubbleHead?"live-animated-head":(overlayAnchor===root?"npc-root-fallback":"shared-overlay-anchor");
  const BABYLON=s.BABYLON||window.BABYLON;
  if(!BABYLON||!BABYLON.MeshBuilder||!BABYLON.DynamicTexture||!BABYLON.StandardMaterial)return hide("world-bubble-api-unavailable");
@@ -362,10 +361,10 @@ function captureVisualProof(includeDataUrl=false){
   try{
    slot.mesh.computeWorldMatrix?.(true);
    const B=window.BABYLON,world=slot.mesh.getAbsolutePosition?.();
+   if(world)worldPosition3d={x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))};
    const viewport=camera?.viewport?.toGlobal?.(engine?.getRenderWidth?.()||0,engine?.getRenderHeight?.()||0);
    const transform=scene?.getTransformMatrix?.();
    if(B?.Vector3?.Project&&B?.Matrix?.Identity&&world&&viewport&&transform){
-    worldPosition3d={x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))};
     const projected=B.Vector3.Project(world,B.Matrix.Identity(),transform,viewport);
     screenPosition={x:Number(projected.x.toFixed(1)),y:Number(projected.y.toFixed(1)),depth:Number(projected.z.toFixed(4))};
     screenInViewport=projected.z>=0&&projected.z<=1&&projected.x>=0&&projected.y>=0&&projected.x<=engine.getRenderWidth()&&projected.y<=engine.getRenderHeight();
