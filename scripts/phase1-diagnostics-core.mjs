@@ -167,6 +167,8 @@ export function normalizeGameTelemetry(health, browser = {}, options = {}) {
     renderWidth: nonNegativeOrNull(runtime.renderWidth),
     renderHeight: nonNegativeOrNull(runtime.renderHeight),
     renderDpr: nonNegativeOrNull(runtime.renderDpr),
+    physicalPixelCoveragePct: nonNegativeOrNull(runtime.renderResolution?.physicalPixelCoveragePct),
+    qualityScaleFixed: runtime.renderResolution?.qualityScaleFixed === true || runtime.qualityScaleFixed === true,
     jsHeapUsedMB: heapUsedBytes === null ? null : Number((heapUsedBytes / 1048576).toFixed(2)),
     jsHeapLimitMB: heapLimitBytes === null ? null : Number((heapLimitBytes / 1048576).toFixed(2))
   };

@@ -668,9 +668,7 @@ async function main() {
     const campaignButton = page.locator('#newGameChoice');
     await campaignButton.waitFor({ state: 'visible', timeout: 30000 });
 
-    // Diagnose the actual hit target before bypassing Playwright's two-frame stability heuristic.
-    // The campaign card can be affected by a continuously animated intro; the test must not
-    // click through a real overlay, disabled control or hidden button.
+    // Diagnose the actual hit target before interaction. Never bypass hit-testing or click through overlays.
     const introReady = await page.evaluate(() => {
       const intro = document.getElementById('intro');
       const button = document.getElementById('newGameChoice');
@@ -680,6 +678,22 @@ async function main() {
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(centerX, centerY);
+      const describeHitNode = node => {
+        if (!node) return null;
+        const hitStyle = getComputedStyle(node), hitRect = node.getBoundingClientRect();
+        return {
+          tag: node.tagName, id: node.id || null,
+          className: typeof node.className === 'string' ? node.className : null,
+          text: String(node.textContent || '').trim().slice(0, 100),
+          rect: { x: hitRect.x, y: hitRect.y, width: hitRect.width, height: hitRect.height },
+          position: hitStyle.position, zIndex: hitStyle.zIndex,
+          pointerEvents: hitStyle.pointerEvents, display: hitStyle.display,
+          visibility: hitStyle.visibility, opacity: hitStyle.opacity,
+          outerHTML: String(node.outerHTML || '').slice(0, 500)
+        };
+      };
+      const hitStack = document.elementsFromPoint(centerX, centerY).slice(0, 8).map(describeHitNode);
+      const qualityLabPanel = describeHitNode(document.getElementById('elsnQualityLab'));
       const ancestors = [];
       for (let node = button; node && node !== document.documentElement; node = node.parentElement) {
         const computed = getComputedStyle(node);
@@ -719,11 +733,10 @@ async function main() {
         pointerEvents: style.pointerEvents,
         opacity: style.opacity,
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-        hitTarget: hit ? {
-          tag: hit.tagName,
-          id: hit.id || null,
-          className: typeof hit.className === 'string' ? hit.className : null
-        } : null,
+        hitTarget: describeHitNode(hit),
+        hitStack,
+        qualityLabPanel,
+        loadingOverlay: describeHitNode(document.getElementById('loading')),
         animatedAncestors: ancestors,
         activeAnimations: animations
       };
@@ -735,11 +748,8 @@ async function main() {
         JSON.stringify(introReady));
     }
     try {
-      // Dispatch the button's native activation after the explicit visibility, enabled-state and hit-test checks above.
-      // Playwright's click(force) still waits for a stable bounding box; the intro's perpetual entrance/pulse animation
-      // can keep that heuristic pending forever even though the control is visibly unobstructed and receives pointer hits.
-      // HTMLElement.click() runs the same registered click handlers without waiting for CSS animation stability.
-      await campaignButton.evaluate(button => button.click());
+      // Use a real pointer action after the independent hit-test check. Never use force or HTMLElement.click().
+      await campaignButton.click({ timeout: 15000 });
     } catch (error) {
       await page.screenshot({ path: path.join(OUT, 'campaign-selector-click-failure.png'), fullPage: true }).catch(() => {});
       throw new Error('El botón de nueva partida superó las comprobaciones de visibilidad y hit-test, ' +
@@ -793,8 +803,10 @@ async function main() {
     assert.ok(renderResolution,'Falta la telemetría del framebuffer de Babylon.');
     assert.ok(Number.isFinite(renderResolution.renderWidth)&&Number.isFinite(renderResolution.renderHeight)&&renderResolution.renderWidth>0&&renderResolution.renderHeight>0,
       'La resolución real del framebuffer no es válida: '+JSON.stringify(renderResolution));
-    assert.equal(renderResolution.fullNativeResolution,true,
-      'El perfil Calidad de esta prueba debe dibujar a resolución física nativa: '+JSON.stringify(renderResolution));
+    assert.equal(renderResolution.renderWidth,renderResolution.physicalPixelWidth,
+      'El perfil Calidad debe dibujar al ancho físico nativo: '+JSON.stringify(renderResolution));
+    assert.equal(renderResolution.renderHeight,renderResolution.physicalPixelHeight,
+      'El perfil Calidad debe dibujar al alto físico nativo: '+JSON.stringify(renderResolution));
     manifest.renderResolution=renderResolution;
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');

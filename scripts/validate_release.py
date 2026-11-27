@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.360"
+EXPECTED_VERSION = "0.6.362"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -26,9 +26,9 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "performanceAuditActive=perfAuditScenario!=='sin seleccionar'",
     "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
     "const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;",
-    "fullNativeResolution",
-    "expectedDeviceWidth",
-    "expectedDeviceHeight",
+    "physicalPixelCoveragePct",
+    "physicalPixelWidth",
+    "physicalPixelHeight",
     "window.getGameVisualActorDiagnostics=()=>{",
     "RealCastawayStickBranch",
     "const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();",
@@ -609,20 +609,20 @@ def main() -> None:
         fail("Falta la detección y pose procedural de agarre de la mano derecha.")
     graphics_quality_markers = (
         "window.__ELSN_RENDER_RESOLUTION=()=>{",
-        "fullNativeResolution",
-        "expectedDeviceWidth",
-        "expectedDeviceHeight",
-        "highHeadroomQualityMobile?deviceDpr:1.45",
+        "physicalPixelCoveragePct",
+        "physicalPixelWidth",
+        "physicalPixelHeight",
+        "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
-        "qualityScaleAdaptive:false",
+        "qualityScaleAdaptive:qualityLabAdaptiveActive",
         "const targetFrameRate=120;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
-        "FPS bajo; la calidad y resolución nativa permanecen bloqueadas.",
-        "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))",
+        "FPS bajo; la escala de Calidad permanece fija",
+        "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
         "'sand',isPerformanceMode?(isConstrainedMobile?256:512):(highHeadroomQualityMobile?2048:1024),true)",
@@ -632,12 +632,13 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityScaleLockedForSession:true" not in index_html or "qualityScaleAdaptive:false" not in index_html or "nativeResolutionPreserved:!!(window.__ELSN_RENDER_RESOLUTION&&window.__ELSN_RENDER_RESOLUTION().fullNativeResolution)" not in index_html:
-        fail("El perfil Calidad debe conservar la resolución nativa durante toda la sesión y medir los cuellos de botella sin degradarla.")
-    if "engine.setHardwareScalingLevel(1/qualityDprCurrent)" in index_html or "qualityDprSlowSamples" in index_html:
-        fail("El runtime no puede reducir la resolución nativa automáticamente.")
+    if "qualityScaleFixed:!qualityLabAdaptiveActive" not in index_html or "physicalPixelCoveragePct" not in index_html:
+        fail("El perfil Calidad debe informar la escala fija y el porcentaje real de píxeles físicos.")
+    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt\)\{([\s\S]*?)\n  \}", index_html)
+    if not quality_adaptive_match or "engine.setHardwareScalingLevel" in quality_adaptive_match.group(1) or "qualityDprSlowSamples" in quality_adaptive_match.group(1):
+        fail("El runtime no puede reducir automáticamente la escala de Calidad; los cambios manuales quedan limitados al laboratorio debug.")
     mobile_gpu_budget_markers = (
-        "highHeadroomQualityMobile?deviceDpr:1.45",
+        "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
         "nordicWaterMirror.refreshRate=isTouchDevice?12:8",
         "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))",
@@ -658,9 +659,14 @@ def main() -> None:
             fail("La actualización de DynamicTexture debe recuperar el motor vivo o descartar de forma segura una textura huérfana: " + dynamic_texture_guard)
     spatial_selection_markers = (
         "scene.createOrUpdateSelectionOctree(64,3)",
+        "await yieldSpatialWorkFrame()",
+        "babylonOctreeBuildMs",
+        "dynamicClassificationMs",
+        "await freezeSpatialStaticWorldMatrices()",
+        "await buildSpatialSelectionOctree();\n   startupAssetsReady=true;",
         "scene.onNewMeshAddedObservable.add",
         "scene.onMeshRemovedObservable.add",
-        "function buildSpatialSelectionOctree()",
+        "async function buildSpatialSelectionOctree()",
         "buildSpatialSelectionOctree();",
         "const installSpatialDynamicCandidateFilter=()=>{",
         "scene.getActiveMeshCandidates=()=>{",
@@ -669,6 +675,8 @@ def main() -> None:
         "mesh.alwaysSelectAsActiveMesh",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
+        "meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs",
+        "meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs",
         "meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio",
         "meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason",
         "meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled",
@@ -691,7 +699,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'68',build:'0.6.360'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'70',build:'0.6.362'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -732,8 +740,8 @@ def main() -> None:
     missing_mobile_memory = [marker for marker in mobile_memory_markers if marker not in index_html]
     if missing_mobile_memory:
         fail("La versión móvil debe escalonar GLB, liberar fuentes ya importadas y registrar memoria sin alterar Calidad: " + ", ".join(missing_mobile_memory))
-    if "const qualityDpr=isPerformanceMode" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
-        fail("La política de memoria no debe sustituir la escala gráfica seleccionada.")
+    if "const qualityDprDefault=isPerformanceMode" not in index_html or "const qualityDpr=(!isPerformanceMode&&qualityLabEnabled" not in index_html or "engine.setHardwareScalingLevel(renderScale)" not in index_html:
+        fail("La política de memoria no debe sustituir la escala gráfica seleccionada ni el selector de depuración.")
     missing_beach_diagnostics = [marker for marker in beach_diagnostic_markers if marker not in index_html]
     if missing_beach_diagnostics:
         fail("El informe debe separar CPU de tiempo transcurrido y medir el material/texturas de arena: " + ", ".join(missing_beach_diagnostics))
@@ -747,8 +755,10 @@ def main() -> None:
     ):
         if marker not in index_html:
             fail("Falta instrumentación/diagnóstico real de Babylon: " + marker)
-    if "if(false){" not in index_html or "if(fsr1Candidate){" in index_html:
-        fail("El arranque aún contiene una rama FSR heredada sin proteger.")
+    if "if(false){" in index_html or "if(fsr1Candidate){" not in index_html or "qualityLabFsr1Requested" not in index_html:
+        fail("FSR1 debe estar disponible solo con debug=1 y fsr1=1.")
+    if "Prueba de nitidez" not in index_html or "BENCHMARK_MS=15000" not in index_html:
+        fail("Falta el laboratorio gráfico con la prueba de 15 segundos.")
     if "const PLAYER_MOVEMENT_LOCKED_ACTIONS=new Set(" not in index_html or "PLAYER_MOVEMENT_LOCKED_ACTIONS.has(playerAction)" not in index_html:
         fail("El bucle de movimiento debe reutilizar el conjunto de acciones bloqueadas.")
     if "function refreshPlayerGroundNormal(x,z)" not in index_html or "const normal=refreshPlayerGroundNormal(player.root.position.x,player.root.position.z);" not in index_html or "playerGroundNormalForMovement=playerGroundNormalCache" not in index_html:
@@ -766,7 +776,7 @@ def main() -> None:
         fail("El espejo del agua debe actualizarse solo con la isla activa.")
     if "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024" not in index_html or "nordicWaterMirror.updateSamplingMode(B.Texture.TRILINEAR_SAMPLINGMODE)" not in index_html or "anisotropicFilteringLevel=Math.min(8,maxAnisotropy)" not in index_html or "reflectionFilteredMeshCount" not in index_html or "tinyReflectionDetail=vertexCount<96" not in index_html or "list.length<180" not in index_html or "reflectionLimitDiscardedMeshCount" not in index_html or "nordicWaterMirror.refreshRate=isTouchDevice?12:8" not in index_html:
         fail("El reflejo de Calidad debe conservar la resolución, el presupuesto visual y la cadencia originales.")
-    if "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
+    if "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))" not in index_html or "renderPipeline.sharpen.edgeAmount=.34" not in index_html or "shadowMap.refreshRate=isConstrainedMobile?14:(isPerformanceMode?10:(highHeadroomQualityMobile?10:4))" not in index_html:
         fail("El perfil móvil de gama alta debe usar MSAA nativo, nitidez moderada, sombras cacheadas y reflejos filtrados.")
     if "const boneCount=skeletons.reduce" not in index_html or "skinnedVertexCount<600" not in index_html or "root.setParent(actor,true,true)" not in index_html or "normalizeActorScaleFromWorldBounds(actor,meshes,expectedHeight)" not in index_html or "function skinnedVertexWorldBounds(mesh)" not in index_html or "mesh.setPositionsForCPUSkinning()" not in index_html or "skeleton.getTransformMatrices(mesh)" not in index_html or "heightError>heightTolerance" not in index_html:
         fail("La fauna debe preservar las transformaciones GLB, medir límites locales esqueletizados en espacio mundial y validar la altura física final de cada animal.")
@@ -1093,7 +1103,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'68',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'70',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")

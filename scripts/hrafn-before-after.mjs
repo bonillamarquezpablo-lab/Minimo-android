@@ -160,7 +160,7 @@ async function sampleGraphicsPerformance(page, label, startupHeapTrace = []) {
       build: document.querySelector('meta[name="el-sin-nombre-build"]')?.content || null,
       profile: runtime.graphicsProfile || null, fps: runtime.fps ?? health.fps ?? null,
       frameTiming: runtime.frameTimingMs || null, performanceAssessment: runtime.performanceAssessment || null,
-      renderDpr: renderResolution?.renderDpr ?? runtime.renderDpr ?? null, renderWidth: renderResolution?.renderWidth ?? runtime.renderWidth ?? null, renderHeight: renderResolution?.renderHeight ?? runtime.renderHeight ?? null, renderResolution, nativeResolutionPreserved: renderResolution?.fullNativeResolution ?? null,
+      renderDpr: renderResolution?.renderDpr ?? runtime.renderDpr ?? null, renderWidth: renderResolution?.renderWidth ?? runtime.renderWidth ?? null, renderHeight: renderResolution?.renderHeight ?? runtime.renderHeight ?? null, renderResolution, qualityScaleFixed: renderResolution?.qualityScaleFixed ?? runtime.qualityScaleFixed ?? null, physicalPixelCoveragePct: renderResolution?.physicalPixelCoveragePct ?? runtime.physicalPixelCoveragePct ?? null,
       drawCalls: runtime.drawCalls ?? null, activeMeshes: runtime.activeMeshes ?? null, totalVertices: runtime.totalVertices ?? null,
       worldUpdateMs: runtime.worldUpdateMs ?? null, renderCpuMs: runtime.renderCpuMs ?? null,
       gpuRenderer: runtime.gpuRenderer || null, gpuVendor: runtime.gpuVendor || null, webglVersion: runtime.webglVersion || null,

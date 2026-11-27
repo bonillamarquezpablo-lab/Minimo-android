@@ -133,10 +133,12 @@ assert.ok(dialogueRuntime.includes('projectionAttempts') &&
   smoke.includes('proof?.uploadInvertY === true') &&
   smoke.includes('renderedBubbleVerified: false'),
   'The runtime must expose positioning attempts and the browser smoke must persist its complete snapshot with the NPC texture proof.');
-assert.match(smoke, /campaignButton\.evaluate\(button => button\.click\(\)\)/,
-  'Campaign entry must not hang on Playwright bounding-box stability while the intro is continuously animated.');
-assert.doesNotMatch(smoke, /campaignButton\.click\(\{\s*force:\s*true/,
-  'Do not rely on Playwright force-click stability semantics for the animated campaign card.');
+assert.match(smoke, /document\.elementsFromPoint\(centerX, centerY\)/,
+  'Campaign entry must record the real hit-test stack and reject overlays before interaction.');
+assert.match(smoke, /campaignButton\.click\(\{\s*timeout:\s*15000\s*\}\)/,
+  'Campaign entry must use a real Playwright pointer click after the hit-test passes.');
+assert.doesNotMatch(smoke, /campaignButton\.evaluate\(button => button\.click\(\)\)|force:\s*true/,
+  'Do not bypass the browser hit-test with a programmatic or forced click.');
 assert.match(smoke, /SKIP_WARM_ONLINE_RESTART/);
 assert.match(smoke, /context\.setOffline\(true\)/,
   'Skipping the redundant online warm boot must not skip the offline Service Worker restart.');
