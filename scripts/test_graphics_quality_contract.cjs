@@ -90,6 +90,9 @@ assert.ok(atmosphere.includes("this.quality === 'high' && !this.isTouchDevice"),
 assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must keep one standard shadow map instead of a cascaded shadow pass.');
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
 assert.ok(qualityLab.includes('pointer-events:none'), 'The debug quality lab panel must not intercept pointer events on the underlying campaign selector.');
+assert.ok(qualityLab.includes("aria-expanded=\"false\"") && qualityLab.includes("data-content hidden") && qualityLab.includes("data-toggle"), 'The render lab must start folded behind a compact launcher.');
+assert.ok(qualityLab.includes("pointer-events:none;width:auto") && qualityLab.includes("panel.querySelectorAll('button,select,input,a').forEach(control=>{control.style.pointerEvents='auto';});"), 'The folded lab wrapper must pass through gameplay pointers and expose only real controls.');
+assert.ok(qualityLab.includes("setExpanded(false)") && qualityLab.includes("toggle.addEventListener('click'"), 'The render lab must be expandable and foldable without being removed permanently.');
 assert.ok(qualityLab.includes("panel.querySelectorAll('button,select,input,a').forEach(control=>{control.style.pointerEvents='auto';});"), 'Only actionable quality-lab controls may receive pointer events.');
 
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
