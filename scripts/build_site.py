@@ -3054,9 +3054,9 @@ function updateWildlife(dt){
     if game_version != "0.6.274":
         raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.364; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.363\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.364\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.363.")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.364.")
     html = html.replace("0.6.274", "0.6.363")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
@@ -3622,6 +3622,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.phase='native-octree-build';
    spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
+   spatialSelectionOctree=octree||null;
    assertSpatialBuildBudget('native-octree-build');
    markSpatialPhase('native-octree-build-complete');
    spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
@@ -3666,6 +3667,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    }
    spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
    spatialBuildProgress.phase='freezing-static-matrices';
+   markSpatialPhase('freezing-static-matrices');
    spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
    assertSpatialBuildBudget('after-static-matrix-freeze');
