@@ -28,7 +28,7 @@ const SOCIAL_MEMORY_KEY="elsn-npc-social-memory-v1";
 function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.getItem(SOCIAL_MEMORY_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.pairs))return;for(const row of data.pairs.slice(-64)){if(!row||typeof row.key!=="string"||row.key.length>180)continue;relationships.set(row.key,{key:row.key,rapport:Math.max(0,Math.min(5,Number(row.rapport)||0)),exchanges:Math.max(0,Math.floor(Number(row.exchanges)||0)),recentTopics:Array.isArray(row.recentTopics)?row.recentTopics.map(x=>String(x).slice(0,40)).slice(-4):[]});}}catch(_){}}
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,staleBubbleSlotsCleared:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,invalidSceneRootCount:0,disabledNearbyRootCount:0,recoveredNearbyRootCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:"",overlayAnchorCount:0,lastAttachment:null};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,staleBubbleSlotsCleared:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,invalidSceneRootCount:0,disabledNearbyRootCount:0,recoveredNearbyRootCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:"",overlayAnchorCount:0,lastAttachment:null,liveAttachmentFrames:0,liveAttachmentReparents:0,lastLiveAttachment:null};
 const positioningSamples=new Float32Array(120);let positioningCursor=0,positioningCount=0;
 function recordPositioningSample(startedAt){
  const duration=Math.max(0,performance.now()-startedAt);
@@ -45,12 +45,25 @@ function positioningPercentiles(){
 let schedulerHandle=0,positionHandle=0,lastActive=false,renderedCount=0,lastSnapshot=null,lastCapturedCount=null,recentCaptureUntil=0;
 const RANGE_SQUARED=RANGE*RANGE;
 function bubbleLimit(){return window.matchMedia&&window.matchMedia("(max-width: 700px)").matches?1:MAX_BUBBLES;}
-function makeSlot(index){return{index,current:null,roleText:"",kindText:"",messageText:"",mesh:null,texture:null,material:null,anchor:null,textDirty:true,lastUploadInvertY:false};}
+function makeSlot(index){return{index,current:null,roleText:"",kindText:"",messageText:"",mesh:null,texture:null,material:null,anchor:null,anchorMode:"",textDirty:true,lastUploadInvertY:false};}
 for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i));
 const random=()=>Math.random(),between=(a,b)=>a+random()*(b-a);
 function rootOf(n){return n&&(n.parts&&n.parts.root||n.root||n.actor||n);}
 function idOf(n){const root=rootOf(n);return String(n&&n.parts&&(n.parts.name||(n.parts.root&&n.parts.root.name))||n&&n.name||root&&root.name||"");}
 function worldPosition(node){if(!node)return null;try{if(typeof node.computeWorldMatrix==="function")node.computeWorldMatrix(true);const p=typeof node.getAbsolutePosition==="function"?node.getAbsolutePosition():node.position||null;return p&&Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y))&&Number.isFinite(Number(p.z))?p:null;}catch(_){return null;}}
+function liveHeadNode(parts,scene){
+ if(!parts)return null;
+ const real=parts.realHuman||{},rig=real.rig||{},head=parts.head||rig.head||null;
+ let transformNode=null;
+ try{if(head&&typeof head.getTransformNode==="function")transformNode=head.getTransformNode();}catch(_){}
+ const candidates=[head,head&&head.node,transformNode,rig.head,rig.head&&rig.head.node];
+ for(const node of candidates){
+  if(!node||isDisposed(node)||typeof node.getAbsolutePosition!=="function")continue;
+  try{if(typeof node.getScene==="function"&&node.getScene()!==scene)continue;}catch(_){continue;}
+  return node;
+ }
+ return null;
+}
 function distance(a,b){return a&&b?Math.hypot(Number(a.x)-Number(b.x),Number(a.z)-Number(b.z)):Infinity;}
 function distanceSquared(a,b){if(!a||!b)return Infinity;const dx=Number(a.x)-Number(b.x),dz=Number(a.z)-Number(b.z);return dx*dx+dz*dz;}
 function isDisposed(node){try{return !node||(typeof node.isDisposed==="function"&&node.isDisposed());}catch(_){return true;}}
@@ -222,6 +235,9 @@ function updateWorldBubble(slot,s){
  let overlayAnchor=parts&&parts.overlayAnchor||root;
  try{if(typeof window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__==="function")overlayAnchor=window.__ELSN_ENSURE_NPC_OVERLAY_ANCHOR__(parts)||overlayAnchor;}catch(_){}
  if(isDisposed(overlayAnchor)||(typeof overlayAnchor.getScene==="function"&&overlayAnchor.getScene()!==s.scene))overlayAnchor=root;
+ const bubbleHead=liveHeadNode(parts,s.scene);
+ const bubbleAnchor=bubbleHead||overlayAnchor;
+ const bubbleAnchorMode=bubbleHead?"live-animated-head":(overlayAnchor===root?"npc-root-fallback":"shared-overlay-anchor");
  const BABYLON=s.BABYLON||window.BABYLON;
  if(!BABYLON||!BABYLON.MeshBuilder||!BABYLON.DynamicTexture||!BABYLON.StandardMaterial)return hide("world-bubble-api-unavailable");
  try{
@@ -238,19 +254,56 @@ function updateWorldBubble(slot,s){
    slot.mesh.isPickable=false;slot.mesh.checkCollisions=false;slot.mesh.alwaysSelectAsActiveMesh=true;
    slot.mesh.renderingGroupId=2;slot.mesh.setEnabled(false);slot.textDirty=true;
   }
-  if(slot.anchor!==overlayAnchor){slot.mesh.parent=overlayAnchor;slot.anchor=overlayAnchor;}
-  slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0);
+  if(slot.mesh.parent!==bubbleAnchor||slot.anchor!==bubbleAnchor){slot.mesh.parent=bubbleAnchor;slot.anchor=bubbleAnchor;}
+  slot.anchorMode=bubbleAnchorMode;
+  slot.mesh.position.set(0,(bubbleHead?.58:(overlayAnchor===root?2.48:.66))+slot.index*.42,0);
   if(slot.textDirty)paintWorldBubble(slot);
   slot.mesh.setEnabled(true);
   const anchorWorld=worldPosition(overlayAnchor);
   diagnostics.overlayAnchorCount=Number(diagnostics.overlayAnchorCount||0)+1;
-  diagnostics.lastAttachment={id:idOf(npc),rootName:String(root.name||root.id||""),anchorName:String(overlayAnchor.name||overlayAnchor.id||""),root:{x:Number(rootPos.x.toFixed(2)),y:Number(rootPos.y.toFixed(2)),z:Number(rootPos.z.toFixed(2))},anchorWorld:anchorWorld?{x:Number(anchorWorld.x.toFixed(2)),y:Number(anchorWorld.y.toFixed(2)),z:Number(anchorWorld.z.toFixed(2))}:null,distance:Number(distance(rootPos,s.playerPosition).toFixed(2)),anchor:overlayAnchor===root?"npc-root-fallback":"shared-overlay-anchor",at:Date.now()};
+  diagnostics.lastAttachment={id:idOf(npc),rootName:String(root.name||root.id||""),anchorName:String(overlayAnchor.name||overlayAnchor.id||""),root:{x:Number(rootPos.x.toFixed(2)),y:Number(rootPos.y.toFixed(2)),z:Number(rootPos.z.toFixed(2))},anchorWorld:anchorWorld?{x:Number(anchorWorld.x.toFixed(2)),y:Number(anchorWorld.y.toFixed(2)),z:Number(anchorWorld.z.toFixed(2))}:null,distance:Number(distance(rootPos,s.playerPosition).toFixed(2)),anchor:bubbleAnchorMode,headAnchorName:bubbleHead?String(bubbleHead.name||bubbleHead.id||""):"",at:Date.now()};
   diagnostics.lastHideReason="";diagnostics.projectionSuccesses++;return true;
  }catch(error){diagnostics.lastError=String(error&&error.message||error);return hide("world-bubble-exception");}
+}
+let attachmentObserverScene=null,attachmentObserver=null;
+function installLiveAttachmentObserver(scene){
+ if(!scene||!scene.onBeforeRenderObservable||typeof scene.onBeforeRenderObservable.add!=="function")return;
+ if(attachmentObserverScene===scene&&attachmentObserver)return;
+ if(attachmentObserver&&attachmentObserverScene&&attachmentObserverScene.onBeforeRenderObservable){
+  try{attachmentObserverScene.onBeforeRenderObservable.remove(attachmentObserver);}catch(_){}
+ }
+ attachmentObserverScene=scene;
+ attachmentObserver=scene.onBeforeRenderObservable.add(()=>{
+  if(!lastActive||document.hidden)return;
+  for(const slot of slots){
+   if(!slot.current||!slot.mesh)continue;
+   const npc=slot.current.npc,parts=npc&&(npc.parts||npc)||{},root=rootOf(npc);
+   let anchor=liveHeadNode(parts,scene)||slot.anchor;
+   if(!anchor||isDisposed(anchor))anchor=root;
+   if(!anchor||isDisposed(anchor))continue;
+   if(slot.mesh.parent!==anchor||slot.anchor!==anchor){
+    slot.mesh.parent=anchor;slot.anchor=anchor;
+    slot.anchorMode=anchor===root?"npc-root-fallback":(anchor===parts.overlayAnchor?"shared-overlay-anchor":"live-animated-head");
+    slot.mesh.position.set(0,(slot.anchorMode==="npc-root-fallback"?2.48:(slot.anchorMode==="live-animated-head"?.58:.66))+slot.index*.42,0);
+    diagnostics.liveAttachmentReparents++;
+   }
+   try{
+    if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);
+    if(typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);
+    if(typeof slot.mesh.computeWorldMatrix==="function")slot.mesh.computeWorldMatrix(true);
+    diagnostics.liveAttachmentFrames++;
+    if(diagnostics.liveAttachmentFrames%30===0){
+     const point=worldPosition(slot.mesh);
+     diagnostics.lastLiveAttachment={id:idOf(npc),anchorMode:slot.anchorMode,anchorName:String(anchor.name||anchor.id||""),world:point?{x:Number(point.x.toFixed(3)),y:Number(point.y.toFixed(3)),z:Number(point.z.toFixed(3))}:null,at:Date.now()};
+    }
+   }catch(error){diagnostics.lastError=String(error&&error.message||error);}
+  }
+ });
 }
 function render(s){
  const started=performance.now(),active=!!(s&&s.active&&!document.hidden&&!blockingUi());
  if(!active){for(const slot of slots)if(slot.mesh)slot.mesh.setEnabled(false);renderedCount=0;recordPositioningSample(started);return;}
+ installLiveAttachmentObserver(s.scene);
  const limit=bubbleLimit();let visible=0;
  for(let i=0;i<slots.length;i++){
   const slot=slots[i];
@@ -291,13 +344,14 @@ function captureVisualProof(includeDataUrl=false){
   const meshReady=typeof slot.mesh.isReady==="function"?slot.mesh.isReady(true):true;
   const parent=slot.mesh.parent,position=slot.mesh.position;
   const scene=slot.mesh.getScene?.(),camera=scene?.activeCamera,engine=scene?.getEngine?.();
-  let screenPosition=null,screenInViewport=false;
+  let screenPosition=null,screenInViewport=false,worldPosition3d=null;
   try{
    slot.mesh.computeWorldMatrix?.(true);
    const B=window.BABYLON,world=slot.mesh.getAbsolutePosition?.();
    const viewport=camera?.viewport?.toGlobal?.(engine?.getRenderWidth?.()||0,engine?.getRenderHeight?.()||0);
    const transform=scene?.getTransformMatrix?.();
    if(B?.Vector3?.Project&&B?.Matrix?.Identity&&world&&viewport&&transform){
+    worldPosition3d={x:Number(world.x.toFixed(3)),y:Number(world.y.toFixed(3)),z:Number(world.z.toFixed(3))};
     const projected=B.Vector3.Project(world,B.Matrix.Identity(),transform,viewport);
     screenPosition={x:Number(projected.x.toFixed(1)),y:Number(projected.y.toFixed(1)),depth:Number(projected.z.toFixed(4))};
     screenInViewport=projected.z>=0&&projected.z<=1&&projected.x>=0&&projected.y>=0&&projected.x<=engine.getRenderWidth()&&projected.y<=engine.getRenderHeight();
@@ -307,7 +361,7 @@ function captureVisualProof(includeDataUrl=false){
   const ready=!!enabled&&visible&&!!meshReady&&screenInViewport&&!slot.textDirty&&!!slot.messageText&&slot.lastUploadInvertY===true;
   return{
    ready,id:slot.current.id,role:slot.roleText,text:slot.messageText,messagePainted:!slot.textDirty,
-   meshEnabled:!!enabled,meshVisible:visible,meshReady:!!meshReady,screenInViewport,screenPosition,
+   meshEnabled:!!enabled,meshVisible:visible,meshReady:!!meshReady,screenInViewport,screenPosition,worldPosition:worldPosition3d,anchorMode:slot.anchorMode,
    renderingGroupId:Number(slot.mesh.renderingGroupId),sceneRenderId:scene?.getRenderId?.()??null,
    parentName:String(parent&&(parent.name||parent.id)||""),
    position:position?{x:Number(position.x.toFixed(3)),y:Number(position.y.toFixed(3)),z:Number(position.z.toFixed(3))}:null,
@@ -334,7 +388,7 @@ function captureVisualProof(includeDataUrl=false){
   return !!smokeSlot&&smokeSlot.current?.id===target.id;
  }
  const npcDialogueApi={
-  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),overlayAnchorDiagnostics:typeof window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__==="function"?window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__():null,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
+  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),overlayAnchorDiagnostics:typeof window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__==="function"?window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__():null,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastLiveAttachment:diagnostics.lastLiveAttachment,liveAttachmentFrames:diagnostics.liveAttachmentFrames,liveAttachmentReparents:diagnostics.liveAttachmentReparents,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
   captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)
  };
  const dialogueSmokeParams=new URLSearchParams(location.search||'');
