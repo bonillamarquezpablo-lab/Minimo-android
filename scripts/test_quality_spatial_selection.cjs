@@ -42,7 +42,7 @@ for(const marker of [
   'mesh.computeWorldMatrix()',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'scene.skipFrustumClipping',
-  'buildSpatialSelectionOctree();',
+  'Promise.resolve().then(()=>buildSpatialSelectionOctree())',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
