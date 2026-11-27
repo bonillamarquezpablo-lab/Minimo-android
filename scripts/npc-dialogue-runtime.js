@@ -256,7 +256,7 @@ function updateWorldBubble(slot,s){
   }
   if(slot.mesh.parent!==bubbleAnchor||slot.anchor!==bubbleAnchor){slot.mesh.parent=bubbleAnchor;slot.anchor=bubbleAnchor;}
   slot.anchorMode=bubbleAnchorMode;
-  slot.mesh.position.set(0,(bubbleHead?.58:(overlayAnchor===root?2.48:.66))+slot.index*.42,0);
+  slot.mesh.position.set(0,(bubbleHead ? .58 : (overlayAnchor===root?2.48:.66))+slot.index*.42,0);
   if(slot.textDirty)paintWorldBubble(slot);
   slot.mesh.setEnabled(true);
   const anchorWorld=worldPosition(overlayAnchor);
@@ -284,7 +284,7 @@ function installLiveAttachmentObserver(scene){
    if(slot.mesh.parent!==anchor||slot.anchor!==anchor){
     slot.mesh.parent=anchor;slot.anchor=anchor;
     slot.anchorMode=anchor===root?"npc-root-fallback":(anchor===parts.overlayAnchor?"shared-overlay-anchor":"live-animated-head");
-    slot.mesh.position.set(0,(slot.anchorMode==="npc-root-fallback"?2.48:(slot.anchorMode==="live-animated-head"?.58:.66))+slot.index*.42,0);
+    slot.mesh.position.set(0,(slot.anchorMode==="npc-root-fallback"?2.48:(slot.anchorMode==="live-animated-head" ? .58 : .66))+slot.index*.42,0);
     diagnostics.liveAttachmentReparents++;
    }
    try{
