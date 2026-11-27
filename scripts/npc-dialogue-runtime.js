@@ -226,7 +226,9 @@ function positionBubbleAtLiveAnchor(slot,npc,scene){
   // head/root transform every rendered frame; no stale inherited parent matrix.
   if(slot.mesh.parent!==null)slot.mesh.parent=null;
   slot.mesh.position.copyFrom(position);
-  const measuredHeadOffset=Number(parts.overlayAnchor&&parts.overlayAnchor.position&&parts.overlayAnchor.position.y);\n  const fallbackHeadOffset=Number.isFinite(measuredHeadOffset)?measuredHeadOffset+.66:2.48;\n  slot.mesh.position.y+=(head ? .58 : fallbackHeadOffset)+slot.index*.42;
+  const measuredHeadOffset=Number(parts.overlayAnchor&&parts.overlayAnchor.position&&parts.overlayAnchor.position.y);
+  const fallbackHeadOffset=Number.isFinite(measuredHeadOffset)?measuredHeadOffset+.66:2.48;
+  slot.mesh.position.y+=(head ? .58 : fallbackHeadOffset)+slot.index*.42;
   slot.mesh.computeWorldMatrix(true);
   slot.anchor=source;slot.anchorMode=mode;
   return {source,mode,position};
