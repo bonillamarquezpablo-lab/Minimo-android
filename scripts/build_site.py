@@ -875,6 +875,10 @@ def main() -> None:
     if not source_html.exists():
         raise SystemExit("Falta index.html en el repositorio.")
     html = source_html.read_text(encoding="utf-8")
+    startup_performance_observer_tag = '<script src="./scripts/startup-performance-observer.js"></script>'
+    if html.count("</head>") != 1 or html.count(startup_performance_observer_tag) != 0:
+        raise SystemExit("No se pudo insertar de forma única el observador de tareas largas en el head.")
+    html = html.replace("</head>", startup_performance_observer_tag + "\\n</head>", 1)
     # 0.6.360: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
@@ -2110,6 +2114,7 @@ function updateWildlife(dt){
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
     startup_coast_warmup_code = """ if(!coastalReferenceMode){
   const startupCoastWarmupStartedAt=performance.now();
+  const startupCoastPerf=window.__ELSN_STARTUP_PERF__.begin('costa-reflejos-isla-inicial');
   const yieldStartupCoastFrame=()=>new Promise(resolve=>{
    let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
    requestAnimationFrame(finish);setTimeout(finish,90);
@@ -2137,6 +2142,7 @@ function updateWildlife(dt){
    durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
   };
   if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
+  window.__ELSN_STARTUP_PERF__.end(startupCoastPerf,{status:'ready',...window.__ELSN_INITIAL_COAST_WARMUP__});
   recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
  }"""
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
@@ -3234,8 +3240,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  syncActiveBeachIsland();
  syncActiveTidalFoamIsland();
  recordStartupTask('Geometría de costa inicial',initialCoastStartedAt,performance.now(),'ready',{islandIndex:activeBeachIslandIndex,island:land[activeBeachIslandIndex]&&land[activeBeachIslandIndex].name,beachReady:!!livingBeachLayers[activeBeachIslandIndex],foamMeshes:tidalFoamMeshes.length});
- if(!coastalReferenceMode)playerHumanLoadPromise=loadHumanViking();
- let npcStartupPromise=coastalReferenceMode||!allowConcurrentHumanoidGlbImports?Promise.resolve(0):startNpcHumanModels();"""
+ if(!coastalReferenceMode)playerHumanLoadPromise=window.__ELSN_STARTUP_PERF__.track('GLB protagonista',()=>loadHumanViking(),{role:'player'});
+ let npcStartupPromise=coastalReferenceMode||!allowConcurrentHumanoidGlbImports?Promise.resolve(0):window.__ELSN_STARTUP_PERF__.track('GLB roster NPC',()=>startNpcHumanModels(),{role:'npc-roster'});"""
     if html.count(npc_promise_marker) != 1:
         raise SystemExit("No se encontró la promesa única de preparación de NPC.")
     html = html.replace(npc_promise_marker, npc_promise_replacement, 1)
@@ -3244,7 +3250,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     npc_serial_wait_replacement = """   if(!allowConcurrentHumanoidGlbImports){
     // Constrained devices still stage the same complete roster to cap peak decoder memory.
     await playerHumanLoadPromise;
-    npcStartupPromise=startNpcHumanModels();
+    npcStartupPromise=window.__ELSN_STARTUP_PERF__.track('GLB roster NPC',()=>startNpcHumanModels(),{role:'npc-roster',schedule:'sequential-low-memory'});
     await npcStartupPromise;
    }else{
     // High-headroom devices load the protagonist and required NPC roster concurrently.
@@ -3462,7 +3468,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   freezeProcessed:0,freezeTotal:0,yieldCount:0,lastYieldMs:null,
   nativeOctreeBuildMs:null,buildMs:null,error:null
  };
- const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;
+ const spatialWorkSliceBudgetMs=isTouchDevice?6:8;
+ const spatialGlobalBuildBudgetMs=isTouchDevice?16000:12000;
+ let assertSpatialBuildBudget=()=>{};
  const yieldSpatialWorkFrame=()=>new Promise(resolve=>{
   let settled=false,timer=0,requestedAt=performance.now();
   const finish=()=>{
@@ -3483,6 +3491,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   let frozen=0,errors=0,skippedDynamic=0;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
   spatialBuildProgress.phase='freezing-static-matrices';
+   markSpatialPhase('freezing-static-matrices');
   spatialBuildProgress.freezeTotal=meshCount;
   spatialBuildProgress.freezeProcessed=0;
   spatialBuildProgress.updatedAt=startedAt;
@@ -3491,6 +3500,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   // Moving roots, animated rigs, vegetation pivots, effects and all their descendants
   // are excluded; their matrix updates and animations remain live.
   for(let index=0;index<meshCount;index++){
+   if((index&63)===0)assertSpatialBuildBudget('freezing-static-matrices');
    const mesh=scene.meshes[index];
    if(!mesh||mesh.__elsnSpatialDynamic||isSpatialDynamicMesh(mesh)||
       mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||
@@ -3505,6 +3515,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
       // recompute it a second time. This preserves the complete parent/world transform.
       const worldMatrix=mesh.computeWorldMatrix(true);
       mesh.freezeWorldMatrix(worldMatrix);
+      mesh.__elsnSpatialFreezeOwned=true;
       frozen++;
      }
     }catch(_){errors++;}
@@ -3542,7 +3553,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(!classification&&!force)return;
   // A formerly static object may become interactive (for example, a felled tree).
   // Unfreeze it before registering it in Babylon's live dynamic-content list.
-  try{if(typeof mesh.unfreezeWorldMatrix==='function')mesh.unfreezeWorldMatrix();}catch(_){}
+  try{if(mesh.__elsnSpatialFreezeOwned&&typeof mesh.unfreezeWorldMatrix==='function')mesh.unfreezeWorldMatrix();}catch(_){}
+  try{delete mesh.__elsnSpatialFreezeOwned;}catch(_){mesh.__elsnSpatialFreezeOwned=false;}
   mesh.__elsnSpatialDynamic=true;
   mesh.__elsnSpatialDynamicReason=classification;
   mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
@@ -3585,7 +3597,14 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(scene.meshes.length<512||typeof scene.createOrUpdateSelectionOctree!=='function')return false;
   if(!scene.onNewMeshAddedObservable||typeof scene.onNewMeshAddedObservable.add!=='function')return false;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
+  const spatialBuildTrace=window.__ELSN_STARTUP_PERF__.begin('indexacion-espacial',{meshCount});
+  assertSpatialBuildBudget=phase=>{
+   const elapsed=performance.now()-startedAt;
+   if(elapsed>spatialGlobalBuildBudgetMs)throw new Error('Spatial selection global budget exceeded during '+phase+' after '+elapsed.toFixed(1)+' ms');
+  };
+  const markSpatialPhase=phase=>window.__ELSN_STARTUP_PERF__.mark('indexacion-espacial:'+phase,{meshCount,elapsedMs:Number((performance.now()-startedAt).toFixed(1))});
   spatialBuildProgress.phase='waiting-first-yield';
+  markSpatialPhase('waiting-first-yield');
   spatialBuildProgress.startedAt=startedAt;
   spatialBuildProgress.updatedAt=startedAt;
   spatialBuildProgress.meshCount=meshCount;
@@ -3597,6 +3616,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.phase='native-octree-build';
    spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
+   assertSpatialBuildBudget('native-octree-build');
+   markSpatialPhase('native-octree-build-complete');
    spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
    spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.babylonOctreeBuildMs=spatialBuildProgress.nativeOctreeBuildMs;
@@ -3609,9 +3630,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    let workSliceStartedAt=performance.now();
    const initialDynamicCount=octree.dynamicContent.length;
    spatialBuildProgress.phase='tracking-initial-dynamic';
+   markSpatialPhase('tracking-initial-dynamic');
    spatialBuildProgress.initialDynamicCount=initialDynamicCount;
    spatialBuildProgress.initialDynamicProcessed=0;
    for(let index=0;index<initialDynamicCount;index++){
+    if((index&63)===0)assertSpatialBuildBudget('tracking-initial-dynamic');
     spatialBuildProgress.initialDynamicProcessed=index+1;
     if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=octree.dynamicContent[index];
@@ -3625,8 +3648,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    }
    const classificationStartedAt=performance.now();
    spatialBuildProgress.phase='classifying-dynamic-meshes';
+   markSpatialPhase('classifying-dynamic-meshes');
    spatialBuildProgress.classificationProcessed=0;
    for(let index=0;index<meshCount;index++){
+    if((index&63)===0)assertSpatialBuildBudget('classifying-dynamic-meshes');
     spatialBuildProgress.classificationProcessed=index+1;
     if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=scene.meshes[index];
@@ -3637,6 +3662,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.phase='freezing-static-matrices';
    spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
+   assertSpatialBuildBudget('after-static-matrix-freeze');
+   markSpatialPhase('static-matrices-frozen');
    updateSpatialSelectionCounts();
    // Leave Babylon's native SelectionOctree.select() intact. The scene component
    // uses it to gather static octree blocks plus every dynamicContent mesh. Filter
@@ -3714,6 +3741,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.error=null;
    publishSpatialSelectionStats();
+   window.__ELSN_STARTUP_PERF__.end(spatialBuildTrace,{status:'ready',meshCount,durationMs:spatialSelectionStats.buildMs});
    console.info('Babylon spatial selection ready',{
     sceneMeshes:meshCount,
     dynamicMeshes:spatialSelectionStats.dynamicMeshCount,
@@ -3726,7 +3754,20 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    });
    return true;
   }catch(error){
+   // Roll back only matrices frozen by this optional index pass and restore Babylon's default selector.
+   for(const mesh of scene.meshes){
+    if(mesh&&mesh.__elsnSpatialFreezeOwned){
+     try{mesh.unfreezeWorldMatrix?.();}catch(_){}
+     try{delete mesh.__elsnSpatialFreezeOwned;}catch(_){mesh.__elsnSpatialFreezeOwned=false;}
+    }
+    if(mesh&&mesh.__elsnSpatialDynamic){
+     try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;delete mesh.__elsnSpatialFreshUntilRenderId;}catch(_){}
+    }
+   }
+   spatialDynamicMeshSet.clear();
+   try{if(scene.selectionOctree===spatialSelectionOctree)scene.selectionOctree=null;}catch(_){}
    spatialSelectionOctree=null;
+   window.__ELSN_STARTUP_PERF__.end(spatialBuildTrace,{status:'fallback',error:String(error&&error.message||error).slice(0,220)});
    spatialBuildProgress.phase='failed';
    spatialBuildProgress.error=String(error&&error.message||error).slice(0,220);
    spatialBuildProgress.buildMs=Number((performance.now()-startedAt).toFixed(2));
@@ -4140,11 +4181,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   source.puffs=puffs;return puffs.length;
  }
  async function prepareAmbientSmokePuffs(){
-  const started=performance.now();let prepared=0;
+  const started=performance.now(),smokePoolTrace=window.__ELSN_STARTUP_PERF__.begin('piscinas-humo-ambiental',{emitters:smokeEmitters.length});let prepared=0;
   for(let index=0;index<smokeEmitters.length;index++){
    prepared+=createAmbientSmokePuffs(smokeEmitters[index],index);
    if((index+1)%2===0&&index+1<smokeEmitters.length)await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
   }
+  window.__ELSN_STARTUP_PERF__.end(smokePoolTrace,{status:'ready',emitters:smokeEmitters.length,puffs:prepared});
   recordStartupTask('Piscinas de humo ambiental',started,performance.now(),'ready',{emitters:smokeEmitters.length,puffs:prepared,batchEmitters:2});
   return prepared;
  }"""
