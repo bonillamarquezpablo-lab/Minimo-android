@@ -214,6 +214,24 @@ function paintWorldBubble(slot){
  for(let i=0;i<lines.length;i++)ctx.fillText(lines[i],34,132+i*67,690);
  ctx.restore();slot.texture.update(true);slot.lastUploadInvertY=true;slot.textDirty=false;
 }
+function positionBubbleAtLiveAnchor(slot,npc,scene){
+ const parts=npc&&(npc.parts||npc)||{},root=rootOf(npc);
+ const head=liveHeadNode(parts,scene);
+ const source=head||parts.overlayAnchor||root;
+ const position=worldPosition(source);
+ if(!position)return null;
+ const mode=head?"live-animated-head":(source===root?"npc-root-fallback":"shared-overlay-anchor");
+ try{
+  // Keep the card in scene space and refresh its world coordinates from the live
+  // head/root transform every rendered frame; no stale inherited parent matrix.
+  if(slot.mesh.parent!==null)slot.mesh.parent=null;
+  slot.mesh.position.copyFrom(position);
+  slot.mesh.position.y+=(head ? .58 : (source===root?2.48:.66))+slot.index*.42;
+  slot.mesh.computeWorldMatrix(true);
+  slot.anchor=source;slot.anchorMode=mode;
+  return {source,mode,position};
+ }catch(error){diagnostics.lastError=String(error&&error.message||error);return null;}
+}
 function updateWorldBubble(slot,s){
  const c=slot.current;
  const hide=reason=>{
@@ -254,9 +272,9 @@ function updateWorldBubble(slot,s){
    slot.mesh.isPickable=false;slot.mesh.checkCollisions=false;slot.mesh.alwaysSelectAsActiveMesh=true;
    slot.mesh.renderingGroupId=2;slot.mesh.setEnabled(false);slot.textDirty=true;
   }
-  if(slot.mesh.parent!==bubbleAnchor||slot.anchor!==bubbleAnchor){slot.mesh.parent=bubbleAnchor;slot.anchor=bubbleAnchor;}
+  slot.mesh.parent=null;
   slot.anchorMode=bubbleAnchorMode;
-  slot.mesh.position.set(0,(bubbleHead ? .58 : (overlayAnchor===root?2.48:.66))+slot.index*.42,0);
+  const positioned=positionBubbleAtLiveAnchor(slot,npc,s.scene);if(!positioned)return hide("npc-live-anchor-unavailable");
   if(slot.textDirty)paintWorldBubble(slot);
   slot.mesh.setEnabled(true);
   const anchorWorld=worldPosition(overlayAnchor);
@@ -278,17 +296,13 @@ function installLiveAttachmentObserver(scene){
   for(const slot of slots){
    if(!slot.current||!slot.mesh)continue;
    const npc=slot.current.npc,parts=npc&&(npc.parts||npc)||{},root=rootOf(npc);
-   let anchor=liveHeadNode(parts,scene)||slot.anchor;
-   if(!anchor||isDisposed(anchor))anchor=root;
-   if(!anchor||isDisposed(anchor))continue;
-   if(slot.mesh.parent!==anchor||slot.anchor!==anchor){
-    slot.mesh.parent=anchor;slot.anchor=anchor;
-    slot.anchorMode=anchor===root?"npc-root-fallback":(anchor===parts.overlayAnchor?"shared-overlay-anchor":"live-animated-head");
-    slot.mesh.position.set(0,(slot.anchorMode==="npc-root-fallback"?2.48:(slot.anchorMode==="live-animated-head" ? .58 : .66))+slot.index*.42,0);
-    diagnostics.liveAttachmentReparents++;
-   }
+   if(!root||isDisposed(root))continue;
    try{
     if(root&&typeof root.computeWorldMatrix==="function")root.computeWorldMatrix(true);
+    const positioned=positionBubbleAtLiveAnchor(slot,npc,scene);
+    if(!positioned)continue;
+    const anchor=positioned.source;
+    diagnostics.liveAttachmentReparents++;
     if(typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);
     if(typeof slot.mesh.computeWorldMatrix==="function")slot.mesh.computeWorldMatrix(true);
     diagnostics.liveAttachmentFrames++;
