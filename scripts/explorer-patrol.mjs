@@ -196,7 +196,12 @@ async function startGame(page) {
       bootFailed: document.body.classList.contains('boot-failed'),
       bodyClass: document.body.className,
       loadingText: document.querySelector('#loadText')?.textContent || null,
-      loadingHelp: document.querySelector('#loadHelp')?.textContent || null
+      loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+      startupHandoff:window.__ELSN_STARTUP_HANDOFF__||null,
+      spatialBuild:window.__ELSN_SPATIAL_BUILD_PROGRESS__||null,
+      resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
+      startupTimeline:window.__elSinNombreStartupSmoke?.startupTimeline||null,
+      startupPerformance:window.__ELSN_STARTUP_PERF__?.snapshot?.()||null
     }));
     throw new Error('El arranque no alcanzó worldReady: ' + JSON.stringify(report.startup) + ' · ' + String(error?.message || error));
   }
