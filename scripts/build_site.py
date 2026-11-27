@@ -878,7 +878,7 @@ def main() -> None:
     startup_performance_observer_tag = '<script src="./scripts/startup-performance-observer.js"></script>'
     if html.count("</head>") != 1 or html.count(startup_performance_observer_tag) != 0:
         raise SystemExit("No se pudo insertar de forma única el observador de tareas largas en el head.")
-    html = html.replace("</head>", startup_performance_observer_tag + "\\n</head>", 1)
+    html = html.replace("</head>", startup_performance_observer_tag + "\n</head>", 1)
     # 0.6.360: only live combat entities may own damage authority.
     combat_damage_marker = "if(!attacker||!attacker.alive||attacker.recruited||attacker.surrendered)return false;"
     combat_damage_replacement = "if(!attacker||!attacker.alive||attacker.parts&&attacker.parts.alive===false||attacker.recruited||attacker.surrendered)return false;"
@@ -2491,7 +2491,13 @@ function updateWildlife(dt){
     )
     if navigation_check.returncode != 0:
         raise SystemExit("Navigation runtime JavaScript syntax validation failed:\n" + navigation_check.stderr)
-    print("Navigation runtime JavaScript syntax validation passed.")
+    startup_observer_check = subprocess.run(
+        [node, "--check", str(ROOT / "scripts" / "startup-performance-observer.js")],
+        capture_output=True, text=True,
+    )
+    if startup_observer_check.returncode != 0:
+        raise SystemExit("Startup performance observer JavaScript syntax validation failed:\\n" + startup_observer_check.stderr)
+    print("Navigation runtime and startup performance observer JavaScript syntax validation passed.")
     # Anchor decorative terrain objects to the actual rendered GroundMesh. The
     # analytical heightfield can differ from the rendered triangle interpolation,
     # leaving rocks, tree trunks and shrubs visibly detached from the island.
@@ -3046,7 +3052,7 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.363; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.364; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
     html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.363\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
@@ -3469,7 +3475,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   nativeOctreeBuildMs:null,buildMs:null,error:null
  };
  const spatialWorkSliceBudgetMs=isTouchDevice?6:8;
- const spatialGlobalBuildBudgetMs=isTouchDevice?16000:12000;
+ const spatialGlobalBuildBudgetMs=isTouchDevice?30000:45000;
  let assertSpatialBuildBudget=()=>{};
  const yieldSpatialWorkFrame=()=>new Promise(resolve=>{
   let settled=false,timer=0,requestedAt=performance.now();
