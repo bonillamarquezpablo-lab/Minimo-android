@@ -92,6 +92,7 @@ async function readStartupSnapshot(page) {
       startupHandoff:window.__ELSN_STARTUP_HANDOFF__||null,
       spatialBuild:window.__ELSN_SPATIAL_BUILD_PROGRESS__||null,
       spatialSelection:window.__ELSN_SPATIAL_SELECTION__||null,
+      startupPerformance:window.__ELSN_STARTUP_PERF__?.snapshot?.()||null,
       visualActors,
       player:window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.()||null,
       resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
