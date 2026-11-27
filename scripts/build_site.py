@@ -4515,7 +4515,7 @@ function getFrameMaintenanceTimingSnapshot(){
         ),
         (
             "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples));",
-            "renderPipeline.samples=Math.max(1,Math.min(isTouchDevice?(highHeadroomQualityMobile?2:1):4,maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
+            "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples));if(highHeadroomQualityMobile&&renderPipeline.sharpen){renderPipeline.sharpenEnabled=true;renderPipeline.sharpen.edgeAmount=.34;renderPipeline.sharpen.colorAmount=.92;}",
             "use native 2x MSAA and restrained sharpening for flagship mobile without a second spatial upscaling pass",
         ),
     )
