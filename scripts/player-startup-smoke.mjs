@@ -940,7 +940,20 @@ async function main() {
       );
       window.__ELSN_DIALOGUE_SMOKE_RESTORE__ = () => {
         try { root.setAbsolutePosition(original); root.computeWorldMatrix(true); } catch (_) {}
+        delete window.__ELSN_DIALOGUE_SMOKE_MOVE__;
         delete window.__ELSN_DIALOGUE_SMOKE_RESTORE__;
+      };
+      window.__ELSN_DIALOGUE_SMOKE_MOVE__ = (dx, dz) => {
+        try {
+          const current = root.getAbsolutePosition().clone();
+          current.x += Number(dx) || 0;
+          current.z += Number(dz) || 0;
+          root.setAbsolutePosition(current);
+          root.computeWorldMatrix(true);
+          return { x: current.x, y: current.y, z: current.z };
+        } catch (error) {
+          return { error: String(error?.message || error) };
+        }
       };
       root.setAbsolutePosition(probePosition);
       root.computeWorldMatrix(true);
@@ -1007,6 +1020,38 @@ async function main() {
         visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
         'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' +
         JSON.stringify({pollTimedOut:dialogueVisualPollTimedOut,state:visualEvidence.state,proof:visualEvidence.proof}));
+      assert.ok(visualEvidence.proof?.worldPosition,
+        'La prueba de diálogo no capturó la posición mundial de la tarjeta.');
+      const dialogueMove = await page.evaluate(() =>
+        window.__ELSN_DIALOGUE_SMOKE_MOVE__?.(1.65, 0.85) || null);
+      assert.ok(dialogueMove && !dialogueMove.error,
+        'No se pudo desplazar el NPC de prueba: ' + JSON.stringify(dialogueMove));
+      await page.waitForFunction(({ before }) => {
+        const proof = window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.();
+        if (!proof?.worldPosition) return false;
+        const dx = proof.worldPosition.x - before.x;
+        const dz = proof.worldPosition.z - before.z;
+        return Math.hypot(dx, dz) >= 1.35;
+      }, { before: visualEvidence.proof.worldPosition }, { timeout: 5000, polling: 50 });
+      const dialogueAttachmentMotion = await page.evaluate(before => {
+        const proof = window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.();
+        if (!proof?.worldPosition) return null;
+        const dx = proof.worldPosition.x - before.x;
+        const dy = proof.worldPosition.y - before.y;
+        const dz = proof.worldPosition.z - before.z;
+        return {
+          before,
+          after: proof.worldPosition,
+          displacementMeters: Number(Math.hypot(dx, dz).toFixed(3)),
+          verticalDeltaMeters: Number(dy.toFixed(3)),
+          anchorMode: proof.anchorMode,
+          parentName: proof.parentName
+        };
+      }, visualEvidence.proof.worldPosition);
+      assert.ok(dialogueAttachmentMotion && dialogueAttachmentMotion.displacementMeters >= 1.35,
+        'La tarjeta de diálogo no acompañó el desplazamiento real del NPC: ' +
+        JSON.stringify(dialogueAttachmentMotion));
+      manifest.npcDialogueAttachmentMotion = dialogueAttachmentMotion;
       // Chromium's full-page compositor screenshot can stall for 20s under SwiftShader,
       // even after Babylon confirms the billboard is enabled, ready and inside the viewport.
       // Keep that optional evidence separate from the deterministic live-render proof.
