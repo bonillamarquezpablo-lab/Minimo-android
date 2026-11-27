@@ -28,7 +28,7 @@ const SOCIAL_MEMORY_KEY="elsn-npc-social-memory-v1";
 function restoreSocialMemory(){try{const raw=window.localStorage&&localStorage.getItem(SOCIAL_MEMORY_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||data.version!==1||!Array.isArray(data.pairs))return;for(const row of data.pairs.slice(-64)){if(!row||typeof row.key!=="string"||row.key.length>180)continue;relationships.set(row.key,{key:row.key,rapport:Math.max(0,Math.min(5,Number(row.rapport)||0)),exchanges:Math.max(0,Math.floor(Number(row.exchanges)||0)),recentTopics:Array.isArray(row.recentTopics)?row.recentTopics.map(x=>String(x).slice(0,40)).slice(-4):[]});}}catch(_){}}
 function saveSocialMemory(){try{if(!window.localStorage)return;const pairs=Array.from(relationships.values()).slice(-64).map(row=>({key:row.key,rapport:row.rapport,exchanges:row.exchanges,recentTopics:row.recentTopics.slice(-4)}));localStorage.setItem(SOCIAL_MEMORY_KEY,JSON.stringify({version:1,pairs}));}catch(_){}}
 restoreSocialMemory();
-const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,staleBubbleSlotsCleared:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,invalidSceneRootCount:0,disabledNearbyRootCount:0,recoveredNearbyRootCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:"",overlayAnchorCount:0,lastAttachment:null,liveAttachmentFrames:0,liveAttachmentReparents:0,lastLiveAttachment:null};
+const diagnostics={bridgeReady:true,lastTickAt:0,bridgeActive:false,bridgeReportedActive:false,bridgeError:"",snapshotFailures:0,staleBubbleSlotsCleared:0,worldPeopleCount:0,resolvedPeopleCount:0,missingRootCount:0,missingIdentityCount:0,invalidSceneRootCount:0,disabledNearbyRootCount:0,recoveredNearbyRootCount:0,nearestNpcDistanceMeters:null,nearbyCount:0,bubblesStarted:0,projectionAttempts:0,projectionSuccesses:0,projectionFailures:{},projectionCandidateFailures:{},lastProjectionCandidate:null,lastError:"",overlayAnchorCount:0,lastAttachment:null,liveAttachmentFrames:0,liveAttachmentUpdates:0,lastLiveAttachment:null};
 const positioningSamples=new Float32Array(120);let positioningCursor=0,positioningCount=0;
 function recordPositioningSample(startedAt){
  const duration=Math.max(0,performance.now()-startedAt);
@@ -217,7 +217,7 @@ function paintWorldBubble(slot){
 function positionBubbleAtLiveAnchor(slot,npc,scene){
  const parts=npc&&(npc.parts||npc)||{},root=rootOf(npc);
  const head=liveHeadNode(parts,scene);
- const source=head||parts.overlayAnchor||root;
+ const source=head||root;
  const position=worldPosition(source);
  if(!position)return null;
  const mode=head?"live-animated-head":(source===root?"npc-root-fallback":"shared-overlay-anchor");
@@ -226,7 +226,7 @@ function positionBubbleAtLiveAnchor(slot,npc,scene){
   // head/root transform every rendered frame; no stale inherited parent matrix.
   if(slot.mesh.parent!==null)slot.mesh.parent=null;
   slot.mesh.position.copyFrom(position);
-  slot.mesh.position.y+=(head ? .58 : (source===root?2.48:.66))+slot.index*.42;
+  const measuredHeadOffset=Number(parts.overlayAnchor&&parts.overlayAnchor.position&&parts.overlayAnchor.position.y);\n  const fallbackHeadOffset=Number.isFinite(measuredHeadOffset)?measuredHeadOffset+.66:2.48;\n  slot.mesh.position.y+=(head ? .58 : fallbackHeadOffset)+slot.index*.42;
   slot.mesh.computeWorldMatrix(true);
   slot.anchor=source;slot.anchorMode=mode;
   return {source,mode,position};
@@ -301,7 +301,7 @@ function installLiveAttachmentObserver(scene){
     const positioned=positionBubbleAtLiveAnchor(slot,npc,scene);
     if(!positioned)continue;
     const anchor=positioned.source;
-    diagnostics.liveAttachmentReparents++;
+    diagnostics.liveAttachmentUpdates++;
     if(typeof anchor.computeWorldMatrix==="function")anchor.computeWorldMatrix(true);
     if(typeof slot.mesh.computeWorldMatrix==="function")slot.mesh.computeWorldMatrix(true);
     diagnostics.liveAttachmentFrames++;
@@ -401,7 +401,7 @@ function captureVisualProof(includeDataUrl=false){
   return !!smokeSlot&&smokeSlot.current?.id===target.id;
  }
  const npcDialogueApi={
-  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),overlayAnchorDiagnostics:typeof window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__==="function"?window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__():null,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastLiveAttachment:diagnostics.lastLiveAttachment,liveAttachmentFrames:diagnostics.liveAttachmentFrames,liveAttachmentReparents:diagnostics.liveAttachmentReparents,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
+  getSnapshot:()=>({...diagnostics,...positioningPercentiles(),overlayAnchorDiagnostics:typeof window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__==="function"?window.__ELSN_NPC_OVERLAY_ANCHOR_DIAGNOSTICS__():null,active:!!lastActive,maxVisibleBubbles:bubbleLimit(),activeBubbleCount:slots.filter(s=>!!s.current).length,renderedBubbleCount:renderedCount,activeBubbleTexts:slots.filter(s=>!!s.current).map(s=>({role:s.roleText,kind:s.kindText,text:s.messageText})),lastAttachment:diagnostics.lastAttachment,lastLiveAttachment:diagnostics.lastLiveAttachment,liveAttachmentFrames:diagnostics.liveAttachmentFrames,liveAttachmentUpdates:diagnostics.liveAttachmentUpdates,lastHideReason:diagnostics.lastHideReason,lastPositioningMs:diagnostics.lastPositioningMs,maxPositioningMs:diagnostics.maxPositioningMs,nearbyRangeMeters:RANGE,positionUpdateMs:Core.POSITION_UPDATE_MS,schedulerIntervalMs:Core.SCHEDULER_INTERVAL_MS}),
   captureVisualProof:includeDataUrl=>captureVisualProof(includeDataUrl===true)
  };
  const dialogueSmokeParams=new URLSearchParams(location.search||'');
