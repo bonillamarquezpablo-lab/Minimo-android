@@ -65,7 +65,9 @@ assert.ok(build.includes('syncActiveBeachIsland();') && build.includes('syncActi
 assert.ok(build.includes('syncNordicWaterReflectionIsland();'), 'The active island reflection list must be prepared before the first rendered gameplay frame.');
 assert.ok(build.includes('civilianWarmupPromise=civilianTotal&&!isMobilePeakMemorySensitive'),'The mobile startup must not prefetch both NPC GLBs simultaneously on iOS/Adreno 650.');
 assert.ok(build.includes('wildlifeBlobs.delete(kind)'),'Each wildlife GLB source must be released after all its actors are instantiated.');
-assert.ok(build.includes('npcStartupPromise=startNpcHumanModels();'),'Protagonist and NPC GLB imports must be staged on memory-sensitive mobile devices.');
+assert.ok(build.includes('allowConcurrentHumanoidGlbImports=!isMobilePeakMemorySensitive||highHeadroomQualityMobile;'),'Flagship high-headroom phones must overlap protagonist and required NPC GLB work while constrained phones remain protected.');
+assert.ok(build.includes('npcStartupPromise=coastalReferenceMode||!allowConcurrentHumanoidGlbImports?Promise.resolve(0):startNpcHumanModels();') && build.includes('await Promise.all([playerHumanLoadPromise,npcStartupPromise]);'),'Protagonist and NPC GLB imports must overlap on high-headroom devices.');
+assert.ok(build.includes('if(!allowConcurrentHumanoidGlbImports){') && build.includes('npcStartupPromise=startNpcHumanModels();'),'Constrained devices must retain sequential import as the memory-safe fallback.');
 assert.ok(build.includes('async function prepareAmbientSmokePuffs()') && build.includes("await prepareAmbientSmokePuffs();"),'All existing ambient smoke pools must be prepared before releasing the loading screen.');
 assert.ok(build.includes('habitableAuditAccumulator=0') && build.includes('const initialHabitableAuditStartedAt=performance.now();'), 'The initial building integrity audit must run before the loading screen closes.');
 assert.ok(build.includes("recordStartupTask('Auditoría inicial de asentamientos'"), 'The initial audit work must be included in startup timing and diagnostics.');
