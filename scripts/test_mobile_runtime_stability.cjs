@@ -207,6 +207,10 @@ assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && buil
   dialogueRuntime.includes('scene.onBeforeRenderObservable.add'),
   'NPC dialogue cards must follow the live actor head/root in world space without changing their visual style.');
 assert.ok(smoke.includes('npcDialogueAttachmentMotion') && smoke.includes('displacementMeters >= 1.35') && smoke.includes('__ELSN_DIALOGUE_SMOKE_MOVE__'), 'The player startup smoke test must move an NPC and assert that its dialogue card follows in world space.');
+assert.ok(smoke.includes('pointerTargetInsideButton') && smoke.includes('const pointerX = rect.left + rect.width * .82') &&
+  smoke.includes('await page.mouse.move(point.x, point.y)') && smoke.includes('await page.mouse.down()') &&
+  smoke.includes('await page.mouse.up()') && !smoke.includes('campaignButton.click('),
+  'The campaign smoke test must perform a real mouse down/up at a verified hit point without locator stability waits or forced DOM clicks.');
 assert.ok(smoke.includes("startupHandoff:window.__ELSN_STARTUP_HANDOFF__") &&
   smoke.includes("spatialBuild:window.__ELSN_SPATIAL_BUILD_PROGRESS__"),
   "A startup timeout must preserve the exact handoff phase and spatial work cursor.");
