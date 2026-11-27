@@ -680,7 +680,13 @@ async function main() {
       const rect = button.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
+      // In software WebGL runners requestAnimationFrame may be extremely slow.
+      // Use a separate safe point on the unobscured action area for a real mouse
+      // input, after verifying its exact hit target; do not rely on locator stability.
+      const pointerX = rect.left + rect.width * .82;
+      const pointerY = rect.top + rect.height * .80;
       const hit = document.elementFromPoint(centerX, centerY);
+      const pointerHit = document.elementFromPoint(pointerX, pointerY);
       const describeHitNode = node => {
         if (!node) return null;
         const hitStyle = getComputedStyle(node), hitRect = node.getBoundingClientRect();
@@ -736,6 +742,9 @@ async function main() {
         pointerEvents: style.pointerEvents,
         opacity: style.opacity,
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        pointerPoint: { x: Number(pointerX.toFixed(1)), y: Number(pointerY.toFixed(1)) },
+        pointerTarget: describeHitNode(pointerHit),
+        pointerTargetInsideButton: !!pointerHit && (pointerHit === button || button.contains(pointerHit)),
         hitTarget: describeHitNode(hit),
         hitStack,
         qualityLabPanel,
@@ -746,13 +755,19 @@ async function main() {
     });
     manifest.campaignSelector = introReady;
     if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible ||
-        !introReady.enabled || !introReady.receivesPointer) {
+        !introReady.enabled || !introReady.receivesPointer || !introReady.pointerTargetInsideButton) {
       throw new Error('El selector de campaña no es realmente pulsable; no se forzará el clic: ' +
         JSON.stringify(introReady));
     }
     try {
-      // Use a real pointer action after the independent hit-test check. Never use force or HTMLElement.click().
-      await campaignButton.click({ timeout: 15000 });
+      // Use a real browser mouse sequence at the independently hit-tested action area.
+      // locator.click() waits for two stable rAF samples; the CI software renderer can
+      // run below 1 FPS, so that stability heuristic times out despite a valid target.
+      // page.mouse.click sends genuine pointer/mouse input and does not bypass hit-testing.
+      const point = introReady.pointerPoint;
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.up();
     } catch (error) {
       await page.screenshot({ path: path.join(OUT, 'campaign-selector-click-failure.png'), fullPage: true }).catch(() => {});
       throw new Error('El botón de nueva partida superó las comprobaciones de visibilidad y hit-test, ' +
