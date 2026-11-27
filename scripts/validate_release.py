@@ -663,7 +663,7 @@ def main() -> None:
         "babylonOctreeBuildMs",
         "dynamicClassificationMs",
         "await freezeSpatialStaticWorldMatrices()",
-        "await buildSpatialSelectionOctree();\n   window.__ELSN_STARTUP_HANDOFF__.phase='reveal-selector';\n   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();\n   startupAssetsReady=true;",
+        "Promise.resolve().then(()=>buildSpatialSelectionOctree())", "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise", "window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index-background';\\n   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();",
         "scene.onNewMeshAddedObservable.add",
         "scene.onMeshRemovedObservable.add",
         "async function buildSpatialSelectionOctree()",
