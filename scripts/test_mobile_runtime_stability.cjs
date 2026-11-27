@@ -41,7 +41,7 @@ for (const marker of [
   'baseGetActiveMeshCandidates.call(scene)',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'scene.skipFrustumClipping',
-  'buildSpatialSelectionOctree();',
+  'Promise.resolve().then(()=>buildSpatialSelectionOctree())',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
@@ -107,7 +107,7 @@ assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.incl
 assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
 assert.ok(builder.includes('startup_handoff_marker') &&
   builder.includes("if(!startScreenShown){") && builder.includes("scene.render();") &&
-  builder.includes("buildSpatialSelectionOctree();") && builder.includes("showStartScreen();") && builder.includes("window.__elSinNombreStartupSmoke.worldReady=true;"),
+  builder.includes("Promise.resolve().then(()=>buildSpatialSelectionOctree())") && builder.includes("window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise") && builder.includes("showStartScreen();") && builder.includes("window.__elSinNombreStartupSmoke.worldReady=true;"),
   'The startup resource gate must reveal the campaign selector after one verified frame even when the Babylon render-loop callback is throttled.');
 assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
 assert.ok(builder.includes("continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true})"), 'The named identity action must support touch pointer-up as well as click.');
