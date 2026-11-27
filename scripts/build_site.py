@@ -3905,11 +3905,17 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
     console.info('EL SIN NOMBRE: primer fotograma confirmado por la barrera de arranque.');
    }
-   // Keep the regular render-loop handoff invariant: the spatial octree must
-   // exist before gameplay can be selected, even when this safety path wins the race.
-   window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index';
+   // The campaign selector is not gameplay: never keep the player on a
+   // completed loading screen while the optional spatial acceleration index builds.
+   // Build it in the background; Babylon's normal scene selection remains valid
+   // until the octree is ready, and dynamic actors are registered by the observers.
+   window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index-background';
    window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
-   await buildSpatialSelectionOctree();
+   const spatialBuildPromise=Promise.resolve().then(()=>buildSpatialSelectionOctree()).then(
+    result=>{window.__ELSN_STARTUP_HANDOFF__.spatialIndexReady=!!result;window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();return result;},
+    error=>{window.__ELSN_STARTUP_HANDOFF__.spatialIndexError=String(error&&error.message||error).slice(0,240);window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();console.warn('Índice espacial en segundo plano no disponible; Babylon mantiene la selección nativa:',error);return false;}
+   );
+   window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise;
    window.__ELSN_STARTUP_HANDOFF__.phase='reveal-selector';
    window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    startupAssetsReady=true;
