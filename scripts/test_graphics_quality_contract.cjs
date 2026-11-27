@@ -93,6 +93,8 @@ assert.ok(qualityLab.includes('pointer-events:none'), 'The debug quality lab pan
 assert.ok(qualityLab.includes("aria-expanded=\"false\"") && qualityLab.includes("data-content hidden") && qualityLab.includes("data-toggle"), 'The render lab must start folded behind a compact launcher.');
 assert.ok(qualityLab.includes("pointer-events:none;width:auto") && qualityLab.includes("panel.querySelectorAll('button,select,input,a').forEach(control=>{control.style.pointerEvents='auto';});"), 'The folded lab wrapper must pass through gameplay pointers and expose only real controls.');
 assert.ok(qualityLab.includes("setExpanded(false)") && qualityLab.includes("toggle.addEventListener('click'"), 'The render lab must be expandable and foldable without being removed permanently.');
+assert.ok(smoke.includes("BASE_URL + '?playertest=1&debug=1'") && smoke.includes("qualityLabState") && smoke.includes("lab.folded"), 'The player-startup browser smoke must open with debug enabled and require the lab to be folded.');
+assert.ok(smoke.includes('page.mouse.down();') && smoke.includes('page.mouse.up();') && smoke.includes('pointerTargetInsideButton'), 'The debug-mode campaign selector must be started with real pointer events after a successful hit test.');
 assert.ok(qualityLab.includes("panel.querySelectorAll('button,select,input,a').forEach(control=>{control.style.pointerEvents='auto';});"), 'Only actionable quality-lab controls may receive pointer events.');
 
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
