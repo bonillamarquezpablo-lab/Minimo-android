@@ -6,6 +6,7 @@ const builder=fs.readFileSync('scripts/build_site.py','utf8');
 const validator=fs.readFileSync('scripts/validate_release.py','utf8');
 const gameSource=fs.readFileSync('index.html','utf8');
 const atmosphere=fs.readFileSync('scripts/nordic/atmosphere-system.js','utf8');
+const qualityLab=fs.readFileSync('scripts/quality-render-lab.js','utf8');
 
 for(const marker of [
   'highTierGpuMatch=',
@@ -87,6 +88,9 @@ assert.ok(atmosphere.includes('pipeline.fxaaEnabled = !mobileHigh;'), 'The mobil
 assert.ok(atmosphere.includes("this.quality === 'high' && !this.isTouchDevice"), 'Volumetric rays and SSAO must remain desktop-only.');
 assert.ok(atmosphere.includes("this.quality === 'low' || this.isTouchDevice"), 'Touch devices must keep one standard shadow map instead of a cascaded shadow pass.');
 assert.ok(validator.includes('missing_graphics_quality'), 'The release validator must reject missing mobile rendering guardrails.');
+assert.ok(qualityLab.includes('pointer-events:none'), 'The debug quality lab panel must not intercept pointer events on the underlying campaign selector.');
+assert.ok(qualityLab.includes("panel.querySelectorAll('button,select,input,a').forEach(control=>{control.style.pointerEvents='auto';});"), 'Only actionable quality-lab controls may receive pointer events.');
+
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
 console.log('OK graphics quality: native WebGL rendering, fixed native-DPR flagship Quality, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
