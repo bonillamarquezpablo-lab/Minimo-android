@@ -4524,6 +4524,10 @@ function getFrameMaintenanceTimingSnapshot(){
             raise SystemExit(f"No se encontró exactamente una fórmula original para {label}.")
         html = html.replace(old_code, new_code, 1)
 
+    # Guard against later profile substitutions silently removing the debug-only MSAA selector.
+    if "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:" not in html:
+        raise SystemExit("La política final de calidad ha sobrescrito el selector MSAA del laboratorio de depuración.")
+
     atmosphere_init_marker = "function update(dt){"
     atmosphere_init_code = r"""
   let atmosphereSystem=null;
