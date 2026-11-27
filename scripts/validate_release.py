@@ -677,7 +677,7 @@ def main() -> None:
         "window.__ELSN_STARTUP_HANDOFF__={phase:'entered'",
         "window.__ELSN_STARTUP_HANDOFF__.phase='world-ready'",
 
-        "buildSpatialSelectionOctree();",
+        "Promise.resolve().then(()=>buildSpatialSelectionOctree())", "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise",
         "const installSpatialDynamicCandidateFilter=()=>{",
         "scene.getActiveMeshCandidates=()=>{",
         "spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();",
@@ -822,8 +822,8 @@ def main() -> None:
     startup_handoff = index_html.find("primer fotograma confirmado por la barrera de arranque")
     startup_world_ready = index_html.find("window.__elSinNombreStartupSmoke.worldReady=true;", startup_handoff)
     handoff_body = index_html[startup_handoff-900:startup_world_ready] if startup_handoff >= 0 and startup_world_ready >= startup_handoff else ""
-    if startup_handoff < 0 or startup_world_ready < startup_handoff or "scene.render();" not in handoff_body or "buildSpatialSelectionOctree();" not in handoff_body:
-        fail("La barrera de recursos debe asegurar primer fotograma, índice espacial y selector antes de declarar worldReady; el render loop no puede dejar el arranque offline atascado.")
+    if startup_handoff < 0 or startup_world_ready < startup_handoff or "scene.render();" not in handoff_body or "Promise.resolve().then(()=>buildSpatialSelectionOctree())" not in handoff_body or "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise" not in handoff_body:
+        fail("La barrera de recursos debe asegurar el primer fotograma y el selector, y programar el índice espacial en segundo plano antes de declarar worldReady; el render loop no puede dejar el arranque offline atascado.")
     if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
     if "fauna:'blocking-required'" not in index_html:
