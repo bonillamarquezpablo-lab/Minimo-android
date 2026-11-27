@@ -3133,7 +3133,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(player_import_start_marker, "let playerHumanLoadPromise=Promise.resolve(null);", 1)
 
     mobile_memory_policy_marker = "const isConstrainedMobile=!!(isPerformanceMode&&(iosMemoryBlindMobile||(isTouchDevice&&(constrainedHardware||reportedMemory<=3))));"
-    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||isTouchDevice);\n let startupWildlifeCompressedBytes=0;"
+    mobile_memory_policy_replacement = mobile_memory_policy_marker + "\n // Peak-memory scheduling is independent from the selected graphics profile. It changes task concurrency only; render scale, textures, shadows, density and gameplay systems remain untouched.\n const isMobilePeakMemorySensitive=!!(isIOSDevice||isTouchDevice);
+ // High-headroom flagships (including S26 Ultra) can overlap protagonist/NPC GLB work; keep sequential imports on memory-sensitive phones without the high-tier reserve.
+ const allowConcurrentHumanoidGlbImports=!isMobilePeakMemorySensitive||highHeadroomQualityMobile;\n let startupWildlifeCompressedBytes=0;"
     if html.count(mobile_memory_policy_marker) != 1:
         raise SystemExit("No se encontró la clasificación única para la política de memoria multiplataforma.")
     html = html.replace(mobile_memory_policy_marker, mobile_memory_policy_replacement, 1)
@@ -3233,18 +3235,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  syncActiveTidalFoamIsland();
  recordStartupTask('Geometría de costa inicial',initialCoastStartedAt,performance.now(),'ready',{islandIndex:activeBeachIslandIndex,island:land[activeBeachIslandIndex]&&land[activeBeachIslandIndex].name,beachReady:!!livingBeachLayers[activeBeachIslandIndex],foamMeshes:tidalFoamMeshes.length});
  if(!coastalReferenceMode)playerHumanLoadPromise=loadHumanViking();
- let npcStartupPromise=coastalReferenceMode||isMobilePeakMemorySensitive?Promise.resolve(0):startNpcHumanModels();"""
+ let npcStartupPromise=coastalReferenceMode||!allowConcurrentHumanoidGlbImports?Promise.resolve(0):startNpcHumanModels();"""
     if html.count(npc_promise_marker) != 1:
         raise SystemExit("No se encontró la promesa única de preparación de NPC.")
     html = html.replace(npc_promise_marker, npc_promise_replacement, 1)
 
     npc_parallel_wait_marker = "   await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"
-    npc_serial_wait_replacement = """   if(isMobilePeakMemorySensitive){
-    // Load the protagonist first, then the unchanged required NPC roster; this avoids overlapping GLB parser/decoder working sets.
+    npc_serial_wait_replacement = """   if(!allowConcurrentHumanoidGlbImports){
+    // Constrained devices still stage the same complete roster to cap peak decoder memory.
     await playerHumanLoadPromise;
     npcStartupPromise=startNpcHumanModels();
     await npcStartupPromise;
-   }else await Promise.all([playerHumanLoadPromise,npcStartupPromise]);"""
+   }else{
+    // High-headroom devices load the protagonist and required NPC roster concurrently.
+    await Promise.all([playerHumanLoadPromise,npcStartupPromise]);
+   }"""
     if html.count(npc_parallel_wait_marker) != 1:
         raise SystemExit("No se encontró la espera única del protagonista y el roster NPC.")
     html = html.replace(npc_parallel_wait_marker, npc_serial_wait_replacement, 1)
