@@ -3451,16 +3451,36 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   return null;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
+ const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__={
+  phase:'idle',startedAt:null,updatedAt:performance.now(),meshCount:0,
+  initialDynamicCount:0,initialDynamicProcessed:0,classificationProcessed:0,
+  freezeProcessed:0,freezeTotal:0,yieldCount:0,lastYieldMs:null,
+  nativeOctreeBuildMs:null,buildMs:null,error:null
+ };
  const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;
  const yieldSpatialWorkFrame=()=>new Promise(resolve=>{
-  let settled=false,timer=0;
-  const finish=()=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);resolve();};
-  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);else timer=setTimeout(finish,0);
-  if(!settled)timer=setTimeout(finish,50);
+  let settled=false,timer=0,requestedAt=performance.now();
+  const finish=()=>{
+   if(settled)return;settled=true;
+   if(timer)clearTimeout(timer);
+   spatialBuildProgress.yieldCount++;
+   spatialBuildProgress.lastYieldMs=Number((performance.now()-requestedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
+   resolve();
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
+  // A capped timer prevents a throttled render loop (CI software renderer or
+  // background tab) from stretching each tiny 3 ms work slice to several seconds.
+  // At normal refresh rates requestAnimationFrame still wins this race.
+  timer=setTimeout(finish,16);
  });
  const freezeSpatialStaticWorldMatrices=async()=>{
   let frozen=0,errors=0,skippedDynamic=0;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
+  spatialBuildProgress.phase='freezing-static-matrices';
+  spatialBuildProgress.freezeTotal=meshCount;
+  spatialBuildProgress.freezeProcessed=0;
+  spatialBuildProgress.updatedAt=startedAt;
   let sliceStartedAt=startedAt;
   // Freeze only meshes that are static after the complete scene has been assembled.
   // Moving roots, animated rigs, vegetation pivots, effects and all their descendants
@@ -3484,12 +3504,16 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      }
     }catch(_){errors++;}
    }
+   spatialBuildProgress.freezeProcessed=index+1;
+   if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
    // Test the time budget for every visited mesh, including dynamic/skipped meshes.
    if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){
     await yieldSpatialWorkFrame();
     sliceStartedAt=performance.now();
    }
   }
+  spatialBuildProgress.phase='static-matrices-frozen';
+  spatialBuildProgress.updatedAt=performance.now();
   spatialSelectionStats.staticWorldMatricesFrozen=frozen;
   spatialSelectionStats.staticWorldMatrixFreezeMs=Number((performance.now()-startedAt).toFixed(2));
   spatialSelectionStats.staticWorldMatrixFreezeErrors=errors;
@@ -3556,12 +3580,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(scene.meshes.length<512||typeof scene.createOrUpdateSelectionOctree!=='function')return false;
   if(!scene.onNewMeshAddedObservable||typeof scene.onNewMeshAddedObservable.add!=='function')return false;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
+  spatialBuildProgress.phase='waiting-first-yield';
+  spatialBuildProgress.startedAt=startedAt;
+  spatialBuildProgress.updatedAt=startedAt;
+  spatialBuildProgress.meshCount=meshCount;
+  spatialBuildProgress.error=null;
   try{
    // Let the final loading frame paint before Babylon performs its native octree build.
    await yieldSpatialWorkFrame();
    const octreeBuildStartedAt=performance.now();
+   spatialBuildProgress.phase='native-octree-build';
+   spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
-   spatialSelectionStats.babylonOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
+   spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
+   spatialSelectionStats.babylonOctreeBuildMs=spatialBuildProgress.nativeOctreeBuildMs;
    if(!octree||!octree.dynamicContent||typeof octree.dynamicContent.push!=='function'){
     throw new Error('Babylon no devolvió la lista dinámica de la selección espacial.');
    }
@@ -3570,7 +3603,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Iterate the live collections directly: no full-size temporary arrays on memory-sensitive phones.
    let workSliceStartedAt=performance.now();
    const initialDynamicCount=octree.dynamicContent.length;
+   spatialBuildProgress.phase='tracking-initial-dynamic';
+   spatialBuildProgress.initialDynamicCount=initialDynamicCount;
+   spatialBuildProgress.initialDynamicProcessed=0;
    for(let index=0;index<initialDynamicCount;index++){
+    spatialBuildProgress.initialDynamicProcessed=index+1;
+    if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=octree.dynamicContent[index];
     if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
@@ -3581,12 +3619,18 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    const classificationStartedAt=performance.now();
+   spatialBuildProgress.phase='classifying-dynamic-meshes';
+   spatialBuildProgress.classificationProcessed=0;
    for(let index=0;index<meshCount;index++){
+    spatialBuildProgress.classificationProcessed=index+1;
+    if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=scene.meshes[index];
     if(mesh&&isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
+   spatialBuildProgress.phase='freezing-static-matrices';
+   spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
    updateSpatialSelectionCounts();
    // Leave Babylon's native SelectionOctree.select() intact. The scene component
@@ -3660,6 +3704,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=octree.dynamicContent.length;
    spatialSelectionStats.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialBuildProgress.phase='complete';
+   spatialBuildProgress.buildMs=spatialSelectionStats.buildMs;
+   spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.error=null;
    publishSpatialSelectionStats();
    console.info('Babylon spatial selection ready',{
@@ -3675,6 +3722,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    return true;
   }catch(error){
    spatialSelectionOctree=null;
+   spatialBuildProgress.phase='failed';
+   spatialBuildProgress.error=String(error&&error.message||error).slice(0,220);
+   spatialBuildProgress.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.enabled=false;
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=0;
