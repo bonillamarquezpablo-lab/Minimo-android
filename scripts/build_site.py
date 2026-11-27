@@ -3889,8 +3889,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # then reveal the campaign selector from the startup task itself. The render-loop
     # path remains the normal path; this idempotent hand-off is only its safety net.
     startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
-    startup_handoff_replacement = """ if(!startScreenShown){
+    startup_handoff_replacement = """ window.__ELSN_STARTUP_HANDOFF__={phase:'entered',startedAt:performance.now(),updatedAt:performance.now(),error:null};
+ if(!startScreenShown){
   try{
+   window.__ELSN_STARTUP_HANDOFF__.phase='first-frame-check';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    if(!firstFrameRendered){
     if(!engine||engine.isDisposed&&engine.isDisposed())throw new Error('El motor Babylon ya no está disponible para el primer fotograma.');
     if(!scene.activeCamera)scene.activeCamera=camera;
@@ -3904,15 +3907,26 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    }
    // Keep the regular render-loop handoff invariant: the spatial octree must
    // exist before gameplay can be selected, even when this safety path wins the race.
+   window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    await buildSpatialSelectionOctree();
+   window.__ELSN_STARTUP_HANDOFF__.phase='reveal-selector';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    startupAssetsReady=true;
    const startupLoading=document.getElementById('loading');
    if(startupLoading)startupLoading.style.display='none';
    showStartScreen();
+   window.__ELSN_STARTUP_HANDOFF__.phase='selector-shown';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    trackStartupPerfStage(100,'Selector principal listo');
    finishStartupPerfStage();
    startScreenShown=true;
+   window.__ELSN_STARTUP_HANDOFF__.phase='complete';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
   }catch(startupHandoffError){
+   window.__ELSN_STARTUP_HANDOFF__.phase='failed';
+   window.__ELSN_STARTUP_HANDOFF__.error=String(startupHandoffError&&startupHandoffError.message||startupHandoffError).slice(0,240);
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    reportFrameError('presentación del selector tras la barrera de recursos',startupHandoffError);
    throw new Error('RECURSO OBLIGATORIO: primer fotograma y selector de campaña · '+String(startupHandoffError&&startupHandoffError.message||startupHandoffError));
   }
