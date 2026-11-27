@@ -135,8 +135,11 @@ assert.ok(dialogueRuntime.includes('projectionAttempts') &&
   'The runtime must expose positioning attempts and the browser smoke must persist its complete snapshot with the NPC texture proof.');
 assert.match(smoke, /document\.elementsFromPoint\(centerX, centerY\)/,
   'Campaign entry must record the real hit-test stack and reject overlays before interaction.');
-assert.match(smoke, /campaignButton\.click\(\{\s*timeout:\s*15000\s*\}\)/,
-  'Campaign entry must use a real Playwright pointer click after the hit-test passes.');
+assert.match(smoke, /pointerTargetInsideButton/);
+assert.match(smoke, /page\.mouse\.move\(point\.x, point\.y\)/);
+assert.match(smoke, /page\.mouse\.down\(\)[\s\S]{0,100}page\.mouse\.up\(\)/);
+assert.doesNotMatch(smoke, /campaignButton\.click\(/,
+  'Campaign entry must use a real pointer sequence at a verified hit point, without waiting for slow-renderer locator stability.');
 assert.doesNotMatch(smoke, /campaignButton\.evaluate\(button => button\.click\(\)\)|force:\s*true/,
   'Do not bypass the browser hit-test with a programmatic or forced click.');
 assert.match(smoke, /SKIP_WARM_ONLINE_RESTART/);
