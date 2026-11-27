@@ -273,14 +273,15 @@ assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.
 
 
 assert.ok(buildSite.includes('async function buildSpatialSelectionOctree()') &&
-  buildSite.includes('await buildSpatialSelectionOctree();') &&
+  buildSite.includes('Promise.resolve().then(()=>buildSpatialSelectionOctree())') &&
   buildSite.includes('await freezeSpatialStaticWorldMatrices()') &&
   buildSite.includes('meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs') &&
   buildSite.includes('meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs'),
-  "The startup handoff must await a time-sliced spatial build and publish separate octree/classification timings.");
+  "The startup handoff must publish the selector without blocking on the time-sliced spatial build, and retain separate octree/classification timings.");
 
 
-const awaitedSpatialIndex=buildSite.indexOf("await buildSpatialSelectionOctree();");
-const readinessPublished=buildSite.indexOf("startupAssetsReady=true;",awaitedSpatialIndex);
-assert.ok(awaitedSpatialIndex>0&&readinessPublished>awaitedSpatialIndex,
-  "startupAssetsReady must remain false until the asynchronous spatial index is complete.");
+const backgroundSpatialIndex=buildSite.indexOf("Promise.resolve().then(()=>buildSpatialSelectionOctree())");
+const readinessPublished=buildSite.indexOf("startupAssetsReady=true;",backgroundSpatialIndex);
+assert.ok(backgroundSpatialIndex>0&&readinessPublished>backgroundSpatialIndex &&
+  buildSite.includes("window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise"),
+  "The selector must be revealed while the spatial index continues safely in the background.");
