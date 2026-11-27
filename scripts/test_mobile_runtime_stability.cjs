@@ -41,7 +41,7 @@ for (const marker of [
   'baseGetActiveMeshCandidates.call(scene)',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'scene.skipFrustumClipping',
-  'buildSpatialSelectionOctree();',
+  'Promise.resolve().then(()=>buildSpatialSelectionOctree())',
   'meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount',
   'meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs',
   'meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio',
@@ -91,8 +91,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'70\',build:\'{EXPECTED_VERSION}\''), 'Release must carry diagnostic report 68.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.362"'), 'Release validator must target version 0.6.360.');
+assert.ok(validator.includes('reportVersion:\'71\',build:\'{EXPECTED_VERSION}\''), 'Release must carry diagnostic report 68.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.363"'), 'Release validator must target version 0.6.360.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -107,7 +107,7 @@ assert.ok(builder.includes('syncNordicWaterReflectionIsland();') && builder.incl
 assert.ok(builder.includes('identity_start_guard_marker') && builder.includes('identityStartupTriggered=false'), 'The preflight identity gate must be idempotent.');
 assert.ok(builder.includes('startup_handoff_marker') &&
   builder.includes("if(!startScreenShown){") && builder.includes("scene.render();") &&
-  builder.includes("buildSpatialSelectionOctree();") && builder.includes("showStartScreen();") && builder.includes("window.__elSinNombreStartupSmoke.worldReady=true;"),
+  builder.includes("Promise.resolve().then(()=>buildSpatialSelectionOctree())") && builder.includes("window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise") && builder.includes("showStartScreen();") && builder.includes("window.__elSinNombreStartupSmoke.worldReady=true;"),
   'The startup resource gate must reveal the campaign selector after one verified frame even when the Babylon render-loop callback is throttled.');
 assert.ok(builder.includes("continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:true})"), 'The anonymous identity action must support touch pointer-up as well as click.');
 assert.ok(builder.includes("continueWithNameButton.addEventListener('pointerup',startNamedIdentity,{once:true})"), 'The named identity action must support touch pointer-up as well as click.');
@@ -201,8 +201,20 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
   'Dialogue startup must retry with a low-frequency bounded poll until the game bridge is ready.');
 
 assert.ok(builder.includes('const targetFrameRate=120;'), 'The Quality diagnostics must target high-refresh 120 Hz devices.');
-assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('(overlayAnchor===root?2.48:.66)+slot.index*.42') && dialogueRuntime.includes('slot.mesh.parent=overlayAnchor'),
-  'NPC dialogue cards must be compact, raised above actors and rendered in the dialogue overlay group.');
+assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') &&
+  dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('function positionBubbleAtLiveAnchor(slot,npc,scene)') &&
+  dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('liveAttachmentFrames') &&
+  dialogueRuntime.includes('scene.onBeforeRenderObservable.add'),
+  'NPC dialogue cards must follow the live actor head/root in world space without changing their visual style.');
+assert.ok(smoke.includes('npcDialogueAttachmentMotion') && smoke.includes('displacementMeters >= 1.35') && smoke.includes('__ELSN_DIALOGUE_SMOKE_MOVE__'), 'The player startup smoke test must move an NPC and assert that its dialogue card follows in world space.');
+assert.ok(smoke.includes('pointerTargetInsideButton') && smoke.includes('const pointerX = rect.left + rect.width * .82') &&
+  smoke.includes('await page.mouse.move(point.x, point.y)') && smoke.includes('await page.mouse.down()') &&
+  smoke.includes('await page.mouse.up()') && !smoke.includes('campaignButton.click('),
+  'The campaign smoke test must perform a real mouse down/up at a verified hit point without locator stability waits or forced DOM clicks.');
+assert.ok(smoke.includes("startupHandoff:window.__ELSN_STARTUP_HANDOFF__") &&
+  smoke.includes("spatialBuild:window.__ELSN_SPATIAL_BUILD_PROGRESS__"),
+  "A startup timeout must preserve the exact handoff phase and spatial work cursor.");
+
 assert.ok(dialogueRuntime.includes('ctx.font="650 46px system-ui, sans-serif"') &&
   dialogueRuntime.includes('{width:2.12,height:1.06,sideOrientation:BABYLON.Mesh.DOUBLESIDE}'),
   'NPC world dialogues must remain readable at mobile camera distance.');
@@ -223,7 +235,7 @@ assert.ok(builder.includes('npc_visual_lod_replacement') && builder.includes('(w
 assert.ok(builder.includes('club_shaft_replacement') && builder.includes('RealCastawayStickBranch') && builder.includes('1.34,.078,M.woodLight'), 'The starting club must keep a clearly readable full-length wooden shaft and forked branch.');
 assert.ok(builder.includes('const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();') && builder.includes('gripWorld.addInPlace(modelRight.scale(.055));') && builder.includes('club.position.y=0;') && builder.includes("RealCastawayStickShaft',club,[0,.68,0]"), 'The staff master pose is gripped in the palm and raised forward/up.');
 assert.ok(builder.includes('function ensureNpcOverlayAnchor(parts,force=false){') && builder.includes('badge.parent=overlayAnchor') && builder.includes('back.parent=overlayAnchor') && builder.includes('maintainNpcOverlayAnchors(now);'), 'NPC badges and health bars share a measured/repaired head anchor.');
-assert.ok(dialogueRuntime.includes('slot.mesh.parent=overlayAnchor') && dialogueRuntime.includes('restoreNearbyNpcVisibility'), 'Dialogue cards share the same anchor and restore nearby LOD-hidden NPCs.');
+assert.ok(dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('positionBubbleAtLiveAnchor(slot,npc,s.scene)') && dialogueRuntime.includes('scene.onBeforeRenderObservable.add') && dialogueRuntime.includes('restoreNearbyNpcVisibility'), 'Dialogue cards follow live world coordinates each frame and restore nearby LOD-hidden NPCs.');
 assert.ok(builder.includes('function updateAmbientGullFlight(nowSeconds){') && builder.includes('updateAmbientGullFlight(now);') && builder.includes('scene.onBeforeRenderObservable.add') && !builder.includes('updateAmbientGullFlight(now*.001);') && builder.includes('b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);') && builder.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && builder.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);"), 'The five gulls must update after Babylon animation evaluation, retain independent orbit positions and restart their native flight clip.');
 assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.includes('visibleMeshCount') && builder.includes('flightPlaying') && builder.includes('leftWingPose') && builder.includes('hostiles'), 'The release must expose read-only visual proof for the club, home warriors, hostile bodies and gull wing motion.');
 assert.ok(builder.includes('function maintainActiveEnemyVisuals(nowMs){')&&builder.includes('maintainActiveEnemyVisuals(now);')&&builder.includes('proceduralFallbackBody')&&builder.includes('nearbyHostiles'), 'Every active hostile near the player must recover its visible 3D body independently of health bars, emblems and AI.');

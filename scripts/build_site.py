@@ -3040,25 +3040,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.362; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.363; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.362\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.363\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.362.")
-    html = html.replace("0.6.274", "0.6.362")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.363.")
+    html = html.replace("0.6.274", "0.6.363")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'70',build:'0.6.362'"
+    diagnostic_build_replacement = "reportVersion:'71',build:'0.6.363'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.362 para normalizar.")
-    game_version = "0.6.362"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.363 para normalizar.")
+    game_version = "0.6.363"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3451,16 +3451,36 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   return null;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
+ const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__={
+  phase:'idle',startedAt:null,updatedAt:performance.now(),meshCount:0,
+  initialDynamicCount:0,initialDynamicProcessed:0,classificationProcessed:0,
+  freezeProcessed:0,freezeTotal:0,yieldCount:0,lastYieldMs:null,
+  nativeOctreeBuildMs:null,buildMs:null,error:null
+ };
  const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;
  const yieldSpatialWorkFrame=()=>new Promise(resolve=>{
-  let settled=false,timer=0;
-  const finish=()=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);resolve();};
-  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);else timer=setTimeout(finish,0);
-  if(!settled)timer=setTimeout(finish,50);
+  let settled=false,timer=0,requestedAt=performance.now();
+  const finish=()=>{
+   if(settled)return;settled=true;
+   if(timer)clearTimeout(timer);
+   spatialBuildProgress.yieldCount++;
+   spatialBuildProgress.lastYieldMs=Number((performance.now()-requestedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
+   resolve();
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(finish);
+  // A capped timer prevents a throttled render loop (CI software renderer or
+  // background tab) from stretching each tiny 3 ms work slice to several seconds.
+  // At normal refresh rates requestAnimationFrame still wins this race.
+  timer=setTimeout(finish,20);
  });
  const freezeSpatialStaticWorldMatrices=async()=>{
   let frozen=0,errors=0,skippedDynamic=0;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
+  spatialBuildProgress.phase='freezing-static-matrices';
+  spatialBuildProgress.freezeTotal=meshCount;
+  spatialBuildProgress.freezeProcessed=0;
+  spatialBuildProgress.updatedAt=startedAt;
   let sliceStartedAt=startedAt;
   // Freeze only meshes that are static after the complete scene has been assembled.
   // Moving roots, animated rigs, vegetation pivots, effects and all their descendants
@@ -3484,12 +3504,16 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      }
     }catch(_){errors++;}
    }
+   spatialBuildProgress.freezeProcessed=index+1;
+   if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
    // Test the time budget for every visited mesh, including dynamic/skipped meshes.
    if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){
     await yieldSpatialWorkFrame();
     sliceStartedAt=performance.now();
    }
   }
+  spatialBuildProgress.phase='static-matrices-frozen';
+  spatialBuildProgress.updatedAt=performance.now();
   spatialSelectionStats.staticWorldMatricesFrozen=frozen;
   spatialSelectionStats.staticWorldMatrixFreezeMs=Number((performance.now()-startedAt).toFixed(2));
   spatialSelectionStats.staticWorldMatrixFreezeErrors=errors;
@@ -3556,12 +3580,21 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(scene.meshes.length<512||typeof scene.createOrUpdateSelectionOctree!=='function')return false;
   if(!scene.onNewMeshAddedObservable||typeof scene.onNewMeshAddedObservable.add!=='function')return false;
   const startedAt=performance.now(),meshCount=scene.meshes.length;
+  spatialBuildProgress.phase='waiting-first-yield';
+  spatialBuildProgress.startedAt=startedAt;
+  spatialBuildProgress.updatedAt=startedAt;
+  spatialBuildProgress.meshCount=meshCount;
+  spatialBuildProgress.error=null;
   try{
    // Let the final loading frame paint before Babylon performs its native octree build.
    await yieldSpatialWorkFrame();
    const octreeBuildStartedAt=performance.now();
+   spatialBuildProgress.phase='native-octree-build';
+   spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
-   spatialSelectionStats.babylonOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
+   spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
+   spatialSelectionStats.babylonOctreeBuildMs=spatialBuildProgress.nativeOctreeBuildMs;
    if(!octree||!octree.dynamicContent||typeof octree.dynamicContent.push!=='function'){
     throw new Error('Babylon no devolvió la lista dinámica de la selección espacial.');
    }
@@ -3570,7 +3603,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    // Iterate the live collections directly: no full-size temporary arrays on memory-sensitive phones.
    let workSliceStartedAt=performance.now();
    const initialDynamicCount=octree.dynamicContent.length;
+   spatialBuildProgress.phase='tracking-initial-dynamic';
+   spatialBuildProgress.initialDynamicCount=initialDynamicCount;
+   spatialBuildProgress.initialDynamicProcessed=0;
    for(let index=0;index<initialDynamicCount;index++){
+    spatialBuildProgress.initialDynamicProcessed=index+1;
+    if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=octree.dynamicContent[index];
     if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
@@ -3581,12 +3619,18 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    const classificationStartedAt=performance.now();
+   spatialBuildProgress.phase='classifying-dynamic-meshes';
+   spatialBuildProgress.classificationProcessed=0;
    for(let index=0;index<meshCount;index++){
+    spatialBuildProgress.classificationProcessed=index+1;
+    if((index&127)===0)spatialBuildProgress.updatedAt=performance.now();
     const mesh=scene.meshes[index];
     if(mesh&&isSpatialDynamicMesh(mesh))addSpatialDynamicMesh(mesh,null,false,true);
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
+   spatialBuildProgress.phase='freezing-static-matrices';
+   spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
    updateSpatialSelectionCounts();
    // Leave Babylon's native SelectionOctree.select() intact. The scene component
@@ -3660,6 +3704,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=octree.dynamicContent.length;
    spatialSelectionStats.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialBuildProgress.phase='complete';
+   spatialBuildProgress.buildMs=spatialSelectionStats.buildMs;
+   spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.error=null;
    publishSpatialSelectionStats();
    console.info('Babylon spatial selection ready',{
@@ -3675,6 +3722,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    return true;
   }catch(error){
    spatialSelectionOctree=null;
+   spatialBuildProgress.phase='failed';
+   spatialBuildProgress.error=String(error&&error.message||error).slice(0,220);
+   spatialBuildProgress.buildMs=Number((performance.now()-startedAt).toFixed(2));
+   spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.enabled=false;
    spatialSelectionStats.sceneMeshCount=meshCount;
    spatialSelectionStats.dynamicMeshCount=0;
@@ -3838,8 +3889,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # then reveal the campaign selector from the startup task itself. The render-loop
     # path remains the normal path; this idempotent hand-off is only its safety net.
     startup_handoff_marker = " startupAssetsReady=true;\n window.__elSinNombreStartupSmoke.worldReady=true;"
-    startup_handoff_replacement = """ if(!startScreenShown){
+    startup_handoff_replacement = """ window.__ELSN_STARTUP_HANDOFF__={phase:'entered',startedAt:performance.now(),updatedAt:performance.now(),error:null};
+ if(!startScreenShown){
   try{
+   window.__ELSN_STARTUP_HANDOFF__.phase='first-frame-check';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    if(!firstFrameRendered){
     if(!engine||engine.isDisposed&&engine.isDisposed())throw new Error('El motor Babylon ya no está disponible para el primer fotograma.');
     if(!scene.activeCamera)scene.activeCamera=camera;
@@ -3851,21 +3905,40 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     startupTimeline.firstFrameElapsedMs=Number((startupTimeline.firstFrameAt-startupTimelineBootAt).toFixed(1));
     console.info('EL SIN NOMBRE: primer fotograma confirmado por la barrera de arranque.');
    }
-   // Keep the regular render-loop handoff invariant: the spatial octree must
-   // exist before gameplay can be selected, even when this safety path wins the race.
-   await buildSpatialSelectionOctree();
+   // The campaign selector is not gameplay: never keep the player on a
+   // completed loading screen while the optional spatial acceleration index builds.
+   // Build it in the background; Babylon's normal scene selection remains valid
+   // until the octree is ready, and dynamic actors are registered by the observers.
+   window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index-background';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
+   const spatialBuildPromise=Promise.resolve().then(()=>buildSpatialSelectionOctree()).then(
+    result=>{window.__ELSN_STARTUP_HANDOFF__.spatialIndexReady=!!result;window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();return result;},
+    error=>{window.__ELSN_STARTUP_HANDOFF__.spatialIndexError=String(error&&error.message||error).slice(0,240);window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();console.warn('Índice espacial en segundo plano no disponible; Babylon mantiene la selección nativa:',error);return false;}
+   );
+   window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise;
+   window.__ELSN_STARTUP_HANDOFF__.phase='reveal-selector';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    startupAssetsReady=true;
    const startupLoading=document.getElementById('loading');
    if(startupLoading)startupLoading.style.display='none';
    showStartScreen();
+   window.__ELSN_STARTUP_HANDOFF__.phase='selector-shown';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    trackStartupPerfStage(100,'Selector principal listo');
    finishStartupPerfStage();
    startScreenShown=true;
+   window.__ELSN_STARTUP_HANDOFF__.phase='complete';
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
   }catch(startupHandoffError){
+   window.__ELSN_STARTUP_HANDOFF__.phase='failed';
+   window.__ELSN_STARTUP_HANDOFF__.error=String(startupHandoffError&&startupHandoffError.message||startupHandoffError).slice(0,240);
+   window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
    reportFrameError('presentación del selector tras la barrera de recursos',startupHandoffError);
    throw new Error('RECURSO OBLIGATORIO: primer fotograma y selector de campaña · '+String(startupHandoffError&&startupHandoffError.message||startupHandoffError));
   }
  }
+ window.__ELSN_STARTUP_HANDOFF__.phase='world-ready';
+ window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
  window.__elSinNombreStartupSmoke.worldReady=true;"""
     if html.count(startup_handoff_marker) != 1:
         raise SystemExit("No se encontró el punto único de cierre de la barrera de recursos para asegurar la presentación del selector.")

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.362"
+EXPECTED_VERSION = "0.6.363"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -241,7 +241,7 @@ def main() -> None:
         fail("La IA de aldeanos no puede aumentar la frecuencia de actualización ni alterar el presupuesto móvil.")
     if "dialogueAmbientByRoot=new Map()" not in index_html or "actualParts=ambientActor&&ambientActor.parts" not in index_html:
         fail("Los diálogos deben reutilizar la identidad y profesión reales del aldeano, no inventar variantes.")
-    for marker in ("slot.mesh.parent=overlayAnchor", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
+    for marker in ("function liveHeadNode(parts,scene)", "function positionBubbleAtLiveAnchor(slot,npc,scene)", "slot.mesh.parent=null", "positionBubbleAtLiveAnchor(slot,npc,s.scene)", "scene.onBeforeRenderObservable.add", "slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL", "Core.POSITION_UPDATE_MS", "Core.SCHEDULER_INTERVAL_MS", "for(let i=0;i<MAX_BUBBLES;i++)slots.push(makeSlot(i))"):
         if marker not in dialogue_runtime_source:
             fail("El runtime de diálogos ha perdido la proyección o los límites de actualización: " + marker)
     enemy_entity_contract = {
@@ -255,10 +255,10 @@ def main() -> None:
     }
     if not all(enemy_entity_contract.values()):
         fail("Contrato de sincronización entre combate, cuerpo 3D y diálogos incompleto: " + json.dumps(enemy_entity_contract, ensure_ascii=False))
-    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "fullLocalBounds": "for(let corner=0;corner<8;corner++)" in index_html and "B.Vector3.TransformCoordinates(worldPoint,inverse)" in index_html, "nearbyInvisibleActorRecovery": "function recoverNpcActorVisuals(parts,nowMs)" in index_html and "lastVisualRecoveryMeshes" in index_html, "npcVisualRecoveryCache": "__elsnVisualAuditAt" in index_html and "visualAuditCacheHits++" in index_html and "npcVisualRecoveryAudit" in index_html, "enemyMeshAuditCadence": "nowMs-(parts.__elsnEnemyMeshAuditAt||0)>=1200" in index_html and "enemyMeshVisibilityAudit" in index_html and "enemyFallbackMeshAudit" in index_html, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "parentedToSharedOverlayAnchor": "slot.mesh.parent=overlayAnchor" in dialogue_runtime_source, "stableOverlayOffset": "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
+    dialogue_matrix_contract = {"rootForced": "root.computeWorldMatrix(true)" in dialogue_runtime_source, "fullLocalBounds": "for(let corner=0;corner<8;corner++)" in index_html and "B.Vector3.TransformCoordinates(worldPoint,inverse)" in index_html, "nearbyInvisibleActorRecovery": "function recoverNpcActorVisuals(parts,nowMs)" in index_html and "lastVisualRecoveryMeshes" in index_html, "npcVisualRecoveryCache": "__elsnVisualAuditAt" in index_html and "visualAuditCacheHits++" in index_html and "npcVisualRecoveryAudit" in index_html, "enemyMeshAuditCadence": "nowMs-(parts.__elsnEnemyMeshAuditAt||0)>=1200" in index_html and "enemyMeshVisibilityAudit" in index_html and "enemyFallbackMeshAudit" in index_html, "boundedRange": "RANGE_SQUARED" in dialogue_runtime_source, "worldSpacePlane": "BABYLON.MeshBuilder.CreatePlane" in dialogue_runtime_source, "dynamicTexture": "new BABYLON.DynamicTexture" in dialogue_runtime_source, "worldSpaceDetachedCard": "slot.mesh.parent=null" in dialogue_runtime_source, "liveHeadLookup": "function liveHeadNode(parts,scene)" in dialogue_runtime_source, "liveWorldPositioning": "function positionBubbleAtLiveAnchor(slot,npc,scene)" in dialogue_runtime_source and "slot.mesh.position.copyFrom(position)" in dialogue_runtime_source, "perFrameAttachment": "scene.onBeforeRenderObservable.add" in dialogue_runtime_source and "positionBubbleAtLiveAnchor(slot,npc,scene)" in dialogue_runtime_source, "nearbyLodRecovery": "restoreNearbyNpcVisibility" in dialogue_runtime_source, "billboardCameraFacing": "BABYLON.Mesh.BILLBOARDMODE_ALL" in dialogue_runtime_source, "distanceOnlyScheduling": "Core.selectVisibleBubbles(nearby.map" in dialogue_runtime_source, "noScreenProjection": "BABYLON.Vector3.Project" not in dialogue_runtime_source}
     if not all(dialogue_matrix_contract.values()):
         fail("Contrato de proyección de diálogos incompleto en el paquete: " + json.dumps(dialogue_matrix_contract, ensure_ascii=False))
-    for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "slot.mesh.parent=overlayAnchor", "slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)", "restoreNearbyNpcVisibility", "Core.selectVisibleBubbles(nearby.map"):
+    for marker in ("updateWorldBubble(slot,s)", "outside-dialogue-range", "function positionBubbleAtLiveAnchor(slot,npc,scene)", "slot.mesh.parent=null", "positionBubbleAtLiveAnchor(slot,npc,s.scene)", "restoreNearbyNpcVisibility", "Core.selectVisibleBubbles(nearby.map"):
         if marker not in dialogue_runtime_source:
             fail("Los diálogos deben permanecer anclados al NPC y quedar ocluidos por el bosque: " + marker)
     if "occluders:trees,naturalOccluders:naturalShrubs" not in index_html:
@@ -663,11 +663,21 @@ def main() -> None:
         "babylonOctreeBuildMs",
         "dynamicClassificationMs",
         "await freezeSpatialStaticWorldMatrices()",
-        "await buildSpatialSelectionOctree();\n   startupAssetsReady=true;",
+        "Promise.resolve().then(()=>buildSpatialSelectionOctree())", "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise", "window.__ELSN_STARTUP_HANDOFF__.phase='spatial-index-background';",
         "scene.onNewMeshAddedObservable.add",
         "scene.onMeshRemovedObservable.add",
         "async function buildSpatialSelectionOctree()",
-        "buildSpatialSelectionOctree();",
+        "const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__",
+        "timer=setTimeout(finish,20)",
+        "phase='native-octree-build'",
+        "phase='tracking-initial-dynamic'",
+        "phase='classifying-dynamic-meshes'",
+        "phase='freezing-static-matrices'",
+        "phase='complete'",
+        "window.__ELSN_STARTUP_HANDOFF__={phase:'entered'",
+        "window.__ELSN_STARTUP_HANDOFF__.phase='world-ready'",
+
+        "Promise.resolve().then(()=>buildSpatialSelectionOctree())", "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise",
         "const installSpatialDynamicCandidateFilter=()=>{",
         "scene.getActiveMeshCandidates=()=>{",
         "spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();",
@@ -699,7 +709,7 @@ def main() -> None:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
     if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'70',build:'0.6.362'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'71',build:'0.6.363'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -812,8 +822,8 @@ def main() -> None:
     startup_handoff = index_html.find("primer fotograma confirmado por la barrera de arranque")
     startup_world_ready = index_html.find("window.__elSinNombreStartupSmoke.worldReady=true;", startup_handoff)
     handoff_body = index_html[startup_handoff-900:startup_world_ready] if startup_handoff >= 0 and startup_world_ready >= startup_handoff else ""
-    if startup_handoff < 0 or startup_world_ready < startup_handoff or "scene.render();" not in handoff_body or "buildSpatialSelectionOctree();" not in handoff_body:
-        fail("La barrera de recursos debe asegurar primer fotograma, índice espacial y selector antes de declarar worldReady; el render loop no puede dejar el arranque offline atascado.")
+    if startup_handoff < 0 or startup_world_ready < startup_handoff or "scene.render();" not in handoff_body or "Promise.resolve().then(()=>buildSpatialSelectionOctree())" not in handoff_body or "window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise" not in handoff_body:
+        fail("La barrera de recursos debe asegurar el primer fotograma y el selector, y programar el índice espacial en segundo plano antes de declarar worldReady; el render loop no puede dejar el arranque offline atascado.")
     if "MenuMusic.preload()" not in index_html or "GameplayMusic.preload()" not in index_html or "waitForPlayableAudio" not in index_html or "decodedToAudioBuffer:false" not in index_html:
         fail("Las dos pistas de música deben estar listas mediante HTMLAudio streaming sin decodificar buffers.")
     if "fauna:'blocking-required'" not in index_html:
@@ -1103,7 +1113,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'70',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'71',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")

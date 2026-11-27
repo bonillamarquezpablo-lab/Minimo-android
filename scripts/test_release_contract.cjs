@@ -23,7 +23,12 @@ assert.ok(buildSite.includes('meshSelectionDynamicContentRatio:spatialSelectionS
 assert.ok(buildSite.includes("spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i"),"The complete wind-animated forest root, canopy and felled trees must remain dynamic; static foliage and scenery remain spatially indexed.");
 assert.ok(buildSite.includes("created-after-octree") && buildSite.includes("octree-initial-dynamic"),"New meshes and Babylon initial dynamic entries must be tracked.");
 assert.ok(indexHtml.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),"Felled trees must be transferred to dynamic octree selection before falling.");
-assert.ok(buildSite.includes('buildSpatialSelectionOctree();'),"The spatial index must be built before the campaign selector is shown.");
+assert.ok(buildSite.includes('Promise.resolve().then(()=>buildSpatialSelectionOctree())') && buildSite.includes('window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise'),"The spatial index must be scheduled in the background before the campaign selector is shown, without blocking it.");
+assert.ok(buildSite.includes("window.__ELSN_STARTUP_HANDOFF__={phase:'entered'") &&
+  buildSite.includes("phase='spatial-index-background'") && buildSite.includes("phase='reveal-selector'") &&
+  buildSite.includes("phase='world-ready'") &&
+  buildSite.includes("window.__ELSN_SPATIAL_BUILD_PROGRESS__"),
+  "Startup diagnostics must distinguish resource completion, spatial indexing and selector handoff.");
 
 const startupCoastWarmupStart=buildSite.indexOf('startup_coast_warmup_code = """');
 const startupCoastWarmupEnd=buildSite.indexOf('if html.count(fauna_scene_marker)',startupCoastWarmupStart);
@@ -59,7 +64,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.362","The release validator must target the packaged 0.6.362 release.");
+assert.equal(expectedVersion,"0.6.363","The release validator must target the packaged 0.6.363 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -108,12 +113,15 @@ const npcDialogueRuntime=fs.readFileSync('scripts/npc-dialogue-runtime.js','utf8
 assert.ok(buildSite.includes('occluders:trees,naturalOccluders:naturalShrubs'),"The dialogue bridge must supply tree and shrub occluders.");
 assert.ok(npcDialogueRuntime.includes('BABYLON.MeshBuilder.CreatePlane') &&
   npcDialogueRuntime.includes('new BABYLON.DynamicTexture') &&
-  npcDialogueRuntime.includes('slot.mesh.parent=overlayAnchor') &&
+  npcDialogueRuntime.includes('function liveHeadNode(parts,scene)') &&
+  npcDialogueRuntime.includes('function positionBubbleAtLiveAnchor(slot,npc,scene)') &&
+  npcDialogueRuntime.includes('slot.mesh.parent=null') &&
+  npcDialogueRuntime.includes('positionBubbleAtLiveAnchor(slot,npc,s.scene)') &&
+  npcDialogueRuntime.includes('scene.onBeforeRenderObservable.add') &&
   npcDialogueRuntime.includes('slot.mesh.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL') &&
-  npcDialogueRuntime.includes('slot.mesh.position.set(0,(overlayAnchor===root?2.48:.66)+slot.index*.42,0)') &&
-  !npcDialogueRuntime.includes('BABYLON.Vector3.Project') &&
+  npcDialogueRuntime.includes('liveAttachmentFrames') &&
   !npcDialogueRuntime.includes('Core.isSegmentOccluded'),
-  "NPC dialogue must be a distance-scheduled world-space billboard attached to the NPC root, with no fragile screen-projection gate.");
+  "NPC dialogue must follow the live head/root world transform on every render frame.");
 assert.ok(npcDialogueRuntime.includes('function positionTick()') &&
   npcDialogueRuntime.includes('POSITION_UPDATE_MS') &&
   npcDialogueRuntime.includes('if(!lastActive||!slots.some(slot=>slot.current)'),
@@ -127,7 +135,7 @@ assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.356
   buildSite.includes('npc-village-brain-core.js?v=0.6.356-npcbrain7'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.362"\)/,"The build must promote every visible source version to 0.6.362.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.363"\)/,"The build must promote every visible source version to 0.6.363.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!qualityLabAdaptiveActive") && buildSite.includes("qualityScaleAdaptive:qualityLabAdaptiveActive") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must keep its native render scale fixed for the session.");
 const qualityAdaptiveCode=buildSite.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||"";
 assert.ok(!qualityAdaptiveCode.includes("engine.setHardwareScalingLevel") && !qualityAdaptiveCode.includes("qualityDprSlowSamples") && !qualityAdaptiveCode.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction; manual DPR changes remain debug-only.");
@@ -163,7 +171,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.362")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.362.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.363")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.363.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -254,10 +262,10 @@ assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone(
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.362" && buildSite.includes('html = html.replace("0.6.274", "0.6.362")'), "The correction package must be release 0.6.362.");
+assert.ok(expectedVersion==="0.6.363" && buildSite.includes('html = html.replace("0.6.274", "0.6.363")'), "The correction package must be release 0.6.363.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now);') && buildSite.includes('scene.onBeforeRenderObservable.add'), "The flock must be updated after Babylon animation evaluation in the pre-render observer.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.362-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.363-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
 assert.ok(serviceWorker.includes('"./assets/vendor/babylon.js"') && serviceWorker.includes('"./assets/vendor/babylonjs.loaders.min.js"') && serviceWorker.includes('"./assets/vendor/meshopt_decoder.js"'),
   "The shell install must pre-cache Babylon, the glTF loader and meshopt so offline reload can boot.");
 assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.js")') && serviceWorker.includes('cacheFirst(request, SHELL_CACHE)'),
@@ -265,14 +273,15 @@ assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.
 
 
 assert.ok(buildSite.includes('async function buildSpatialSelectionOctree()') &&
-  buildSite.includes('await buildSpatialSelectionOctree();') &&
+  buildSite.includes('Promise.resolve().then(()=>buildSpatialSelectionOctree())') &&
   buildSite.includes('await freezeSpatialStaticWorldMatrices()') &&
   buildSite.includes('meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs') &&
   buildSite.includes('meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs'),
-  "The startup handoff must await a time-sliced spatial build and publish separate octree/classification timings.");
+  "The startup handoff must publish the selector without blocking on the time-sliced spatial build, and retain separate octree/classification timings.");
 
 
-const awaitedSpatialIndex=buildSite.indexOf("await buildSpatialSelectionOctree();");
-const readinessPublished=buildSite.indexOf("startupAssetsReady=true;",awaitedSpatialIndex);
-assert.ok(awaitedSpatialIndex>0&&readinessPublished>awaitedSpatialIndex,
-  "startupAssetsReady must remain false until the asynchronous spatial index is complete.");
+const backgroundSpatialIndex=buildSite.indexOf("Promise.resolve().then(()=>buildSpatialSelectionOctree())");
+const readinessPublished=buildSite.indexOf("startupAssetsReady=true;",backgroundSpatialIndex);
+assert.ok(backgroundSpatialIndex>0&&readinessPublished>backgroundSpatialIndex &&
+  buildSite.includes("window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise"),
+  "The selector must be revealed while the spatial index continues safely in the background.");

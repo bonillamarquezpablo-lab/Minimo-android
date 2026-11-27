@@ -89,6 +89,9 @@ async function readStartupSnapshot(page) {
       loadingText:document.getElementById('loadText')?.textContent||document.querySelector('#loading')?.textContent||null,
       loadingHelp:progress.help,progress,
       recorder:window.__elSinNombreStartupSmoke||null,
+      startupHandoff:window.__ELSN_STARTUP_HANDOFF__||null,
+      spatialBuild:window.__ELSN_SPATIAL_BUILD_PROGRESS__||null,
+      spatialSelection:window.__ELSN_SPATIAL_SELECTION__||null,
       visualActors,
       player:window.__ELSN_PLAYER_STARTUP_SMOKE__?.state?.()||null,
       resourceGate:window.__ELSN_STARTUP_RESOURCE_GATE__||null,
@@ -677,7 +680,13 @@ async function main() {
       const rect = button.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
+      // In software WebGL runners requestAnimationFrame may be extremely slow.
+      // Use a separate safe point on the unobscured action area for a real mouse
+      // input, after verifying its exact hit target; do not rely on locator stability.
+      const pointerX = rect.left + rect.width * .82;
+      const pointerY = rect.top + rect.height * .80;
       const hit = document.elementFromPoint(centerX, centerY);
+      const pointerHit = document.elementFromPoint(pointerX, pointerY);
       const describeHitNode = node => {
         if (!node) return null;
         const hitStyle = getComputedStyle(node), hitRect = node.getBoundingClientRect();
@@ -733,6 +742,9 @@ async function main() {
         pointerEvents: style.pointerEvents,
         opacity: style.opacity,
         rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        pointerPoint: { x: Number(pointerX.toFixed(1)), y: Number(pointerY.toFixed(1)) },
+        pointerTarget: describeHitNode(pointerHit),
+        pointerTargetInsideButton: !!pointerHit && (pointerHit === button || button.contains(pointerHit)),
         hitTarget: describeHitNode(hit),
         hitStack,
         qualityLabPanel,
@@ -743,13 +755,19 @@ async function main() {
     });
     manifest.campaignSelector = introReady;
     if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible ||
-        !introReady.enabled || !introReady.receivesPointer) {
+        !introReady.enabled || !introReady.receivesPointer || !introReady.pointerTargetInsideButton) {
       throw new Error('El selector de campaña no es realmente pulsable; no se forzará el clic: ' +
         JSON.stringify(introReady));
     }
     try {
-      // Use a real pointer action after the independent hit-test check. Never use force or HTMLElement.click().
-      await campaignButton.click({ timeout: 15000 });
+      // Use a real browser mouse sequence at the independently hit-tested action area.
+      // locator.click() waits for two stable rAF samples; the CI software renderer can
+      // run below 1 FPS, so that stability heuristic times out despite a valid target.
+      // page.mouse.click sends genuine pointer/mouse input and does not bypass hit-testing.
+      const point = introReady.pointerPoint;
+      await page.mouse.move(point.x, point.y);
+      await page.mouse.down();
+      await page.mouse.up();
     } catch (error) {
       await page.screenshot({ path: path.join(OUT, 'campaign-selector-click-failure.png'), fullPage: true }).catch(() => {});
       throw new Error('El botón de nueva partida superó las comprobaciones de visibilidad y hit-test, ' +
@@ -940,7 +958,20 @@ async function main() {
       );
       window.__ELSN_DIALOGUE_SMOKE_RESTORE__ = () => {
         try { root.setAbsolutePosition(original); root.computeWorldMatrix(true); } catch (_) {}
+        delete window.__ELSN_DIALOGUE_SMOKE_MOVE__;
         delete window.__ELSN_DIALOGUE_SMOKE_RESTORE__;
+      };
+      window.__ELSN_DIALOGUE_SMOKE_MOVE__ = (dx, dz) => {
+        try {
+          const current = root.getAbsolutePosition().clone();
+          current.x += Number(dx) || 0;
+          current.z += Number(dz) || 0;
+          root.setAbsolutePosition(current);
+          root.computeWorldMatrix(true);
+          return { x: current.x, y: current.y, z: current.z };
+        } catch (error) {
+          return { error: String(error?.message || error) };
+        }
       };
       root.setAbsolutePosition(probePosition);
       root.computeWorldMatrix(true);
@@ -1007,6 +1038,38 @@ async function main() {
         visualEvidence.dataUrl?.startsWith('data:image/png;base64,'),
         'La burbuja NPC no está realmente visible y renderizable dentro del viewport: ' +
         JSON.stringify({pollTimedOut:dialogueVisualPollTimedOut,state:visualEvidence.state,proof:visualEvidence.proof}));
+      assert.ok(visualEvidence.proof?.worldPosition,
+        'La prueba de diálogo no capturó la posición mundial de la tarjeta.');
+      const dialogueMove = await page.evaluate(() =>
+        window.__ELSN_DIALOGUE_SMOKE_MOVE__?.(1.65, 0.85) || null);
+      assert.ok(dialogueMove && !dialogueMove.error,
+        'No se pudo desplazar el NPC de prueba: ' + JSON.stringify(dialogueMove));
+      await page.waitForFunction(({ before }) => {
+        const proof = window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.();
+        if (!proof?.worldPosition) return false;
+        const dx = proof.worldPosition.x - before.x;
+        const dz = proof.worldPosition.z - before.z;
+        return Math.hypot(dx, dz) >= 1.35;
+      }, { before: visualEvidence.proof.worldPosition }, { timeout: 5000, polling: 50 });
+      const dialogueAttachmentMotion = await page.evaluate(before => {
+        const proof = window.__ELSN_NPC_DIALOGUES__?.captureVisualProof?.();
+        if (!proof?.worldPosition) return null;
+        const dx = proof.worldPosition.x - before.x;
+        const dy = proof.worldPosition.y - before.y;
+        const dz = proof.worldPosition.z - before.z;
+        return {
+          before,
+          after: proof.worldPosition,
+          displacementMeters: Number(Math.hypot(dx, dz).toFixed(3)),
+          verticalDeltaMeters: Number(dy.toFixed(3)),
+          anchorMode: proof.anchorMode,
+          parentName: proof.parentName
+        };
+      }, visualEvidence.proof.worldPosition);
+      assert.ok(dialogueAttachmentMotion && dialogueAttachmentMotion.displacementMeters >= 1.35,
+        'La tarjeta de diálogo no acompañó el desplazamiento real del NPC: ' +
+        JSON.stringify(dialogueAttachmentMotion));
+      manifest.npcDialogueAttachmentMotion = dialogueAttachmentMotion;
       // Chromium's full-page compositor screenshot can stall for 20s under SwiftShader,
       // even after Babylon confirms the billboard is enabled, ready and inside the viewport.
       // Keep that optional evidence separate from the deterministic live-render proof.

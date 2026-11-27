@@ -42,7 +42,7 @@ for(const marker of [
   'mesh.computeWorldMatrix()',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'scene.skipFrustumClipping',
-  'buildSpatialSelectionOctree();',
+  'Promise.resolve().then(()=>buildSpatialSelectionOctree())',
   'meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled',
   "get:()=>({...spatialSelectionStats})",
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
@@ -127,6 +127,15 @@ assert.equal((dynamicFilterSource.match(/scene\.getRenderId\(\)/g)||[]).length,1
 assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\.has\(mesh\)/g)||[]).length,1,'Do not repeat dynamic-set lookups for selected meshes.');
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
 
+
+assert.ok(builder.includes("const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__") &&
+  builder.includes("timer=setTimeout(finish,20)") &&
+  builder.includes("phase='native-octree-build'") &&
+  builder.includes("phase='tracking-initial-dynamic'") &&
+  builder.includes("phase='classifying-dynamic-meshes'") &&
+  builder.includes("phase='freezing-static-matrices'") &&
+  builder.includes("phase='complete'"),
+  "The time-sliced spatial startup must expose each bounded phase and cap background yields when rAF is throttled.");
 
 assert.ok(builder.includes('const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;') &&
   builder.includes('await yieldSpatialWorkFrame();') &&
