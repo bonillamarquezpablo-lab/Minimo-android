@@ -702,7 +702,19 @@ async function main() {
         };
       };
       const hitStack = document.elementsFromPoint(centerX, centerY).slice(0, 8).map(describeHitNode);
-      const qualityLabPanel = describeHitNode(document.getElementById('elsnQualityLab'));
+      const qualityLabElement=document.getElementById('elsnQualityLab');
+      const qualityLabPanel=describeHitNode(qualityLabElement);
+      const qualityLabToggle=qualityLabElement?.querySelector('[data-toggle]')||null;
+      const qualityLabContent=qualityLabElement?.querySelector('[data-content]')||null;
+      const qualityLabRect=qualityLabToggle?.getBoundingClientRect();
+      const qualityLabState={
+        present:!!qualityLabElement,
+        folded:!!qualityLabToggle&&qualityLabToggle.getAttribute('aria-expanded')==='false'&&!!qualityLabContent?.hidden,
+        launcherRect:qualityLabRect?{x:qualityLabRect.x,y:qualityLabRect.y,width:qualityLabRect.width,height:qualityLabRect.height}:null,
+        launcherPointerEvents:qualityLabToggle?getComputedStyle(qualityLabToggle).pointerEvents:null,
+        wrapperPointerEvents:qualityLabElement?getComputedStyle(qualityLabElement).pointerEvents:null,
+        contentPointerEvents:qualityLabContent?getComputedStyle(qualityLabContent).pointerEvents:null
+      };
       const ancestors = [];
       for (let node = button; node && node !== document.documentElement; node = node.parentElement) {
         const computed = getComputedStyle(node);
@@ -748,12 +760,19 @@ async function main() {
         hitTarget: describeHitNode(hit),
         hitStack,
         qualityLabPanel,
+        qualityLabState,
         loadingOverlay: describeHitNode(document.getElementById('loading')),
         animatedAncestors: ancestors,
         activeAnimations: animations
       };
     });
     manifest.campaignSelector = introReady;
+    const lab= introReady.qualityLabState;
+    if (!lab?.present || !lab.folded || lab.launcherPointerEvents!=='auto' ||
+        lab.wrapperPointerEvents!=='none' || lab.contentPointerEvents!=='none' ||
+        !lab.launcherRect || lab.launcherRect.width>90 || lab.launcherRect.height>44) {
+      throw new Error('?debug=1 debe mostrar solo el lanzador plegado del laboratorio sin superponer el menú: '+JSON.stringify(lab));
+    }
     if (!introReady.open || introReady.ariaHidden === 'true' || !introReady.newGameVisible ||
         !introReady.enabled || !introReady.receivesPointer || !introReady.pointerTargetInsideButton) {
       throw new Error('El selector de campaña no es realmente pulsable; no se forzará el clic: ' +
