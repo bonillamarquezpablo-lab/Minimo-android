@@ -23,7 +23,7 @@ assert.ok(buildSite.includes('meshSelectionDynamicContentRatio:spatialSelectionS
 assert.ok(buildSite.includes("spatialVegetationMotionPattern=/^(?:mixedForestTree|treeCanopyWindPivot|fallingTree|fallingForestTree)/i"),"The complete wind-animated forest root, canopy and felled trees must remain dynamic; static foliage and scenery remain spatially indexed.");
 assert.ok(buildSite.includes("created-after-octree") && buildSite.includes("octree-initial-dynamic"),"New meshes and Babylon initial dynamic entries must be tracked.");
 assert.ok(indexHtml.includes("addSpatialDynamicMesh(mesh,'falling-tree',true)"),"Felled trees must be transferred to dynamic octree selection before falling.");
-assert.ok(buildSite.includes('buildSpatialSelectionOctree();'),"The spatial index must be scheduled before the campaign selector is shown, without blocking the selector.");
+assert.ok(buildSite.includes('Promise.resolve().then(()=>buildSpatialSelectionOctree())') && buildSite.includes('window.__ELSN_SPATIAL_BUILD_PROMISE__=spatialBuildPromise'),"The spatial index must be scheduled in the background before the campaign selector is shown, without blocking it.");
 assert.ok(buildSite.includes("window.__ELSN_STARTUP_HANDOFF__={phase:'entered'") &&
   buildSite.includes("phase='spatial-index-background'") && buildSite.includes("phase='reveal-selector'") &&
   buildSite.includes("phase='world-ready'") &&
