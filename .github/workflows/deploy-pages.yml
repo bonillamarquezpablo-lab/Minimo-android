@@ -343,8 +343,10 @@ jobs:
           key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
       - name: Install the exact cached Playwright version
         run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
-      - name: Verify cached Chromium and system dependencies
-        run: npx playwright install --with-deps chromium
+      - name: Verify cached Chromium can launch
+        run: |
+          npx playwright install chromium
+          node -e "const { chromium } = require('playwright'); (async () => { const browser = await chromium.launch({ headless: true }); await browser.close(); })().catch(error => { console.error(error); process.exit(1); });"
       - name: Download the exact site package built and validated above
         uses: actions/download-artifact@v4
         with:
@@ -420,9 +422,11 @@ jobs:
           key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
       - name: Install the exact cached Playwright version
         run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
-      - name: Verify cached Chromium and system dependencies
+      - name: Verify cached Chromium can launch
         timeout-minutes: 8
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          node -e "const { chromium } = require('playwright'); (async () => { const browser = await chromium.launch({ headless: true }); await browser.close(); })().catch(error => { console.error(error); process.exit(1); });"
       - name: Download the exact site package built and validated above
         uses: actions/download-artifact@v4
         with:
@@ -504,9 +508,11 @@ jobs:
           key: el-sin-nombre-playwright-${{ runner.os }}-${{ runner.arch }}-${{ needs.build.outputs.playwright-version }}-chromium
       - name: Install the exact cached Playwright version
         run: npm install --no-save --no-package-lock "playwright@${{ needs.build.outputs.playwright-version }}"
-      - name: Verify cached Chromium and system dependencies
+      - name: Verify cached Chromium can launch
         id: playwright_install
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          node -e "const { chromium } = require('playwright'); (async () => { const browser = await chromium.launch({ headless: true }); await browser.close(); })().catch(error => { console.error(error); process.exit(1); });"
       - name: Download the exact site package built and validated above
         uses: actions/download-artifact@v4
         with:
