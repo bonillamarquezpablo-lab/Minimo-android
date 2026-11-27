@@ -128,6 +128,15 @@ assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\.has\(mesh\)/g)||
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
 
 
+assert.ok(builder.includes("const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__") &&
+  builder.includes("timer=setTimeout(finish,20)") &&
+  builder.includes("phase='native-octree-build'") &&
+  builder.includes("phase='tracking-initial-dynamic'") &&
+  builder.includes("phase='classifying-dynamic-meshes'") &&
+  builder.includes("phase='freezing-static-matrices'") &&
+  builder.includes("phase='complete'"),
+  "The time-sliced spatial startup must expose each bounded phase and cap background yields when rAF is throttled.");
+
 assert.ok(builder.includes('const spatialWorkSliceBudgetMs=isTouchDevice?3.25:5.25;') &&
   builder.includes('await yieldSpatialWorkFrame();') &&
   builder.includes('const initialDynamicCount=octree.dynamicContent.length') &&
