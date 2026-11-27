@@ -3472,7 +3472,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   // A capped timer prevents a throttled render loop (CI software renderer or
   // background tab) from stretching each tiny 3 ms work slice to several seconds.
   // At normal refresh rates requestAnimationFrame still wins this race.
-  timer=setTimeout(finish,16);
+  timer=setTimeout(finish,20);
  });
  const freezeSpatialStaticWorldMatrices=async()=>{
   let frozen=0,errors=0,skippedDynamic=0;
@@ -3931,6 +3931,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    throw new Error('RECURSO OBLIGATORIO: primer fotograma y selector de campaña · '+String(startupHandoffError&&startupHandoffError.message||startupHandoffError));
   }
  }
+ window.__ELSN_STARTUP_HANDOFF__.phase='world-ready';
+ window.__ELSN_STARTUP_HANDOFF__.updatedAt=performance.now();
  window.__elSinNombreStartupSmoke.worldReady=true;"""
     if html.count(startup_handoff_marker) != 1:
         raise SystemExit("No se encontró el punto único de cierre de la barrera de recursos para asegurar la presentación del selector.")
