@@ -2115,6 +2115,7 @@ function updateWildlife(dt){
   const coastBudgetMs=8000;
   let coastDeadlineExceeded=false;
   let coastAborted=false;
+  let coastCompilePromise=null;
   const coastReport={
    schema:2,status:'pending',budgetMs:coastBudgetMs,islandIndex:null,
    stages:[],waits:[],checks:null,errors:[],deadlineExceeded:false,
@@ -2175,6 +2176,7 @@ function updateWildlife(dt){
    coastReport.reflectionTemporarilyDisabled=!enabled;
   };
   const startReflectionShaderWarmup=()=>{
+   if(coastReport.shaderCompile.status==='pending'&&coastCompilePromise)return coastCompilePromise;
    if(isPerformanceMode||!nordicWaterMirror){coastReport.shaderCompile.status='not-required';return Promise.resolve();}
    const list=Array.isArray(nordicWaterMirror.renderList)?nordicWaterMirror.renderList:[];
    const targets=new Map();
@@ -2216,11 +2218,12 @@ function updateWildlife(dt){
      return false;
     }
    })();
+   coastCompilePromise=compilePromise;
    return compilePromise;
   };
   if(coastDiagnosticsEnabled&&!window.__ELSN_FRAME_DIAGNOSTICS__){
    const frameState={enabled:true,supportedTypes:[],unsupportedTypes:[],entries:[],maxDurationMs:0,observers:[]};
-   const supported=typeof PerformanceObserver!=='undefined'&&Array.isArray(PerformanceObserver.supportedEntryTypes)?PerformanceObserver.supportedEntryTypes:[];
+   const supported=typeof PerformanceObserver!=='undefined'?Array.from(PerformanceObserver.supportedEntryTypes||[]):[];
    for(const type of ['long-animation-frame','longtask']){
     if(!supported.includes(type)){frameState.unsupportedTypes.push(type);continue;}
     try{
@@ -2257,8 +2260,8 @@ function updateWildlife(dt){
    if(compilePromise)await compilePromise.catch(()=>false);
   };
   let coastDeadlineTimer=null;
-  const workPromise=runCoastPreparation().catch(error=>{coastReport.errors.push({stage:'preparación de costa',message:String(error&&error.message||error).slice(0,240)});});
   const deadlinePromise=new Promise(resolve=>{coastDeadlineTimer=setTimeout(()=>{coastDeadlineExceeded=true;coastAborted=true;coastReport.deadlineExceeded=true;resolve('deadline');},coastBudgetMs);});
+  const workPromise=runCoastPreparation().catch(error=>{coastReport.errors.push({stage:'preparación de costa',message:String(error&&error.message||error).slice(0,240)});});
   await Promise.race([workPromise,deadlinePromise]);
   if(coastDeadlineTimer!==null)clearTimeout(coastDeadlineTimer);
   coastReport.deadlineExceeded=coastDeadlineExceeded;
