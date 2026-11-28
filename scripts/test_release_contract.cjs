@@ -139,7 +139,7 @@ assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.356
   buildSite.includes('npc-village-brain-core.js?v=0.6.356-npcbrain7'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.365"\)/,"The build must promote every visible source version to 0.6.366.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.366"\)/,"The build must promote every visible source version to 0.6.366.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must retain its maximum selected detail and use a bounded adaptive render scale.");
 const qualityAdaptiveCode=buildSite.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||"";
 assert.ok(qualityAdaptiveCode.includes("qualityRuntimeAdaptiveActive=!isPerformanceMode") && qualityAdaptiveCode.includes("qualityDprAdaptiveFloor") && qualityAdaptiveCode.includes("engine.setHardwareScalingLevel(1/bounded)") && qualityAdaptiveCode.includes("gpu-pressure-inferred") && qualityAdaptiveCode.includes("cpu-bound-no-resolution-change") && qualityAdaptiveCode.includes("headroom-recovery"),"Adaptive resolution must use bounded, reversible GPU-pressure decisions and must not lower resolution for CPU-bound frames.");
@@ -169,7 +169,7 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
-assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 60 FPS Quality / 30 FPS Performance target without imposing a lower render cadence.");
+assert.ok(buildSite.includes("const targetFrameRate=isPerformanceMode?30:60;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 60 FPS Quality / 30 FPS Performance target without imposing a lower render cadence.");
 assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
