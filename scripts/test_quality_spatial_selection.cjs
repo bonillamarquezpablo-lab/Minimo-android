@@ -59,8 +59,12 @@ for(const marker of [
 
 assert.ok(builder.includes("EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villager_\\d+_\\d+|RaiderLongship_\\d+"),
   'Numeric NPC, guard and ship root names must be classified with working regular expressions.');
-assert.ok(builder.includes('base.data[writeIndex]=mesh') && builder.includes('base.length=writeIndex'),
-  'The candidate filter must compact Babylon’s frame-local selection array in place without allocating another array.');
+assert.ok(builder.includes('const spatialDynamicUngroupedMeshSet=new Set()') &&
+  builder.includes('const spatialActorBoundsGroups=[]') &&
+  builder.includes('octree.dynamicContent=spatialEmptyDynamicContent') &&
+  builder.includes('dynamicProviderSuppressed=octree.dynamicContent===spatialEmptyDynamicContent') &&
+  builder.includes('base.data[writeIndex++]=mesh') && builder.includes('base.length=writeIndex'),
+  'The candidate provider must isolate the static octree, maintain explicit grouped/ungrouped dynamic sets and compact only static candidates in place.');
 const freezeStart=builder.indexOf('const freezeSpatialStaticWorldMatrices=async()=>{');
 const freezeEnd=builder.indexOf('const updateSpatialSelectionCounts=',freezeStart);
 assert.ok(freezeStart>=0&&freezeEnd>freezeStart,'Static transform freezing must use a bounded, inspectable helper.');
@@ -122,13 +126,22 @@ const dynamicFilterEnd=builder.indexOf('spatialSelectionStats.dynamicFilterEnabl
 assert.ok(dynamicFilterStart>=0&&dynamicFilterEnd>dynamicFilterStart,'The live dynamic candidate filter must remain inspectable.');
 const dynamicFilterSource=builder.slice(dynamicFilterStart,dynamicFilterEnd);
 assert.ok(dynamicFilterSource.includes('const currentRenderId=scene.getRenderId();')&&dynamicFilterSource.includes('mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId'),'The render id must be read once per filter pass and reused for freshness checks.');
-assert.ok(dynamicFilterSource.includes('const isDynamic=spatialDynamicMeshSet.has(mesh);')&&dynamicFilterSource.includes('if(isDynamic)selected++;'),'Each candidate membership lookup must be reused for both filtering and selected-count accounting.');
-assert.equal((dynamicFilterSource.match(/scene\.getRenderId\(\)/g)||[]).length,1,'Do not call Scene.getRenderId for every dynamic mesh.');
-assert.equal((dynamicFilterSource.match(/spatialDynamicMeshSet\.has\(mesh\)/g)||[]).length,1,'Do not repeat dynamic-set lookups for selected meshes.');
+assert.ok(dynamicFilterSource.includes('octree.dynamicContent=spatialEmptyDynamicContent') &&
+  dynamicFilterSource.includes('for(const group of spatialActorBoundsGroups)') &&
+  dynamicFilterSource.includes('for(const mesh of spatialDynamicUngroupedMeshSet)') &&
+  dynamicFilterSource.includes('culled=Math.max(0,dynamicCandidates-selected)'),
+  'The render path must traverse actor groups and a bounded ungrouped fallback, not every dynamic mesh candidate.');
+assert.equal((dynamicFilterSource.match(/scene\\.getRenderId\\(\\)/g)||[]).length,1,'Do not call Scene.getRenderId more than once per filter pass.');
 assert.ok(builder.includes('const buildSpatialActorBoundsGroups=async()=>{') && builder.includes('const actorRoot=mesh.parent;') && builder.includes('mesh.__elsnSpatialActorBoundsGroup=group;'), 'Rigid actor components must be grouped once under their common moving root.');
 assert.ok(builder.includes('mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0') && builder.includes('if(Array.isArray(mesh.animations)&&mesh.animations.length)continue;'), 'Skinned, morph-driven, billboard and independently animated components must remain on the safe per-mesh path.');
-assert.ok(dynamicFilterSource.includes('group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera') && dynamicFilterSource.includes('plane.normal.x*center.x') && dynamicFilterSource.includes('if(group.visible===false)keep=false;') && dynamicFilterSource.includes('mesh.isInFrustum(scene.frustumPlanes)'), 'Actor-level conservative sphere culling must run once per camera/render while retaining the individual fallback.');
-assert.ok(builder.includes('meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount') && builder.includes('meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled') && builder.includes('delete mesh.__elsnSpatialActorBoundsGroup'), 'Actor-group diagnostics and mesh removal cleanup must be included.');
+assert.ok(dynamicFilterSource.includes('group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera') &&
+  dynamicFilterSource.includes('plane.normal.x*center.x') &&
+  dynamicFilterSource.includes('if(!visible)continue;') &&
+  dynamicFilterSource.includes('mesh.isInFrustum(scene.frustumPlanes)') &&
+  builder.includes('mesh.alwaysSelectAsActiveMesh=true') &&
+  builder.includes('mesh.__elsnPreviousAlwaysSelectAsActiveMesh'),
+  'Actor-level conservative sphere culling must run once per camera/render, skip whole out-of-frustum groups, and prevent redundant per-member frustum tests while preserving original flags.');
+assert.ok(builder.includes('meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount') && builder.includes('meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled') && builder.includes('meshSelectionDynamicProviderSuppressed:!!spatialSelectionStats.dynamicProviderSuppressed') && builder.includes('meshSelectionDynamicFilterUngroupedChecks:spatialSelectionStats.dynamicFilterLastUngroupedChecks||0') && builder.includes('delete mesh.__elsnSpatialActorBoundsGroup'), 'Actor-group diagnostics and mesh removal cleanup must be included.');
 console.log('OK Babylon spatial selection: safe static Octree, dynamic meshes tracked separately, no false dynamic-frustum claim, native Quality resolution and antialiasing retained.');
 
 
