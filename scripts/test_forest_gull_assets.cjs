@@ -7,7 +7,7 @@ const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
-assert.ok(html.includes("window.__ELSN_ADAPTIVE_RESOLUTION__?window.__ELSN_ADAPTIVE_RESOLUTION__():null"),'The adaptive-resolution diagnostics getter must be called using its exact published name.');
+assert.ok(html.includes("typeof window.__ELSN_ADAPTIVE_RESOLUTION__==='function'?window.__ELSN_ADAPTIVE_RESOLUTION__():null"),'The adaptive-resolution diagnostics getter must be called using its exact published name.');
 assert.ok(!html.includes("window.__ELSN_ADAPTIVE_RESOLUTION__?window.__ELSN_ADAPTIVE_RESOLUTION():null"),'A mismatched adaptive-resolution getter must never ship.');
 assert.match(html,/container\.addAllToScene\(\)/,'Each forest species must be loaded once as a shared template.');
 assert.match(html,/sourceMesh\.createInstance\(/,'Placed trees must share template geometry through Babylon InstancedMesh.');
