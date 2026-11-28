@@ -561,7 +561,7 @@
         meshSelectionActorBoundsGroupsChecked: number(runtime.meshSelectionActorBoundsGroupsChecked),
         meshSelectionActorBoundsGroupsCulled: number(runtime.meshSelectionActorBoundsGroupsCulled),
         meshSelectionActorBoundsGroupCheckErrors: number(runtime.meshSelectionActorBoundsGroupCheckErrors),
-        meshSelectionActorBoundsGroupingExcludedAnimated: number(runtime.meshSelectionActorBoundsGroupingExcludedAnimated),
+        meshSelectionActorBoundsGroupingExcludedUnsafe: number(runtime.meshSelectionActorBoundsGroupingExcludedUnsafe),
         meshSelectionActorBoundsDirectGroupedMeshes: number(runtime.meshSelectionActorBoundsDirectGroupedMeshes),
         meshSelectionActorBoundsNestedGroupedMeshes: number(runtime.meshSelectionActorBoundsNestedGroupedMeshes),
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs),
