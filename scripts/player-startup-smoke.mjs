@@ -1170,6 +1170,15 @@ async function main() {
       JSON.stringify(manifest.spatialSelection));
     assert.equal(manifest.spatialSelection.dynamicFilterEnabled, true,
       'La integración con getActiveMeshCandidates debe estar activa en la escena real.');
+    assert.equal(manifest.spatialSelection.dynamicProviderSuppressed, true,
+      'Babylon debe consultar el octree estático sin concatenar automáticamente toda la lista dinámica.');
+    assert.ok(Number(manifest.spatialSelection.actorBoundsGroupCount) > 0 &&
+      Number(manifest.spatialSelection.actorBoundsGroupedMeshCount) >= 2,
+      'La escena real debe agrupar al menos un actor rígido y sus mallas bajo una sola prueba de límites.');
+    assert.ok(Number(manifest.spatialSelection.actorBoundsGroupsChecked) > 0,
+      'La selección real debe evaluar grupos de actores mediante sus límites conservadores.');
+    assert.ok(Number(manifest.spatialSelection.dynamicFilterLastUngroupedChecks) >= 0,
+      'La ruta de fallback debe contabilizar rigs, partículas y objetos dinámicos no agrupables.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterPasses) > 0 && Number(manifest.spatialSelection.dynamicFilterLastCandidates) > 0,
       'El filtro de candidatos dinámicos debe haberse ejecutado en el juego real.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterLastSelected) > 0,
