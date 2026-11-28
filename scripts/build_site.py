@@ -2159,8 +2159,8 @@ function updateWildlife(dt){
    if(isPerformanceMode){reflection={ready:true,reason:'no aplica: perfil Rendimiento no crea espejo de agua'};}
    else if(!nordicWaterMirror){reflection={ready:false,reason:'nordicWaterMirror no está creado'};}
    else if(activeWaterReflectionIslandIndex!==index){reflection={ready:false,reason:'isla del reflejo '+activeWaterReflectionIslandIndex+' distinta de la isla activa '+index};}
-   else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
    else if(!['ready','not-required'].includes(coastReport.shaderCompile.status)){reflection={ready:false,reason:'compilación de materiales del reflejo '+coastReport.shaderCompile.status};}
+   else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
    else{reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:coastReport.shaderCompile.status};}
    coastReport.checks={seabed:{label:'Fondo marino',...seabed},beach:{label:'Playa',...beach},foam:{label:'Espuma',...foam},reflection:{label:'Reflejo',...reflection}};
    coastReport.checks.allReady=Object.values(coastReport.checks).filter(item=>item&&typeof item==='object'&&'ready'in item).every(item=>item.ready);
@@ -2171,7 +2171,10 @@ function updateWildlife(dt){
    if(!nordicWaterMirror)return;
    if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalLevel'))coastReport.reflectionOriginalLevel=Number.isFinite(Number(nordicWaterMirror.level))?Number(nordicWaterMirror.level):1;
    if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalRefreshRate'))coastReport.reflectionOriginalRefreshRate=Number.isFinite(Number(nordicWaterMirror.refreshRate))?Number(nordicWaterMirror.refreshRate):(isTouchDevice?12:8);
+   if(!enabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length)coastReport.reflectionOriginalRenderList=nordicWaterMirror.renderList.slice();
    nordicWaterMirror.level=enabled?coastReport.reflectionOriginalLevel:0;
+   if(enabled&&Array.isArray(coastReport.reflectionOriginalRenderList))nordicWaterMirror.renderList=coastReport.reflectionOriginalRenderList.slice();
+   else if(!enabled)nordicWaterMirror.renderList=[];
    nordicWaterMirror.refreshRate=enabled?coastReport.reflectionOriginalRefreshRate:0;
    coastReport.reflectionTemporarilyDisabled=!enabled;
   };
