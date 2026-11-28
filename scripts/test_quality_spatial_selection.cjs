@@ -20,7 +20,7 @@ for(const marker of [
   'const isSpatialDynamicMesh=mesh=>',
   'scene.createOrUpdateSelectionOctree(64,3)',
   'scene.selectionOctree!==octree',
-  "typeof octree.select!=='function',"
+  "typeof octree.select!=='function'",
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,spatialDynamicReasonForMesh(mesh)||'created-after-octree',true);});",
