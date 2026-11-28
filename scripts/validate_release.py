@@ -54,7 +54,7 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now);",
     "gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__",
-    "if(root._isWorldMatrixFrozen&&typeof root.unfreezeWorldMatrix==='function')",
+    "if(node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function')",
     "node.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;",
     "mesh.computeWorldMatrix(true)",
     "if(importedRoot.parent!==visualRoot)",
