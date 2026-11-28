@@ -200,7 +200,7 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
   validator.includes('Math.min(1000,125+bootstrapAttempts*25)'),
   'Dialogue startup must retry with a low-frequency bounded poll until the game bridge is ready.');
 
-assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality diagnostics must target 60 FPS stability target.');
+assert.ok(builder.includes('const targetFrameRate=isPerformanceMode?30:60;'), 'The Quality diagnostics must target 60 FPS stability target.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') &&
   dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('function positionBubbleAtLiveAnchor(slot,npc,scene)') &&
   dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('liveAttachmentFrames') &&
