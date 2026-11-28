@@ -3710,6 +3710,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  let spatialSelectionOctree=null;
  const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,actorBoundsGroupCount:0,actorBoundsGroupedMeshCount:0,actorBoundsGroupBuildMs:0,actorBoundsGroupBuildErrors:0,actorBoundsGroupsChecked:0,actorBoundsGroupsCulled:0,actorBoundsGroupCheckErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
+ const spatialDynamicUngroupedMeshSet=new Set();
+ const spatialActorBoundsGroups=[];
+ const spatialEmptyDynamicContent=[];
  const publishSpatialSelectionStats=()=>{
   try{
    // Expose an on-demand live snapshot. The getter copies only when the Inspector
@@ -3740,10 +3743,11 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const buildSpatialActorBoundsGroups=async()=>{
   const startedAt=performance.now(),groups=new Map();
   let groupedMeshes=0,groupCount=0,groupErrors=0,sliceStartedAt=startedAt;
-  // Group only rigid meshes directly parented to a recognised moving root.
-  // Skinned/morph/animated/billboard and nested independently moving parts stay on the safe path.
+  // Group rigid actor meshes under their common moving root. Only direct root
+  // children are eligible here: nested pivots, bones, sockets and independently
+  // animated pieces retain Babylon's per-mesh path.
   for(const mesh of spatialDynamicMeshSet){
-   if(!mesh||mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0)continue;
+   if(!mesh||mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||mesh.alwaysSelectAsActiveMesh)continue;
    const actorRoot=mesh.parent;
    if(!actorRoot||actorRoot===scene||!spatialActorRootPattern.test(String(actorRoot.name||''))||
       typeof actorRoot.computeWorldMatrix!=='function'||typeof actorRoot.getWorldMatrix!=='function')continue;
@@ -3779,8 +3783,15 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     group.center=new B.Vector3((group.minX+group.maxX)*.5,(group.minY+group.maxY)*.5,(group.minZ+group.maxZ)*.5);
     group.radius=Math.max(.2,Math.sqrt((group.maxX-group.center.x)**2+(group.maxY-group.center.y)**2+(group.maxZ-group.center.z)**2)*1.18+.18);
     group.lastRenderId=-1;group.lastCamera=null;group.visible=true;group.meshCount=group.members.length;
-    for(const mesh of group.members){mesh.__elsnSpatialActorBoundsGroup=group;groupedMeshes++;}
-    group.members=null;groupCount++;
+    for(const mesh of group.members){
+     mesh.__elsnSpatialActorBoundsGroup=group;
+     mesh.__elsnPreviousAlwaysSelectAsActiveMesh=!!mesh.alwaysSelectAsActiveMesh;
+     mesh.alwaysSelectAsActiveMesh=true;
+     spatialDynamicUngroupedMeshSet.delete(mesh);
+     groupedMeshes++;
+    }
+    spatialActorBoundsGroups.push(group);
+    groupCount++;
    }catch(_){groupErrors++;}
   }
   groups.clear();
@@ -3788,6 +3799,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   spatialSelectionStats.actorBoundsGroupedMeshCount=groupedMeshes;
   spatialSelectionStats.actorBoundsGroupBuildMs=Number((performance.now()-startedAt).toFixed(2));
   spatialSelectionStats.actorBoundsGroupBuildErrors=groupErrors;
+  spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
   return groupedMeshes;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
@@ -3885,6 +3897,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   // entries are marked during octree creation before this registration path runs.
   dynamic.push(mesh);
   spatialDynamicMeshSet.add(mesh);
+  spatialDynamicUngroupedMeshSet.add(mesh);
   spatialSelectionStats.dynamicReasons[classification]=(spatialSelectionStats.dynamicReasons[classification]||0)+1;
   if(spatialSelectionStats.dynamicSampleNames.length<32)spatialSelectionStats.dynamicSampleNames.push({name:String(mesh.name||''),reason:classification});
   const reasonSamples=spatialSelectionStats.dynamicSampleNamesByReason[classification]||(spatialSelectionStats.dynamicSampleNamesByReason[classification]=[]);
@@ -3902,9 +3915,19 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    const index=dynamic.indexOf(mesh);if(index>=0)dynamic.splice(index,1);
   }
   spatialDynamicMeshSet.delete(mesh);
+  spatialDynamicUngroupedMeshSet.delete(mesh);
+  const group=mesh.__elsnSpatialActorBoundsGroup;
+  if(group&&Array.isArray(group.members)){
+   const memberIndex=group.members.indexOf(mesh);
+   if(memberIndex>=0){group.members.splice(memberIndex,1);group.meshCount=Math.max(0,group.meshCount-1);}
+  }
+  if(Object.prototype.hasOwnProperty.call(mesh,'__elsnPreviousAlwaysSelectAsActiveMesh')){
+   mesh.alwaysSelectAsActiveMesh=!!mesh.__elsnPreviousAlwaysSelectAsActiveMesh;
+  }
   const reason=String(mesh.__elsnSpatialDynamicReason||'unknown');
   if(spatialSelectionStats.dynamicReasons[reason]>0)spatialSelectionStats.dynamicReasons[reason]--;
-  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;delete mesh.__elsnSpatialActorBoundsGroup;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;delete mesh.__elsnSpatialActorBoundsGroup;delete mesh.__elsnPreviousAlwaysSelectAsActiveMesh;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
   updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
@@ -3952,6 +3975,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     const mesh=octree.dynamicContent[index];
     if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
+    spatialDynamicUngroupedMeshSet.add(mesh);
     mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic';
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
@@ -3981,70 +4005,97 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;
     if(typeof baseGetActiveMeshCandidates!=='function')return false;
     scene.getActiveMeshCandidates=()=>{
-     const base=baseGetActiveMeshCandidates.call(scene);
-     if(!base||!Array.isArray(base.data)||!Number.isFinite(base.length)||scene.skipFrustumClipping||
-        !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
-     const startedAt=performance.now();
-     // The Babylon render id is constant for this candidate pass; cache it once
-     // rather than calling Scene.getRenderId for every actor mesh.
-     const currentRenderId=scene.getRenderId();
-     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0,actorGroupsChecked=0,actorGroupsCulled=0,actorGroupErrors=0;
-     // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
-     // Compact that frame-local result in place: no extra list, no scene mutation,
-     // and no allocation on the render path.
+     const octree=spatialSelectionOctree,fullDynamicContent=octree&&octree.dynamicContent;
+     // Keep Babylon's native path for uncommon states where every object must be
+     // returned (no camera, skipped clipping, or incomplete frustum planes).
+     if(!octree||!Array.isArray(fullDynamicContent)||scene.skipFrustumClipping||
+        !scene.activeCamera||!Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6){
+      return baseGetActiveMeshCandidates.call(scene);
+     }
+     const startedAt=performance.now(),currentRenderId=scene.getRenderId();
+     let base=null,providerError=false;
+     // SelectionOctree.select appends the whole dynamicContent list. Temporarily
+     // point it at a shared empty array so only the static octree blocks are returned.
+     // The original list is restored synchronously before any entity update can run.
+     try{
+      octree.dynamicContent=spatialEmptyDynamicContent;
+      base=baseGetActiveMeshCandidates.call(scene);
+     }catch(_){providerError=true;}
+     finally{octree.dynamicContent=fullDynamicContent;}
+     if(providerError||!base||!Array.isArray(base.data)||!Number.isFinite(base.length)){
+      spatialSelectionStats.dynamicFilterFallbacks=(spatialSelectionStats.dynamicFilterFallbacks||0)+1;
+      return baseGetActiveMeshCandidates.call(scene);
+     }
+     let staticCandidates=0,dynamicCandidates=spatialDynamicMeshSet.size,selected=0,culled=0,errors=0,writeIndex=0;
+     let actorGroupsChecked=0,actorGroupsCulled=0,actorGroupErrors=0,ungroupedChecked=0;
+     // Dynamic actor meshes can still appear in an octree block when they were
+     // promoted after its first build. Remove them from the static result; each is
+     // reintroduced exactly once by its group or ungrouped fallback below.
      for(let index=0;index<base.length;index++){
       const mesh=base.data[index];
       if(!mesh)continue;
-      let keep=true;
-      const isDynamic=spatialDynamicMeshSet.has(mesh);
-      if(isDynamic){
-       dynamicCandidates++;
-       if(mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'&&
-          !mesh.alwaysSelectAsActiveMesh&&
-          !(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
-          !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
-          typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
-        const group=mesh.__elsnSpatialActorBoundsGroup;
-        if(group){
-         if(group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera){
-          group.lastRenderId=currentRenderId;group.lastCamera=scene.activeCamera;actorGroupsChecked++;
-          try{
-           group.root.computeWorldMatrix();
-           const matrix=group.root.getWorldMatrix(),m=matrix.m;
-           const center=B.Vector3.TransformCoordinates(group.center,matrix);
-           const scale=Math.max(Math.hypot(m[0],m[1],m[2]),Math.hypot(m[4],m[5],m[6]),Math.hypot(m[8],m[9],m[10]));
-           const radius=group.radius*Math.max(.001,scale);
-           let visible=true;
-           for(let planeIndex=0;planeIndex<6;planeIndex++){
-            const plane=scene.frustumPlanes[planeIndex],distance=plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d;
-            if(distance < -radius){visible=false;break;}
-           }
-           group.visible=visible;
-           if(!visible)actorGroupsCulled++;
-          }catch(_){group.visible=true;actorGroupErrors++;errors++;}
-         }
-         if(group.visible===false)keep=false;
-        }else{
-         try{mesh.computeWorldMatrix();if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;}
-         catch(_){errors++;}
-        }
-       }
-      }
-      if(keep){
-       base.data[writeIndex]=mesh;
-       writeIndex++;
-       if(isDynamic)selected++;
-      }else{
-       culled++;
-      }
+      if(spatialDynamicMeshSet.has(mesh)){culled++;continue;}
+      base.data[writeIndex++]=mesh;staticCandidates++;
      }
      base.length=writeIndex;
+     const appendCandidate=mesh=>{
+      if(typeof base.push==='function')base.push(mesh);
+      else{base.data[base.length]=mesh;base.length++;}
+     };
+     // One conservative root sphere test replaces N per-mesh frustum tests.
+     for(const group of spatialActorBoundsGroups){
+      if(!group||!group.members||!group.members.length)continue;
+      let visible=group.visible!==false;
+      if(group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera){
+       group.lastRenderId=currentRenderId;group.lastCamera=scene.activeCamera;actorGroupsChecked++;
+       try{
+        if(!group.root||group.root.isDisposed?.()){visible=true;actorGroupErrors++;}
+        else{
+         group.root.computeWorldMatrix();
+         const matrix=group.root.getWorldMatrix(),m=matrix.m;
+         const center=B.Vector3.TransformCoordinates(group.center,matrix);
+         const scale=Math.max(Math.hypot(m[0],m[1],m[2]),Math.hypot(m[4],m[5],m[6]),Math.hypot(m[8],m[9],m[10]));
+         const radius=group.radius*Math.max(.001,scale);
+         visible=true;
+         for(let planeIndex=0;planeIndex<6;planeIndex++){
+          const plane=scene.frustumPlanes[planeIndex];
+          const distance=plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d;
+          if(distance < -radius){visible=false;break;}
+         }
+        }
+       }catch(_){visible=true;actorGroupErrors++;errors++;}
+       group.visible=visible;
+       if(!visible)actorGroupsCulled++;
+      }
+      if(!visible){culled+=group.members.length;continue;}
+      for(const mesh of group.members){
+       if(!mesh||mesh.isDisposed?.())continue;
+       appendCandidate(mesh);selected++;
+      }
+     }
+     // Special rigs, billboards, particles, effects and post-build meshes retain
+     // individual Babylon frustum tests. This set is intentionally much smaller.
+     for(const mesh of spatialDynamicUngroupedMeshSet){
+      if(!mesh||mesh.isDisposed?.())continue;
+      ungroupedChecked++;
+      let keep=true;
+      if(!mesh.alwaysSelectAsActiveMesh&&!(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
+         typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
+       try{mesh.computeWorldMatrix();if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;}
+       catch(_){errors++;}
+      }
+      if(keep){appendCandidate(mesh);selected++;}else culled++;
+     }
      const duration=Math.max(0,performance.now()-startedAt);
      spatialSelectionStats.dynamicFilterEnabled=true;
+     spatialSelectionStats.dynamicFilterMode='static-octree-plus-actor-groups';
      spatialSelectionStats.dynamicFilterPasses++;
      spatialSelectionStats.dynamicFilterLastCandidates=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterLastStaticCandidates=staticCandidates;
      spatialSelectionStats.dynamicFilterLastSelected=selected;
      spatialSelectionStats.dynamicFilterLastCulled=culled;
+     spatialSelectionStats.dynamicFilterLastGroupChecks=actorGroupsChecked;
+     spatialSelectionStats.dynamicFilterLastUngroupedChecks=ungroupedChecked;
      spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
      spatialSelectionStats.dynamicFilterTotalCandidates+=dynamicCandidates;
      spatialSelectionStats.dynamicFilterTotalCulled+=culled;
@@ -4055,6 +4106,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      spatialSelectionStats.actorBoundsGroupsChecked=actorGroupsChecked;
      spatialSelectionStats.actorBoundsGroupsCulled=actorGroupsCulled;
      spatialSelectionStats.actorBoundsGroupCheckErrors+=actorGroupErrors;
+     spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
      return base;
     };
     spatialSelectionStats.dynamicFilterEnabled=true;
