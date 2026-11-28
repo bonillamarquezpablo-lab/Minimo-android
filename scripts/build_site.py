@@ -3978,6 +3978,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.phase='native-octree-build';
    spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
+   // Babylon 9.35's candidate provider selects Scene._selectionOctree and
+   // Octree.select appends dynamicContent. Install our grouped path only when
+   // the created octree is exactly the one used by the live scene provider.
+   if(!octree||scene.selectionOctree!==octree||typeof octree.select!=='function'){
+    throw new Error('El octree creado no coincide con el proveedor de selección activo de Babylon.');
+   }
    spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
    spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.babylonOctreeBuildMs=spatialBuildProgress.nativeOctreeBuildMs;
