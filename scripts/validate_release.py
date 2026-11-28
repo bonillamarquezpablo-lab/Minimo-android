@@ -449,7 +449,7 @@ def main() -> None:
         "gullSkeletons.forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}",
         "mesh.material.backFaceCulling=false",
         "mesh.material.twoSidedLighting=true",
-        "flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh",
+        "flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh",
         "alignAxis=(from,to)",
         "visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))",
         "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
