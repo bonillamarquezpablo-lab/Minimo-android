@@ -576,6 +576,10 @@
         jsHeapLimitBytes: number(browserMemory && browserMemory.jsHeapSizeLimit)
       },
       subsystems: {
+        forestInstancing: typeof window.__ELSN_FOREST_INSTANCING_STATS__ === "function"
+          ? window.__ELSN_FOREST_INSTANCING_STATS__() : null,
+        rockInstancing: typeof window.__ELSN_ROCK_INSTANCING__ === "function"
+          ? window.__ELSN_ROCK_INSTANCING__() : null,
         waterUpdateMs: number(runtime.waterUpdateMs),
         waterNormalMs: number(runtime.waterNormalMs),
         waterReflectionMeshes: number(runtime.waterReflectionMeshes),
