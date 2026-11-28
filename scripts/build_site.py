@@ -3742,20 +3742,39 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   return null;
  };
  const buildSpatialActorBoundsGroups=async()=>{
-  const startedAt=performance.now(),groups=new Map();
-  let groupedMeshes=0,groupCount=0,groupErrors=0,sliceStartedAt=startedAt;
-  // Group rigid actor meshes under their common moving root. Only direct root
-  // children are eligible here: nested pivots, bones, sockets and independently
-  // animated pieces retain Babylon's per-mesh path.
+  const startedAt=performance.now(),groups=new Map(),animatedTransformTargets=new Set();
+  let groupedMeshes=0,groupCount=0,groupErrors=0,groupingExcludedAnimated=0,nestedGroupedMeshes=0,directGroupedMeshes=0,sliceStartedAt=startedAt;
+  // AnimationGroup targets are not guaranteed to appear in node.animations.
+  // Snapshot transform targets once, outside the render path, so nested pivots
+  // animated independently never get hidden by a parent actor's coarse bound.
+  for(const animationGroup of scene.animationGroups||[]){
+   for(const targeted of animationGroup&&animationGroup.targetedAnimations||[]){
+    const target=targeted&&targeted.target;
+    if(target&&typeof target.getWorldMatrix==='function')animatedTransformTargets.add(target);
+   }
+  }
+  // Group rigid actor meshes by their nearest recognised moving root, even when
+  // the GLB hierarchy contains neutral TransformNode pivots between root and mesh.
+  // Exclude every independently animated/interpolated node on the path to the root.
   for(const mesh of spatialDynamicMeshSet){
    if(!mesh||mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||mesh.alwaysSelectAsActiveMesh)continue;
-   const actorRoot=mesh.parent;
-   if(!actorRoot||actorRoot===scene||!spatialActorRootPattern.test(String(actorRoot.name||''))||
-      typeof actorRoot.computeWorldMatrix!=='function'||typeof actorRoot.getWorldMatrix!=='function')continue;
-   if(Array.isArray(mesh.animations)&&mesh.animations.length)continue;
+   let actorRoot=null;
+   for(let node=mesh;node&&node!==scene;node=node.parent){
+    if(spatialActorRootPattern.test(String(node.name||''))){actorRoot=node;break;}
+   }
+   if(!actorRoot||actorRoot===scene||typeof actorRoot.computeWorldMatrix!=='function'||typeof actorRoot.getWorldMatrix!=='function')continue;
+   let unsafeTransform=false;
+   for(let node=mesh;node&&node!==actorRoot;node=node.parent){
+    if(node.skeleton||node.morphTargetManager||Number(node.billboardMode)>0||
+       (Array.isArray(node.animations)&&node.animations.length)||animatedTransformTargets.has(node)){
+     unsafeTransform=true;break;
+    }
+   }
+   if(unsafeTransform){groupingExcludedAnimated++;continue;}
    let group=groups.get(actorRoot);
    if(!group){group={root:actorRoot,members:[],minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity,valid:true};groups.set(actorRoot,group);}
    group.members.push(mesh);
+   if(mesh.parent===actorRoot)directGroupedMeshes++;else nestedGroupedMeshes++;
    if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();sliceStartedAt=performance.now();}
   }
   for(const group of groups.values()){
@@ -3798,6 +3817,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   groups.clear();
   spatialSelectionStats.actorBoundsGroupCount=groupCount;
   spatialSelectionStats.actorBoundsGroupedMeshCount=groupedMeshes;
+  spatialSelectionStats.actorBoundsGroupingExcludedAnimated=groupingExcludedAnimated;
+  spatialSelectionStats.actorBoundsDirectGroupedMeshes=directGroupedMeshes;
+  spatialSelectionStats.actorBoundsNestedGroupedMeshes=nestedGroupedMeshes;
   spatialSelectionStats.actorBoundsGroupBuildMs=Number((performance.now()-startedAt).toFixed(2));
   spatialSelectionStats.actorBoundsGroupBuildErrors=groupErrors;
   spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
