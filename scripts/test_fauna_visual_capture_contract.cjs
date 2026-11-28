@@ -124,6 +124,11 @@ assert.ok(capture.includes("const sampleGullWorldPositions=()=>page.evaluate") &
   capture.includes("requiredDisplacementMeters:.35"),
   'Fauna acceptance must prove real world-space translation of both the gull actor and a rendered mesh; wing animation alone is insufficient.');
 assert.ok(capture.includes('animationGroups'));
+assert.ok(capture.includes('if(angleDegrees===0){') &&
+  capture.includes("angle:'bindpose-no-skinning'") &&
+  capture.includes('captureDiagnostics:window.__ELSN_FAUNA_FAILED_CAPTURE__') &&
+  capture.includes('captureDiagnostics:view.captureDiagnostics'),
+  'A front-view failure must still export the gull bind pose and per-mesh render diagnostics before rejection.');
 assert.ok(capture.includes('captureCanvas'));
 const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.()!==false;');
 const rasterCaptureEnd=capture.indexOf('if(backgroundPng){',rasterCaptureStart);
