@@ -70,6 +70,17 @@ assert.ok(html.includes("glbTimings:glbTimingRecords.slice(-40)") &&
   html.includes("recordGlbTiming('Aldeano ") &&
   html.includes("instanciación y montaje"),
   'Startup diagnostics must expose bounded per-model humanoid import/rig timings without running the Inspector.');
+assert.ok(html.includes("setWaterState:({time,tide})=>") &&
+  html.includes("tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP)") &&
+  html.includes("animateWater(0)"),
+  'The island inspector must set the GPU water clock through the current shoreline update path.');
+for (const legacyWaterSymbol of [
+  'waterAccumulator','waterNormalAccumulator','waterFarAccumulator',
+  'waterVertexStep','waterNormalStep','waterFarStep'
+]) {
+  assert.ok(!html.includes(legacyWaterSymbol),
+    'The generated GPU runtime must not retain stale CPU water cadence variable: ' + legacyWaterSymbol);
+}
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
 assert.ok(html.includes("fauna:'blocking-required'"),

@@ -5722,6 +5722,35 @@ function getWorldPhaseTimingSnapshot(){
  }"""
     html = html[:water_animation_start] + water_animation_replacement + html[water_animation_end:]
 
+    # The GPU water renderer no longer uses the retired CPU vertex/normal accumulators.
+    # Inspector and debug controls drive the current shader clock and shoreline foam only.
+    water_tide_button_old = "debugForcedTideOffset=value;waterAccumulator=waterVertexStep;waterFarAccumulator=waterFarStep;waterNormalAccumulator=waterNormalStep;animateWater(1/60);refreshDiagnostics();"
+    water_tide_button_new = "debugForcedTideOffset=value;tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP);animateWater(1/60);refreshDiagnostics();"
+    if html.count(water_tide_button_old) != 1:
+        raise SystemExit("The debug tide button still needs a unique GPU-compatible update path.")
+    html = html.replace(water_tide_button_old, water_tide_button_new, 1)
+
+    water_test_state_old = "waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;"
+    water_test_state_new = "tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP);"
+    if html.count(water_test_state_old) != 1:
+        raise SystemExit("The test water-state setter still references removed CPU water accumulators.")
+    html = html.replace(water_test_state_old, water_test_state_new, 1)
+
+    water_near_detail_old = "waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;"
+    water_near_detail_new = "animateWater(0);"
+    if html.count(water_near_detail_old) != 1:
+        raise SystemExit("The near-water diagnostic toggle still references removed CPU water accumulators.")
+    html = html.replace(water_near_detail_old, water_near_detail_new, 1)
+
+    retired_water_symbols = (
+        "waterAccumulator", "waterNormalAccumulator", "waterFarAccumulator",
+        "waterVertexStep", "waterNormalStep", "waterFarStep"
+    )
+    remaining_water_symbols = [symbol for symbol in retired_water_symbols if symbol in html]
+    if remaining_water_symbols:
+        raise SystemExit("Retired CPU water symbols remain in the generated GPU runtime: " + ", ".join(remaining_water_symbols))
+
+
 
     water_perf_vertices_marker = "waterVertices:waterPositions.length/3"
     if html.count(water_perf_vertices_marker) != 1:
