@@ -37,7 +37,7 @@ for(const marker of [
   "perfGpuPending.length=0;perfGpuActiveQuery=null;perfGpuExtension=null;perfGpuMode='unavailable';perfGpuDisjoint=false;",
   'physicalPixelCoveragePct',
   'fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight',
-  'FPS bajo; la escala de Calidad permanece fija',
+  'EL SIN NOMBRE: estabilidad por debajo del objetivo de 60 FPS.',
   'renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))',
   'renderPipeline.sharpen.edgeAmount=.34',
   'list.length<180',
@@ -56,7 +56,7 @@ const adaptiveCode=builder.split('quality_adaptive_code = r"""')[1]?.split('"""'
 assert.ok(adaptiveCode.includes('qualityRuntimeAdaptiveActive=!isPerformanceMode') && adaptiveCode.includes('qualityDprAdaptiveFloor') && adaptiveCode.includes('engine.setHardwareScalingLevel(1/bounded)') && adaptiveCode.includes('gpu-pressure-inferred') && adaptiveCode.includes('cpu-bound-no-resolution-change') && adaptiveCode.includes('headroom-recovery'), 'Quality must adapt resolution only under sustained inferred GPU pressure, preserve pixels when CPU-bound, and recover gradually.');
 assert.ok(!adaptiveCode.includes('qualityDprSlowSamples') && !adaptiveCode.includes('qualityDprStableSamples'), 'The adaptive controller must use its bounded rolling frame/CPU windows instead of stale counters.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
+assert.ok(builder.includes('targetFrameRate=60') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)'), 'Performance diagnostics must retain the stable 60 FPS target and adaptive render scale.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
 assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('physicalPixelWidth') && builder.includes('physicalPixelHeight') && builder.includes('physicalPixelCoveragePct'), 'The runtime must report actual framebuffer dimensions and physical-panel pixel coverage.');
 assert.ok(builder.includes('qualityLabFsr1Requested') && builder.includes('const fsr1InputScale=.87;') && builder.includes('if(fsr1Candidate){'), 'FSR1 must remain available behind the explicit debug opt-in.');
