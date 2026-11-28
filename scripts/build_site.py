@@ -2283,6 +2283,7 @@ function updateWildlife(dt){
     if(!scene||scene.isDisposed&&scene.isDisposed())return;
     coastReport.recovery.attempts++;
     runCoastStage('recovery.syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
+    if(coastReport.shaderCompile.status==='pending')setCoastReflectionEnabled(false);
     const recoveryCompile=startReflectionShaderWarmup();
     if(recoveryCompile)recoveryCompile.then(()=>{updateCoastChecks();coastReport.updatedAt=performance.now();}).catch(()=>{});
    },1800);
