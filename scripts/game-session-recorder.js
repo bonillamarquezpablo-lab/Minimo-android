@@ -547,6 +547,13 @@
         meshSelectionDynamicFilterLastMs: number(runtime.meshSelectionDynamicFilterLastMs),
         meshSelectionDynamicFilterMaxMs: number(runtime.meshSelectionDynamicFilterMaxMs),
         meshSelectionDynamicFilterErrors: number(runtime.meshSelectionDynamicFilterErrors),
+        meshSelectionActorBoundsGroupCount: number(runtime.meshSelectionActorBoundsGroupCount),
+        meshSelectionActorBoundsGroupedMeshCount: number(runtime.meshSelectionActorBoundsGroupedMeshCount),
+        meshSelectionActorBoundsGroupBuildMs: number(runtime.meshSelectionActorBoundsGroupBuildMs),
+        meshSelectionActorBoundsGroupBuildErrors: number(runtime.meshSelectionActorBoundsGroupBuildErrors),
+        meshSelectionActorBoundsGroupsChecked: number(runtime.meshSelectionActorBoundsGroupsChecked),
+        meshSelectionActorBoundsGroupsCulled: number(runtime.meshSelectionActorBoundsGroupsCulled),
+        meshSelectionActorBoundsGroupCheckErrors: number(runtime.meshSelectionActorBoundsGroupCheckErrors),
         meshSelectionBuildMs: number(runtime.meshSelectionBuildMs),
         meshSelectionStaticWorldMatrixFreezeMs: number(runtime.meshSelectionStaticWorldMatrixFreezeMs),
         meshSelectionStaticWorldMatricesFrozen: number(runtime.meshSelectionStaticWorldMatricesFrozen),
@@ -671,9 +678,10 @@
         sessionId: state.session.sessionId,
         sampleIntervalMs: SAMPLE_INTERVAL_MS,
         persistIntervalMs: PERSIST_INTERVAL_MS,
-        persistenceMode: "idle"
+        persistenceMode: "idle",
+        backgroundDatabaseMaintenance: true
       };
-      queueIdlePersistence();
+      queueIdlePersist();
     } catch (error) {
       window.__ELSN_SESSION_RECORDER_STATUS__ = { active: false, error: text(error && error.message || error, 180) };
     } finally {
@@ -843,7 +851,7 @@
     appendSample(sample);
   }
 
-  function cancelQueuedPersistence() {
+  function cancelQueuedIdlePersist() {
     if (state.persistHandle !== null && state.persistHandle !== undefined) {
       try {
         if (state.persistHandleKind === "idle" && typeof window.cancelIdleCallback === "function") {
@@ -858,22 +866,19 @@
     state.persistQueued = false;
   }
 
-  function queueIdlePersistence() {
-    if (!state.session || state.persistQueued || state.saving || document.visibilityState !== "visible") return;
+  function queueIdlePersist() {
+    if (!state.session || state.persistQueued || state.saving) return;
     state.persistQueued = true;
     const run = async deadline => {
       state.persistHandle = null;
       state.persistHandleKind = null;
       state.persistQueued = false;
       if (!state.session) return;
-      if (document.visibilityState !== "visible") {
-        persistSession();
-        return;
-      }
-      // Keep database opening, pruning and IndexedDB serialization out of busy render frames.
+      // Keep database opening, pruning and IndexedDB serialization inside idle periods.
+      // Hidden-tab suspension is handled by the compact synchronous pagehide recovery snapshot.
       if (deadline && !deadline.didTimeout &&
-          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 3) {
-        queueIdlePersistence();
+          typeof deadline.timeRemaining === "function" && deadline.timeRemaining() < 2) {
+        queueIdlePersist();
         return;
       }
       try {
@@ -897,13 +902,8 @@
   }
 
   function persistSession() {
-    if (!state.session) return;
-    if (document.visibilityState === "visible") {
-      queueIdlePersistence();
-      return;
-    }
-    cancelQueuedPersistence();
-    if (!state.saving) saveSession();
+    if (!state.session || state.saving) return;
+    queueIdlePersist();
   }
 
   function percentile(values, ratio) {
@@ -1548,7 +1548,7 @@
     state.sampleTimer = null;
     state.persistTimer = null;
     cancelQueuedIdleSample();
-    cancelQueuedPersistence();
+    cancelQueuedIdlePersist();
     if (!state.session) return;
     const current = state.session;
     current.finishedAt = new Date().toISOString();
@@ -1606,7 +1606,7 @@
       queueIdleSample();
     });
     window.addEventListener("pagehide", () => {
-      cancelQueuedPersistence();
+      cancelQueuedIdlePersist();
       if (state.monitorTimer) window.clearInterval(state.monitorTimer);
       finishSession("pagehide");
     }, { once: true });
