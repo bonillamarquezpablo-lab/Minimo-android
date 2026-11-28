@@ -831,6 +831,25 @@ async function main() {
     assert.equal(renderResolution.renderHeight,renderResolution.physicalPixelHeight,
       'El perfil Calidad debe dibujar al alto físico nativo: '+JSON.stringify(renderResolution));
     manifest.renderResolution=renderResolution;
+    const instancingDiagnostics=await page.evaluate(()=>{
+      const scene=window.BABYLON?.EngineStore?.LastCreatedScene||null;
+      const forest=typeof window.__ELSN_FOREST_INSTANCING_STATS__==='function'?window.__ELSN_FOREST_INSTANCING_STATS__():null;
+      const rocks=typeof window.__ELSN_ROCK_INSTANCING__==='function'?window.__ELSN_ROCK_INSTANCING__():null;
+      const meshes=scene?.meshes||[];
+      return {
+        forest,rocks,
+        visibleTreeInstances:meshes.filter(mesh=>/^NorseForestTree_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length,
+        hiddenForestTemplateSources:meshes.filter(mesh=>mesh?.__elsnForestTemplateSource&&mesh.isVisible===false&&Number(mesh.visibility)===0).length,
+        visibleRockInstances:meshes.filter(mesh=>/^(?:graniteBoulder|rockFacet)_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length
+      };
+    });
+    manifest.instancingDiagnostics=instancingDiagnostics;
+    assert.ok(instancingDiagnostics.forest&&instancingDiagnostics.forest.templates===3&&instancingDiagnostics.forest.treeInstances>0&&instancingDiagnostics.forest.instanceMeshes>0&&instancingDiagnostics.forest.sourceMeshes>0&&instancingDiagnostics.forest.templateMeshes>0&&instancingDiagnostics.forest.perTreeGlbClones===0,
+      'El bosque debe usar tres plantillas compartidas y árboles instanciados, sin clonar GLB por árbol: '+JSON.stringify(instancingDiagnostics));
+    assert.ok(instancingDiagnostics.hiddenForestTemplateSources===instancingDiagnostics.forest.templateMeshes&&instancingDiagnostics.visibleTreeInstances===instancingDiagnostics.forest.instanceMeshes,
+      'Las fuentes de geometría forestal deben permanecer ocultas y todas las instancias colocadas deben estar visibles: '+JSON.stringify(instancingDiagnostics));
+    assert.ok(instancingDiagnostics.rocks&&instancingDiagnostics.rocks.instances>0&&instancingDiagnostics.rocks.instanceMeshes===instancingDiagnostics.rocks.instances*2&&instancingDiagnostics.rocks.sourceGeometryMeshes===2&&instancingDiagnostics.visibleRockInstances===instancingDiagnostics.rocks.instanceMeshes,
+      'Las rocas minables deben compartir dos geometrías fuente y conservar visibles sus dos instancias por depósito: '+JSON.stringify(instancingDiagnostics));
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
