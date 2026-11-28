@@ -1714,7 +1714,7 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
 
     wildlife_stream_read_marker = "   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70);"
-    wildlife_stream_read_replacement = "   markWildlifeStartupTrace(kind,'network-response-ready',{status:response.status});\\n   markWildlifeStartupTrace(kind,'glb-stream-read');\\n"+wildlife_stream_read_marker
+    wildlife_stream_read_replacement = "   markWildlifeStartupTrace(kind,'network-response-ready',{status:response.status});\n   markWildlifeStartupTrace(kind,'glb-stream-read');\n"+wildlife_stream_read_marker
     if html.count(wildlife_stream_read_marker) != 1:
         raise SystemExit("No se encontró el punto único de lectura del cuerpo GLB de fauna.")
     html = html.replace(wildlife_stream_read_marker, wildlife_stream_read_replacement, 1)
@@ -1824,7 +1824,7 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
 
     wildlife_babylon_import_marker = "   imported=await timedGlbStage('Fauna '+kind,'importación Babylon',()=>B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb'),blob.size);"
-    wildlife_babylon_import_replacement = wildlife_babylon_import_marker + "\\n   markWildlifeStartupTrace(kind,'babylon-import-ready');"
+    wildlife_babylon_import_replacement = wildlife_babylon_import_marker + "\n   markWildlifeStartupTrace(kind,'babylon-import-ready');"
     if html.count(wildlife_babylon_import_marker) != 1:
         raise SystemExit("No se encontró el punto único de importación Babylon de fauna.")
     html = html.replace(wildlife_babylon_import_marker, wildlife_babylon_import_replacement, 1)
