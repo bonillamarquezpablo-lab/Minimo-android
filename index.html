@@ -2218,7 +2218,7 @@ async function removeStrayDebugGeometry(targetScene){
  const startupTimeline={firstFrameAt:0,firstFrameElapsedMs:null,gameStartedAt:0,gameStartElapsedMs:null,maxFrameMs:0,postFirstFrameSamples:0,longFrames:[],tasks:[]};
  const startupTimelineBootAt=performance.now();let startupTaskCurrent='preparación de escena';
  function recordStartupTask(name,startedAt,endedAt,status='ready',detail=null){const durationMs=Math.max(0,endedAt-startedAt);startupTimeline.tasks.push({name,durationMs:Number(durationMs.toFixed(2)),status,detail,at:new Date().toISOString()});if(startupTimeline.tasks.length>80)startupTimeline.tasks.shift();startupTaskCurrent='idle';return durationMs;}
- function getStartupTimelineSnapshot(){return {firstFrameAt:startupTimeline.firstFrameAt?new Date(performance.timeOrigin+startupTimeline.firstFrameAt).toISOString():null,firstFrameElapsedMs:startupTimeline.firstFrameElapsedMs,gameStartedAt:startupTimeline.gameStartedAt?new Date(performance.timeOrigin+startupTimeline.gameStartedAt).toISOString():null,gameStartElapsedMs:startupTimeline.gameStartElapsedMs,maxFrameMs:Number(startupTimeline.maxFrameMs.toFixed(2)),postFirstFrameSamples:startupTimeline.postFirstFrameSamples,tasks:startupTimeline.tasks.slice(-30),longFrames:startupTimeline.longFrames.slice(-30),activeTask:startupTaskCurrent};}
+ function getStartupTimelineSnapshot(){return {firstFrameAt:startupTimeline.firstFrameAt?new Date(performance.timeOrigin+startupTimeline.firstFrameAt).toISOString():null,firstFrameElapsedMs:startupTimeline.firstFrameElapsedMs,gameStartedAt:startupTimeline.gameStartedAt?new Date(performance.timeOrigin+startupTimeline.gameStartedAt).toISOString():null,gameStartElapsedMs:startupTimeline.gameStartElapsedMs,maxFrameMs:Number(startupTimeline.maxFrameMs.toFixed(2)),postFirstFrameSamples:startupTimeline.postFirstFrameSamples,tasks:startupTimeline.tasks.slice(-30),longFrames:startupTimeline.longFrames.slice(-30),glbTimings:glbTimingRecords.slice(-40),activeTask:startupTaskCurrent};}
  const REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY='el-sin-nombre-arm-last-deviation-v1';
  let realPlayerArmLastDeviation=null,realPlayerArmDeviationLastWasLocomoting=false,realPlayerArmDeviationStoppedAtMs=null,realPlayerArmDeviationActiveSignature='';
  if(realPlayerArmDebugEnabled){try{const storedDeviation=localStorage.getItem(REAL_PLAYER_ARM_DEVIATION_STORAGE_KEY);if(storedDeviation){const parsed=JSON.parse(storedDeviation);if(parsed&&parsed.timestamp&&Array.isArray(parsed.violations))realPlayerArmLastDeviation=parsed;}}catch(_){realPlayerArmLastDeviation=null;}}
@@ -6372,11 +6372,14 @@ void main(void){
     if(parts.realHuman&&parts.realHuman.role==='knight'){loadedWarriors++;if(isHomeGuard)loadedHomeGuards++;return;}
     let inst=null;
     try{
-     const modelIndex=Math.max(0,warriorPartsToLoad.indexOf(parts));
+     const modelIndex=Math.max(0,warriorPartsToLoad.indexOf(parts)),mountStartedAt=performance.now();
      inst=knightContainer.instantiateModelsToScene(name=>name+'_ArmoredKnight_'+modelIndex,false);
-     attachEnemyHumanModel(parts,inst,modelIndex,'knight');loadedWarriors++;if(isHomeGuard)loadedHomeGuards++;
+     attachEnemyHumanModel(parts,inst,modelIndex,'knight');
+     recordGlbTiming('Caballero '+(parts.name||modelIndex),'instanciación y montaje',performance.now()-mountStartedAt,enemyHumanSourceBytes,true);
+     loadedWarriors++;if(isHomeGuard)loadedHomeGuards++;
     }catch(err){
      const reason=(err&&err.message)?err.message:String(err||'error desconocido');
+     recordGlbTiming('Caballero '+(parts.name||'guerrero'),'instanciación y montaje',performance.now()-mountStartedAt,enemyHumanSourceBytes,false);
      failures.push((parts.name||'guerrero')+': '+reason);console.error('No se pudo montar el caballero '+(parts.name||''),reason,err);
      disposeFailedInstance(inst);
     }
@@ -6438,8 +6441,9 @@ void main(void){
       for(let i=0;i<civilianPartsToLoad.length;i++){
        const parts=civilianPartsToLoad[i];if(parts.realHuman&&parts.realHuman.role==='civilian'){loadedCivilians++;continue;}
        let inst=null;
-       try{inst=civilianContainer.instantiateModelsToScene(name=>name+'_Peasant_'+i,false);attachEnemyHumanModel(parts,inst,i,'civilian');loadedCivilians++;}
-       catch(err){const reason=(err&&err.message)?err.message:String(err||'error desconocido');failures.push((parts.name||('aldeano '+i))+': '+reason);console.error('No se pudo montar el aldeano '+i,reason,err);disposeFailedInstance(inst);}
+       const mountStartedAt=performance.now();
+       try{inst=civilianContainer.instantiateModelsToScene(name=>name+'_Peasant_'+i,false);attachEnemyHumanModel(parts,inst,i,'civilian');recordGlbTiming('Aldeano '+(parts.name||i),'instanciación y montaje',performance.now()-mountStartedAt,civilianHumanSourceBytes,true);loadedCivilians++;}
+       catch(err){const reason=(err&&err.message)?err.message:String(err||'error desconocido');recordGlbTiming('Aldeano '+(parts.name||i),'instanciación y montaje',performance.now()-mountStartedAt,civilianHumanSourceBytes,false);failures.push((parts.name||('aldeano '+i))+': '+reason);console.error('No se pudo montar el aldeano '+i,reason,err);disposeFailedInstance(inst);}
        await yieldMobileFrame();
       }
       console.info('Independent human civilians loaded',{loaded:loadedCivilians,total:civilianTotal,source:civilianSource,bytes:civilianBlob.size});

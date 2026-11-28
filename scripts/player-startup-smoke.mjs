@@ -485,6 +485,8 @@ async function main() {
     assert.equal(startupResources.music?.decodedToAudioBuffer, false,
       'La música debe conservar el streaming HTMLAudio, sin decodificarse a AudioBuffer.');
     manifest.startupTimeline = manifest.startupResourceGate.startupTimeline || null;
+    manifest.glbStageTimings = await page.evaluate(() => (window.__elSinNombreGlbTimings || []).slice(-40));
+    assert.ok(manifest.glbStageTimings.length > 0, 'GLB stage timing evidence is missing.');
     await page.waitForFunction(() => {
       const readiness=window.__ELSN_AUDIO_READINESS__;
       return readiness?.soundEffects?.status !== 'loading' &&
