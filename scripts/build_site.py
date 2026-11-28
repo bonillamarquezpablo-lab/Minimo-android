@@ -1820,7 +1820,7 @@ function setLoadingProgress(value,label){
    }
   }
   const started=performance.now();
-  // Do not force mesh.isReady(true) here: on CPU/SwiftShader it may repeatedly compile every
+  // Avoid synchronous per-mesh material readiness probes here: on CPU/SwiftShader they can repeat shader work for every
   // animal material before the first scene render. Geometry/rig validity is checked above;
   // actual material readiness belongs to Babylon's active-view warm-up and visual acceptance.
   const pendingTextures=()=>Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
