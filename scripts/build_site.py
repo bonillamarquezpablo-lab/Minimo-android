@@ -2254,7 +2254,7 @@ function updateWildlife(dt){
    const compilePromise=startReflectionShaderWarmup();
    await yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland');
    if(coastAborted)return;
-   if(compilePromise)compilePromise.catch(()=>{});
+   if(compilePromise)await compilePromise.catch(()=>false);
   };
   let coastDeadlineTimer=null;
   const workPromise=runCoastPreparation().catch(error=>{coastReport.errors.push({stage:'preparación de costa',message:String(error&&error.message||error).slice(0,240)});});
