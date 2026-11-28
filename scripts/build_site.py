@@ -1274,7 +1274,7 @@ def main() -> None:
   {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
- const forestInstancingStats={templates:0,treeInstances:0,instanceMeshes:0,sourceMeshes:0,templateMeshes:0,templateBuildMs:0,perTreeGlbClones:0,sharedGeometry:true};
+ const forestInstancingStats={templates:0,treeInstances:0,instanceMeshes:0,sourceMeshes:0,templateMeshes:0,templateBuildMs:0,perTreeGlbClones:0,sharedGeometry:true,sourceVisibilityStrategy:'offscreen-template-roots'};
  window.__ELSN_FOREST_INSTANCING_STATS__=()=>({...forestInstancingStats});
   const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:6.5};
   function findForestTreePlacement(x,z,canopyRadius){
@@ -1352,8 +1352,11 @@ def main() -> None:
    if(!templateMeshes.length||templateMeshes.length>Math.max(4,templateSourceMeshes.length)){
     throw new Error('La plantilla forestal no pudo compactarse por material: '+spec.label);
    }
-   // Babylon must keep the source mesh render-enabled for its InstancedMesh batch; visibility=0 hides only the source geometry while instances override it to 1.
-   templateMeshes.forEach(mesh=>{mesh.isVisible=true;mesh.visibility=0;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
+   // InstancedMesh.visibility is source-owned in Babylon; instance writes are ignored.
+   // Keep shared source visibility at 1 and park only the template root outside world bounds.
+   // Each instance is detached to its own visualRoot, so its local transform and geometry stay unchanged.
+   templateMeshes.forEach(mesh=>{mesh.isVisible=true;mesh.visibility=1;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
+   templateRoot.position.y=-100000;templateRoot.computeWorldMatrix(true);templateMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
    recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,sourceMeshes:templateSourceMeshes.length,templateMeshes:templateMeshes.length,source:'Innerscene CC0 shared-instancing'});
    return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,sourceMeshCount:templateSourceMeshes.length,textureCount,materialCount};
   }));
@@ -1382,7 +1385,7 @@ def main() -> None:
   const meshes=spec.templateMeshes.map((sourceMesh,index)=>{
    if(!sourceMesh||sourceMesh.isDisposed?.()||typeof sourceMesh.createInstance!=='function')throw new Error('No se pudo crear la instancia forestal '+spec.spec.label+' #'+index);
    const instance=sourceMesh.createInstance('NorseForestTree_'+kind+'_'+serial+'_'+index);
-   instance.parent=visualRoot;instance.setEnabled(true);instance.isVisible=true;instance.visibility=1;
+   instance.parent=visualRoot;instance.setEnabled(true);instance.isVisible=true;
    instance.isPickable=false;instance.receiveShadows=true;instance.alwaysSelectAsActiveMesh=false;
    return instance;
   });
@@ -4643,9 +4646,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const mineableRockGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockGeometryTemplate',{radius:1,subdivisions:2,flat:true},scene);
   const mineableRockCapGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockCapGeometryTemplate',{radius:1,subdivisions:1,flat:true},scene);
   mineableRockGeometryTemplate.material=mineableGraniteMaterial;mineableRockCapGeometryTemplate.material=M.stoneLight;
-  // Keep source meshes enabled for Babylon's instance batch; zero visibility suppresses the source itself.
-  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=true;source.visibility=0;source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
-  const mineableRockInstancingStats={instances:0,instanceMeshes:0,sourceGeometryMeshes:2,sharedGeometry:true};
+  // Instance visibility follows its source mesh; keep source visibility at 1 and park its geometry outside the world.
+  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=true;source.visibility=1;source.position.y=-100000;source.computeWorldMatrix(true);source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
+  const mineableRockInstancingStats={instances:0,instanceMeshes:0,sourceGeometryMeshes:2,sharedGeometry:true,sourceVisibilityStrategy:'offscreen-source-geometry'};
   window.__ELSN_ROCK_INSTANCING__=()=>({...mineableRockInstancingStats});
   const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
   window.__ELSN_ROCK_PLACEMENT__=()=>{let overlaps=0,minClearance=Infinity;for(const rock of rocks){if(!rock||!rock.alive)continue;for(const tree of trees){if(!tree||!tree.alive)continue;const clearance=Math.hypot(rock.x-tree.x,rock.z-tree.z)-(Number(rock.radius)||.5)-(Number(tree.radius)||.7)-.45;minClearance=Math.min(minClearance,clearance);if(clearance<-.05)overlaps++;}}return {...mineableRockPlacementStats,overlapPairs:overlaps,minTreeClearanceMeters:Number.isFinite(minClearance)?Number(minClearance.toFixed(3)):null};};
@@ -4676,10 +4679,10 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    const gy=renderedTerrainSurfaceAt(x,z);
    const serial=(mineableRockInstancingStats.instances+1);
    const r=mineableRockGeometryTemplate.createInstance('graniteBoulder_'+serial);
-   r.position=v(x,gy+sy*.49,z);r.scaling=v(sx,sy,sz);r.isVisible=true;r.visibility=1;r.isPickable=true;r.receiveShadows=true;
+   r.position=v(x,gy+sy*.49,z);r.scaling=v(sx,sy,sz);r.isVisible=true;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
    const cap=mineableRockCapGeometryTemplate.createInstance('rockFacet_'+serial);
-   cap.position=v(x-.18,gy+sy*.72,z-.10);cap.scaling=v(sx*.62,sy*.36,sz*.62);cap.isVisible=true;cap.visibility=1;cap.isPickable=true;cap.receiveShadows=true;
+   cap.position=v(x-.18,gy+sy*.72,z-.10);cap.scaling=v(sx*.62,sy*.36,sz*.62);cap.isVisible=true;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
    mineableRockInstancingStats.instances++;mineableRockInstancingStats.instanceMeshes+=2;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
