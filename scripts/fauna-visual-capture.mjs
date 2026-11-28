@@ -721,7 +721,7 @@ async function main() {
         const file=animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png';
         fs.writeFileSync(path.join(OUT,file),buffer);
         if(angle.id==='front'&&view.bindPosePng){
-          const bindMatch=/^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
+          const bindMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
           assert.ok(bindMatch,'No se obtuvo PNG de bind pose para '+animal.id);
           const bindBuffer=Buffer.from(bindMatch[1],'base64');
           assert.ok(bindBuffer.length>1000,'PNG de bind pose vacío: '+animal.id);
