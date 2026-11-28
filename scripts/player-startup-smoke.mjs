@@ -863,7 +863,8 @@ async function main() {
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
     assert.ok(visualActorsBefore.playerClub.holderParentIsModelPivot,'El palo debe anclarse al pivote del modelo y seguir la mano mediante una pose recalculada.');
     assert.ok(Number.isFinite(visualActorsBefore.playerClub.holderHandDistance)&&visualActorsBefore.playerClub.holderHandDistance<1.5,'El anclaje del palo se ha separado de la mano: '+JSON.stringify(visualActorsBefore.playerClub));
-    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.visualPosition?Math.round(bird.visualPosition.x*10)+':'+Math.round(bird.visualPosition.z*10):'missing'));
+    assert.ok(visualActorsBefore.gulls.every(bird=>bird.meshCount>0&&bird.visibleMeshCount>0&&bird.renderedMeshPosition&&bird.visualParentIsActor),'Hay una gaviota con jerarquía importada incompleta o sin malla visible: '+JSON.stringify(visualActorsBefore.gulls));
+    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.renderedMeshPosition?Math.round(bird.renderedMeshPosition.x*10)+':'+Math.round(bird.renderedMeshPosition.z*10):'missing'));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
     const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
     const gullFlightWaitStartedAt=performance.now();
@@ -878,11 +879,12 @@ async function main() {
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
-          const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+          const before=birds[index],rootA=before?.actorWorldPosition,rootB=bird?.actorWorldPosition,meshA=before?.renderedMeshPosition,meshB=bird?.renderedMeshPosition;
+          const actorDisplacement=rootA&&rootB?Math.hypot(rootB.x-rootA.x,rootB.z-rootA.z):0;
+          const meshDisplacement=meshA&&meshB?Math.hypot(meshB.x-meshA.x,meshB.z-meshA.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&actorDisplacement>1.0&&meshDisplacement>1.0&&Number(bird?.visibleMeshCount)>0&&bird?.visualParentIsActor===true&&leftMotion>.025&&rightMotion>.025;
         });
       },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
@@ -892,15 +894,18 @@ async function main() {
         return {
           beforeTicks,render,
           birds:after.map((bird,index)=>{
-            const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
+            const before=birds[index],actorA=before?.actorWorldPosition,actorB=bird?.actorWorldPosition,meshA=before?.renderedMeshPosition,meshB=bird?.renderedMeshPosition;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
-              beforePosition:a||null,afterPosition:b||null,
+              beforeActorPosition:actorA||null,afterActorPosition:actorB||null,
+              beforeRenderedMeshPosition:meshA||null,afterRenderedMeshPosition:meshB||null,
+              visibleMeshCount:Number(bird?.visibleMeshCount)||0,visualParentIsActor:bird?.visualParentIsActor===true,
               beforeFlightTicks:Number(before?.flightUpdateTicks)||0,
               afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
               beforeFlightElapsed:Number(before?.flightElapsed)||0,
               afterFlightElapsed:Number(bird?.flightElapsed)||0,
-              displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0
+              actorDisplacement:actorA&&actorB?Math.hypot(actorB.x-actorA.x,actorB.z-actorA.z):0,
+              renderedMeshDisplacement:meshA&&meshB?Math.hypot(meshB.x-meshA.x,meshB.z-meshA.z):0
             };
           })
         };
@@ -917,10 +922,12 @@ async function main() {
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
-      const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.actorWorldPosition,afterPosition=after?.actorWorldPosition;
+      const meshBefore=before?.renderedMeshPosition,meshAfter=after?.renderedMeshPosition;
+      const actorDisplacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const meshDisplacement=meshBefore&&meshAfter?Math.hypot(meshAfter.x-meshBefore.x,meshAfter.z-meshBefore.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
-      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(actorDisplacement>.15&&meshDisplacement>.15,'La gaviota '+index+' no desplaza su malla GLB visible junto con el actor: '+JSON.stringify({before,after,actorDisplacement,meshDisplacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {

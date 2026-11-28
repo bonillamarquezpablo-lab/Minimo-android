@@ -96,6 +96,7 @@ assert.ok(buildSite.includes("const requiredFlightParts=[leftWing,rightWing,tail
   buildSite.includes("alignment:{source:'native-Fly-midpoint'") &&
   buildSite.includes("alignmentDot<.995") &&
   buildSite.includes("function updateAmbientGullFlight(nowSeconds){") && buildSite.includes("window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};") &&
+  buildSite.includes("function evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ){") && buildSite.includes("recoverGullWorldHierarchy(b)") && buildSite.includes("flightLastVisualStepMeters") &&
   buildSite.includes("flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);") &&
   buildSite.includes("if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);") &&
   !buildSite.includes("addFlightTrack(") &&
@@ -274,7 +275,7 @@ console.log('OK: release validator, HUD, service worker, build and deployment us
 
 assert.ok(expectedVersion==="0.6.366" && buildSite.includes('html = html.replace("0.6.274", "0.6.366")'), "The correction package must be release 0.6.366.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now);') && buildSite.includes('scene.onBeforeRenderObservable.add'), "The flock must be updated after Babylon animation evaluation in the pre-render observer.");
-assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
+assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("recoverGullWorldHierarchy(b)") && buildSite.includes("if(typeof node.setEnabled==='function'&&!node.isEnabled())node.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
 assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.366-npcbrain7-diag8") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
 assert.ok(serviceWorker.includes('"./assets/vendor/babylon.js"') && serviceWorker.includes('"./assets/vendor/babylonjs.loaders.min.js"') && serviceWorker.includes('"./assets/vendor/meshopt_decoder.js"'),
   "The shell install must pre-cache Babylon, the glTF loader and meshopt so offline reload can boot.");

@@ -1965,7 +1965,7 @@ function setLoadingProgress(value,label){
     html = html.replace(gull_legacy_animation_marker,gull_legacy_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
+    gull_rig_replacement = gull_rig_marker + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -5301,43 +5301,146 @@ function getFrameMaintenanceTimingSnapshot(){
     # 0.6.352 release gate: render-loop changes require a fresh build and real-gameplay acceptance.
     # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
- // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
+ // A single controller owns the coastal route, flight attitude and full GLB hierarchy.
  const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};
+ Object.assign(gullFlightRenderState,{parentRepairs:0,ancestorMatrixRecoveries:0,visibilityRecoveries:0,stalledVisualBirds:0,movingBirds:0,frameDeltaSeconds:0});
+ let gullFlightPreviousFrameSeconds=null;
+ const clampGullFlight=(value,min,max)=>Math.max(min,Math.min(max,value));
+ function evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ){
+  const major=Math.max(18,Number(radius)||18),minor=Math.max(12,major*.68),harmonic=phase*.19;
+  return {
+   x:centerX+major*Math.cos(angle)+major*.075*Math.cos(angle*2+harmonic),
+   y:altitude+Math.sin(angle*2+phase)*.84+Math.sin(angle*.43+phase*.3)*.27+Math.sin(angle*3.1+phase*.2)*.12,
+   z:centerZ+minor*Math.sin(angle)+minor*.09*Math.sin(angle*2+phase*.17)
+  };
+ }
+ function recoverGullWorldHierarchy(bird){
+  const root=bird&&bird.root,rig=bird&&bird.flightRig;
+  if(!root||!rig||root.isDisposed?.())return null;
+  if(root.parent){
+   root.computeWorldMatrix(true);
+   const worldMatrix=root.getWorldMatrix().clone(),worldScale=B.Vector3.One(),worldRotation=B.Quaternion.Identity(),worldPosition=B.Vector3.Zero();
+   if(worldMatrix.decompose(worldScale,worldRotation,worldPosition)){
+    root.parent=null;root.scaling.copyFrom(worldScale);root.rotationQuaternion=worldRotation.clone();root.position.copyFrom(worldPosition);
+    gullFlightRenderState.parentRepairs++;
+   }else{
+    root.parent=null;gullFlightRenderState.parentRepairs++;
+   }
+  }
+  const visualRoot=rig.visualRoot;
+  if(visualRoot&&!visualRoot.isDisposed?.()&&visualRoot.parent!==root){
+   visualRoot.parent=root;gullFlightRenderState.parentRepairs++;
+  }
+  for(const importedRoot of rig.importedRoots||[]){
+   if(!importedRoot||importedRoot.isDisposed?.()||!visualRoot)continue;
+   if(importedRoot.parent!==visualRoot){importedRoot.parent=visualRoot;gullFlightRenderState.parentRepairs++;}
+  }
+  const hierarchyNodes=rig.hierarchyNodes||[];
+  for(const node of [root,visualRoot,...hierarchyNodes]){
+   if(!node||node.isDisposed?.())continue;
+   if(node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function'){
+    node.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;
+    if(node===root)gullFlightRenderState.worldMatrixRecoveries++;
+   }
+   if(typeof node.setEnabled==='function'&&!node.isEnabled())node.setEnabled(true);
+   if(typeof node.markAsDirty==='function')node.markAsDirty('position');
+   try{node.computeWorldMatrix(true);}catch(_){}
+  }
+  const meshes=rig.meshes||[];
+  for(const mesh of meshes){
+   if(!mesh||mesh.isDisposed?.())continue;
+   if(mesh._isWorldMatrixFrozen&&typeof mesh.unfreezeWorldMatrix==='function'){
+    mesh.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;
+   }
+   if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled())mesh.setEnabled(true);
+   if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){
+    mesh.isVisible=true;mesh.visibility=1;gullFlightRenderState.visibilityRecoveries++;
+   }
+   if(typeof mesh.markAsDirty==='function')mesh.markAsDirty('position');
+   try{mesh.computeWorldMatrix(true);}catch(_){}
+  }
+  try{root.computeWorldMatrix(true);visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+  return {root,visualRoot,meshes};
+ }
  function updateAmbientGullFlight(nowSeconds){
   const birds=ambientBirds;
   if(!Number.isFinite(nowSeconds)||!Array.isArray(birds)||!birds.length)return;
   gullFlightRenderState.frameTicks++;
   gullFlightRenderState.lastTimestamp=nowSeconds;
-  let updated=0;
+  const frameDelta=gullFlightPreviousFrameSeconds===null?1/60:clampGullFlight(nowSeconds-gullFlightPreviousFrameSeconds,0,.20);
+  gullFlightPreviousFrameSeconds=nowSeconds;
+  gullFlightRenderState.frameDeltaSeconds=frameDelta;
+  let updated=0,moving=0;
   for(const b of birds){
    try{
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
-    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}
-    if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
-    const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
+    const hierarchy=recoverGullWorldHierarchy(b);
+    if(!hierarchy)continue;
     const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
-    const radius=Number.isFinite(Number(b.radius))?Math.max(1,Number(b.radius)):18;
+    const radius=Number.isFinite(Number(b.radius))?Math.max(18,Number(b.radius)):18;
     const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
-    const speed=Number.isFinite(Number(b.speed))?Math.max(.18,Number(b.speed)):.18;
-    const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
+    const baseAngularSpeed=clampGullFlight(Number(b.speed)||.18,.12,.28);
+    b.flightElapsed=(Number(b.flightElapsed)||0)+frameDelta;
+    const flightElapsed=b.flightElapsed;
+    const angle=phase+flightElapsed*baseAngularSpeed+.08*Math.sin(flightElapsed*.47+phase*.37);
+    const angularRate=baseAngularSpeed+.08*.47*Math.cos(flightElapsed*.47+phase*.37);
+    const centerX=Number.isFinite(Number(b.flightCenterX))?Number(b.flightCenterX):-36;
+    const centerZ=Number.isFinite(Number(b.flightCenterZ))?Number(b.flightCenterZ):-18;
+    const epsilon=.012;
+    const currentPoint=evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ);
+    const previousPoint=evaluateCoastalGullFlightPoint(angle-epsilon,phase,radius,altitude,centerX,centerZ);
+    const nextPoint=evaluateCoastalGullFlightPoint(angle+epsilon,phase,radius,altitude,centerX,centerZ);
+    const vxAngle=(nextPoint.x-previousPoint.x)/(2*epsilon),vzAngle=(nextPoint.z-previousPoint.z)/(2*epsilon);
+    const vyAngle=(nextPoint.y-previousPoint.y)/(2*epsilon);
+    const axAngle=(nextPoint.x-2*currentPoint.x+previousPoint.x)/(epsilon*epsilon);
+    const azAngle=(nextPoint.z-2*currentPoint.z+previousPoint.z)/(epsilon*epsilon);
+    const horizontalDerivative=Math.max(.001,Math.hypot(vxAngle,vzAngle));
+    const horizontalSpeed=horizontalDerivative*Math.abs(angularRate);
+    const verticalSpeed=vyAngle*angularRate;
+    const heading=Math.atan2(vxAngle,vzAngle);
+    const pitch=-Math.atan2(verticalSpeed,Math.max(.001,horizontalSpeed));
+    const curvature=(vxAngle*azAngle-vzAngle*axAngle)/Math.max(.001,Math.pow(horizontalDerivative,3));
+    const bank=clampGullFlight(-Math.atan((horizontalSpeed*horizontalSpeed*curvature)/9.81),-.30,.30);
+    const glideCycle=(flightElapsed+phase*2.6)%18;
+    const gliding=glideCycle>11.5&&glideCycle<15.8;
+    b.flightMode=gliding?'glide':'flap';
+    b.flightSpeedMetersPerSecond=horizontalSpeed;
+    b.flightHeadingRadians=heading;b.flightPitchRadians=pitch;b.flightBankRadians=bank;
     b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
-    b.flightElapsed=flightElapsed;
-    b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
-    b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
+    const actorPrevious=b.flightLastPosition;
+    b.root.position.set(currentPoint.x,currentPoint.y,currentPoint.z);
+    b.root.rotationQuaternion=null;b.root.rotation.set(pitch,heading,bank);
     if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
     b.root.computeWorldMatrix(true);
-    const previous=b.flightLastPosition;
-    if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
-    b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
-    if(b.procedural&&b.left&&b.right){
-     b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
-     b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;
-    }else{
-     const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;
-     if(flight){
-      if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);
-      flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);
+    const actorPosition=b.root.getAbsolutePosition?.()||b.root.position;
+    if(actorPrevious){
+     const dx=actorPosition.x-actorPrevious.x,dy=actorPosition.y-actorPrevious.y,dz=actorPosition.z-actorPrevious.z;
+     b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
+     if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;
+     else moving++;
+    }
+    b.flightLastPosition={x:actorPosition.x,y:actorPosition.y,z:actorPosition.z};
+    const visualRoot=hierarchy.visualRoot;
+    try{visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+    const flightMesh=b.flightRig.firstFlightMesh||hierarchy.meshes.find(mesh=>mesh&&!mesh.isDisposed?.()&&mesh.isVisible!==false)||null;
+    let renderedPosition=null;
+    if(flightMesh){
+     try{flightMesh.computeWorldMatrix(true);const meshPosition=flightMesh.getAbsolutePosition?.();if(meshPosition)renderedPosition={x:meshPosition.x,y:meshPosition.y,z:meshPosition.z};}catch(_){}
+    }
+    if(renderedPosition){
+     const lastVisual=b.flightLastVisualPosition;
+     if(lastVisual){
+      const dx=renderedPosition.x-lastVisual.x,dy=renderedPosition.y-lastVisual.y,dz=renderedPosition.z-lastVisual.z;
+      b.flightLastVisualStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(b.flightLastVisualStepMeters<.0001)gullFlightRenderState.stalledVisualBirds++;
      }
+     b.flightLastVisualPosition=renderedPosition;
+    }
+    const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;
+    if(flight){
+     if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);
+     if(gliding)flight.speedRatio=.48;
+     else flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);
     }
     updated++;
    }catch(error){
@@ -5346,6 +5449,7 @@ function getFrameMaintenanceTimingSnapshot(){
    }
   }
   gullFlightRenderState.updatedBirds=updated;
+  gullFlightRenderState.movingBirds=moving;
  }
  const gullWingBindPose=new WeakMap();
  const gullWingFlapObserver=scene.onBeforeRenderObservable.add(()=>{
@@ -5465,8 +5569,35 @@ function getFrameMaintenanceTimingSnapshot(){
    return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
   });
   const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
-  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;try{rig?.visualRoot?.computeWorldMatrix?.(true);}catch(_){}const visual=rig?.visualRoot?.getAbsolutePosition?.()||null;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,visualPosition:visual?{x:visual.x,y:visual.y,z:visual.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
-  const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{
+   const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;
+   const vectorPoint=value=>value?{x:Number(value.x)||0,y:Number(value.y)||0,z:Number(value.z)||0}:null;
+   try{b.root?.computeWorldMatrix?.(true);rig?.visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+   const actorWorld=vectorPoint(b.root?.getAbsolutePosition?.()||p);
+   const visualRootWorld=vectorPoint(rig?.visualRoot?.getAbsolutePosition?.());
+   const meshes=rig?.meshes||[],visibleMeshes=meshes.filter(visible);
+   const sampleMesh=rig?.firstFlightMesh||visibleMeshes[0]||null;
+   try{sampleMesh?.computeWorldMatrix?.(true);}catch(_){}
+   const renderedMeshWorld=vectorPoint(sampleMesh?.getAbsolutePosition?.());
+   const visual=renderedMeshWorld||visualRootWorld;
+   return {
+    name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),
+    position:p?{x:p.x,y:p.y,z:p.z}:null,actorWorldPosition:actorWorld,
+    visualRootPosition:visualRootWorld,renderedMeshPosition:renderedMeshWorld,
+    visualPosition:visual,phase:Number(b.phase)||0,radius:Number(b.radius)||0,
+    flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,
+    flightLastStepMeters:Number(b.flightLastStepMeters)||0,flightLastVisualStepMeters:Number(b.flightLastVisualStepMeters)||0,
+    flightSpeedMetersPerSecond:Number(b.flightSpeedMetersPerSecond)||0,flightMode:String(b.flightMode||'unknown'),
+    flightHeadingRadians:Number(b.flightHeadingRadians)||0,flightPitchRadians:Number(b.flightPitchRadians)||0,flightBankRadians:Number(b.flightBankRadians)||0,
+    actorParentName:b.root?.parent?.name||null,visualParentIsActor:!!(rig?.visualRoot&&rig.visualRoot.parent===b.root),
+    meshCount:meshes.length,visibleMeshCount:visibleMeshes.length,
+    flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,
+    leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),
+    leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),
+    rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)
+   };
+  });
+   const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
   return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor',holderParentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot),holderHandDistance:clubHolderHandDistance,holderPosition:clubHolderPosition?{x:clubHolderPosition.x,y:clubHolderPosition.y,z:clubHolderPosition.z}:null,handPosition:clubHandPosition?{x:clubHandPosition.x,y:clubHandPosition.y,z:clubHandPosition.z}:null},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
