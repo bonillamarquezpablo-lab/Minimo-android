@@ -36,7 +36,7 @@ for(const marker of [
   'const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;',
   'scene.getActiveMeshCandidates=()=>{',
   'spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',
-  "mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'",
+  "mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'",
   'mesh.alwaysSelectAsActiveMesh',
   '!mesh.skeleton&&!mesh.morphTargetManager',
   'mesh.computeWorldMatrix()',
@@ -131,7 +131,7 @@ assert.ok(dynamicFilterSource.includes('octree.dynamicContent=spatialEmptyDynami
   dynamicFilterSource.includes('for(const mesh of spatialDynamicUngroupedMeshSet)') &&
   dynamicFilterSource.includes('culled=Math.max(0,dynamicCandidates-selected)'),
   'The render path must traverse actor groups and a bounded ungrouped fallback, not every dynamic mesh candidate.');
-assert.equal((dynamicFilterSource.match(/scene\\.getRenderId\\(\\)/g)||[]).length,1,'Do not call Scene.getRenderId more than once per filter pass.');
+assert.equal(dynamicFilterSource.split('scene.getRenderId()').length-1,1,'Do not call Scene.getRenderId more than once per filter pass.');
 assert.ok(builder.includes('const buildSpatialActorBoundsGroups=async()=>{') && builder.includes('const actorRoot=mesh.parent;') && builder.includes('mesh.__elsnSpatialActorBoundsGroup=group;'), 'Rigid actor components must be grouped once under their common moving root.');
 assert.ok(builder.includes('mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0') && builder.includes('if(Array.isArray(mesh.animations)&&mesh.animations.length)continue;'), 'Skinned, morph-driven, billboard and independently animated components must remain on the safe per-mesh path.');
 assert.ok(dynamicFilterSource.includes('group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera') &&
