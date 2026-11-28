@@ -175,9 +175,11 @@ assert.ok(builder.includes('tree_rebuild_start =') &&
   builder.includes('mature-scots-pine-tree.glb') &&
   builder.includes('mature-norway-spruce-tree.glb') &&
   builder.includes('oak-textured.glb') &&
-  builder.includes('mergeStaticDecorByMaterial') &&
+  builder.includes("mergeStaticDecorByMaterial(templateRoot,'NorseForestTemplate_'") &&
   builder.includes('await loadForestTreeTemplates()') &&
-  builder.includes("instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
+  builder.includes('container.addAllToScene()') &&
+  builder.includes('sourceMesh.createInstance(') &&
+  !builder.includes("spec.container.instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
   builder.includes('requiresTexture:true'),
   'The procedural triangle foliage must be replaced by three required, locally packaged CC0 tree models with texture maps.');
 assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
