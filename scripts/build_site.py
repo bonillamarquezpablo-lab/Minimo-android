@@ -5380,7 +5380,7 @@ function getFrameMaintenanceTimingSnapshot(){
     const radius=Number.isFinite(Number(b.radius))?Math.max(18,Number(b.radius)):18;
     const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
     const baseAngularSpeed=clampGullFlight(Number(b.speed)||.18,.12,.28);
-    if(!Number.isFinite(Number(b.flightClockOrigin)))b.flightClockOrigin=nowSeconds;
+    if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
     const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
     b.flightElapsed=flightElapsed;
     const gustPhase=flightElapsed*.19+phase*1.4;
