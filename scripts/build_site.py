@@ -2116,6 +2116,7 @@ function updateWildlife(dt){
   let coastDeadlineExceeded=false;
   let coastAborted=false;
   let coastCompilePromise=null;
+  let coastOriginalRenderList=null;
   const coastReport={
    schema:2,status:'pending',budgetMs:coastBudgetMs,islandIndex:null,
    stages:[],waits:[],checks:null,errors:[],deadlineExceeded:false,
@@ -2171,10 +2172,11 @@ function updateWildlife(dt){
    if(!nordicWaterMirror)return;
    if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalLevel'))coastReport.reflectionOriginalLevel=Number.isFinite(Number(nordicWaterMirror.level))?Number(nordicWaterMirror.level):1;
    if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalRefreshRate'))coastReport.reflectionOriginalRefreshRate=Number.isFinite(Number(nordicWaterMirror.refreshRate))?Number(nordicWaterMirror.refreshRate):(isTouchDevice?12:8);
-   if(!enabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length)coastReport.reflectionOriginalRenderList=nordicWaterMirror.renderList.slice();
+   if(!enabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length)coastOriginalRenderList=nordicWaterMirror.renderList.slice();
    nordicWaterMirror.level=enabled?coastReport.reflectionOriginalLevel:0;
-   if(enabled&&Array.isArray(coastReport.reflectionOriginalRenderList))nordicWaterMirror.renderList=coastReport.reflectionOriginalRenderList.slice();
+   if(enabled&&Array.isArray(coastOriginalRenderList))nordicWaterMirror.renderList=coastOriginalRenderList.slice();
    else if(!enabled)nordicWaterMirror.renderList=[];
+   if(enabled)coastOriginalRenderList=null;
    nordicWaterMirror.refreshRate=enabled?coastReport.reflectionOriginalRefreshRate:0;
    coastReport.reflectionTemporarilyDisabled=!enabled;
   };
