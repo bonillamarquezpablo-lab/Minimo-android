@@ -621,7 +621,7 @@ def main() -> None:
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
-        "FPS bajo; la escala de Calidad permanece fija",
+        "EL SIN NOMBRE: estabilidad por debajo del objetivo de 60 FPS.",
         "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
