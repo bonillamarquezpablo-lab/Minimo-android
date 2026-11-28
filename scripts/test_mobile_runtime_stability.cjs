@@ -51,7 +51,7 @@ for (const marker of [
   'octree-initial-dynamic',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'let qualityLabAdaptiveActive=false;',
-  'qualityScaleAdaptive:qualityLabAdaptiveActive',
+  'qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)',
   "const qualityLabEnabled=qualityLabParams.get('debug')==='1';"
 ]) {
   assert.ok(builder.includes(marker), 'Missing mobile stability guardrail: ' + marker);
@@ -92,7 +92,7 @@ assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNo
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
 assert.ok(validator.includes('reportVersion:\'73\',build:\'{EXPECTED_VERSION}\''), 'Release must carry diagnostic report 73.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.365"'), 'Release validator must target version 0.6.365.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.366"'), 'Release validator must target version 0.6.366.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -200,7 +200,7 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
   validator.includes('Math.min(1000,125+bootstrapAttempts*25)'),
   'Dialogue startup must retry with a low-frequency bounded poll until the game bridge is ready.');
 
-assert.ok(builder.includes('const targetFrameRate=120;'), 'The Quality diagnostics must target high-refresh 120 Hz devices.');
+assert.ok(builder.includes('const targetFrameRate=60;'), 'The Quality diagnostics must target 60 FPS stability target.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') &&
   dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('function positionBubbleAtLiveAnchor(slot,npc,scene)') &&
   dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('liveAttachmentFrames') &&
