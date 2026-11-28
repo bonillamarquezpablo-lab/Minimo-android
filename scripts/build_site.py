@@ -3709,6 +3709,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
+ const spatialActorIndependentMotionNodePattern=/(?:weapon|club|axe|sword|shield|bow|quiver|socket|grip|hand)/i;
  let spatialSelectionOctree=null;
  const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,actorBoundsGroupCount:0,actorBoundsGroupedMeshCount:0,actorBoundsGroupBuildMs:0,actorBoundsGroupBuildErrors:0,actorBoundsGroupsChecked:0,actorBoundsGroupsCulled:0,actorBoundsGroupCheckErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
@@ -3767,6 +3768,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    let unsafeTransform=false;
    for(let node=mesh;node&&node!==actorRoot;node=node.parent){
     if(node.skeleton||node.morphTargetManager||Number(node.billboardMode)>0||
+       spatialActorIndependentMotionNodePattern.test(String(node.name||''))||
        (Array.isArray(node.animations)&&node.animations.length)||animatedTransformTargets.has(node)){
      unsafeTransform=true;break;
     }
