@@ -13,7 +13,7 @@ for(const marker of [
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
   'qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)',
-  'const targetFrameRate=60;',
+  'const targetFrameRate=isPerformanceMode?30:60;',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
@@ -51,7 +51,7 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve the native render scale for the whole session.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve selected detail while allowing bounded adaptive scale changes.');
 const adaptiveCode=builder.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||'';
 assert.ok(adaptiveCode.includes('qualityRuntimeAdaptiveActive=!isPerformanceMode') && adaptiveCode.includes('qualityDprAdaptiveFloor') && adaptiveCode.includes('engine.setHardwareScalingLevel(1/bounded)') && adaptiveCode.includes('gpu-pressure-inferred') && adaptiveCode.includes('cpu-bound-no-resolution-change') && adaptiveCode.includes('headroom-recovery'), 'Quality must adapt resolution only under sustained inferred GPU pressure, preserve pixels when CPU-bound, and recover gradually.');
 assert.ok(!adaptiveCode.includes('qualityDprSlowSamples') && !adaptiveCode.includes('qualityDprStableSamples'), 'The adaptive controller must use its bounded rolling frame/CPU windows instead of stale counters.');
