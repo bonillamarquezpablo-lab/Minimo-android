@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.365"
+EXPECTED_VERSION = "0.6.366"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -208,7 +208,7 @@ def main() -> None:
     for marker in ("elsn-game-session-reports", "SAMPLE_INTERVAL_MS = 2500", "PERSIST_INTERVAL_MS = 10000", "MAX_SAMPLES_PER_SESSION = 1440", "MAX_ANOMALIES_PER_SESSION = 120", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
         if marker not in session_recorder_source:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
-    for marker in ("function queueIdleSample()", "function queueIdlePersistence()", "sceneInventory", "state.sessionStartedPerformanceAt", "transaction.objectStore(STORE).put(current)", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs", "recordPerformanceAnomaly", "runtimeErrors", "persistSession", "sampleCoverage", "relatedLongTasks", "relatedRuntimeErrors", "usedJSHeapSizeBytes"):
+    for marker in ("function queueIdleSample()", "function queueIdlePersist()", "function cancelQueuedIdlePersist()", 'persistenceMode: "idle"', "state.prunedForSession", "sceneInventory", "state.sessionStartedPerformanceAt", "transaction.objectStore(STORE).put(current)", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs", "recordPerformanceAnomaly", "runtimeErrors", "persistSession", "sampleCoverage", "relatedLongTasks", "relatedRuntimeErrors", "usedJSHeapSizeBytes"):
         if marker not in session_recorder_source:
             fail("El registrador debe medir y diferir las tareas de telemetría: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
@@ -617,7 +617,7 @@ def main() -> None:
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
         "qualityScaleAdaptive:qualityLabAdaptiveActive",
-        "const targetFrameRate=120;",
+        "const targetFrameRate=60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
@@ -632,11 +632,12 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityScaleFixed:!qualityLabAdaptiveActive" not in index_html or "physicalPixelCoveragePct" not in index_html:
-        fail("El perfil Calidad debe informar la escala fija y el porcentaje real de píxeles físicos.")
-    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt\)\{([\s\S]*?)\n  \}", index_html)
-    if not quality_adaptive_match or "engine.setHardwareScalingLevel" in quality_adaptive_match.group(1) or "qualityDprSlowSamples" in quality_adaptive_match.group(1):
-        fail("El runtime no puede reducir automáticamente la escala de Calidad; los cambios manuales quedan limitados al laboratorio debug.")
+    if "qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)" not in index_html or "qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)" not in index_html or "physicalPixelCoveragePct" not in index_html:
+        fail("El perfil Calidad debe informar la escala adaptativa y el porcentaje real de píxeles físicos.")
+    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt,rawFrameMs\)\{([\s\S]*?)\n  \}", index_html)
+    adaptive_markers = ("qualityDprAdaptiveFloor", "frameP95>18.5", "cpuP95<Math.max(12,frameP95*.68)", "cpu-bound-no-resolution-change", "gpu-pressure-inferred", "headroom-recovery", "engine.setHardwareScalingLevel(1/bounded)")
+    if not quality_adaptive_match or any(marker not in quality_adaptive_match.group(1) for marker in adaptive_markers):
+        fail("La resolución adaptativa debe distinguir presión CPU de presión GPU, limitar su rango y recuperar calidad gradualmente.")
     mobile_gpu_budget_markers = (
         "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
@@ -683,6 +684,12 @@ def main() -> None:
         "spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();",
         "mesh.isInFrustum(scene.frustumPlanes)",
         "mesh.alwaysSelectAsActiveMesh",
+        "const buildSpatialActorBoundsGroups=async()=>{",
+        "const actorRoot=mesh.parent;",
+        "mesh.__elsnSpatialActorBoundsGroup=group;",
+        "group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera",
+        "plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d",
+        "delete mesh.__elsnSpatialActorBoundsGroup",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs",
@@ -697,7 +704,7 @@ def main() -> None:
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
     fps_pacing_markers = (
-        "const targetFrameRate=120;",
+        "const targetFrameRate=60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
@@ -707,9 +714,9 @@ def main() -> None:
         fail("La medición de fotogramas renderizados y la referencia de pantallas de alta frecuencia están incompletas: " + ", ".join(missing_fps_pacing))
     if "nextRenderAt" in index_html or "frameIntervalMs" in index_html:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
-    if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
+    if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html or "meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount" not in index_html or "meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'73',build:'0.6.365'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'74',build:'0.6.366'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -1113,7 +1120,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'73',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'74',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")
