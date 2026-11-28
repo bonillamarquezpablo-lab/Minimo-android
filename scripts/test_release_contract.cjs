@@ -36,17 +36,21 @@ assert.ok(startupCoastWarmupStart>=0&&startupCoastWarmupEnd>startupCoastWarmupSt
   "The full initial coastline must be prepared during the blocking startup stage.");
 const startupCoastWarmup=buildSite.slice(startupCoastWarmupStart,startupCoastWarmupEnd);
 const startupCoastStages=[
-  "syncActiveBeachIsland();",
-  "syncActiveTidalFoamIsland();",
-  "syncNordicWaterReflectionIsland();"
+  "runCoastStage('syncActiveBeachIsland'",
+  "runCoastStage('syncActiveTidalFoamIsland'",
+  "runCoastStage('syncNordicWaterReflectionIsland'"
 ].map(stage=>startupCoastWarmup.indexOf(stage));
 assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
   startupCoastStages.every(index=>index>=0)&&
   startupCoastStages[0]<startupCoastStages[1]&&startupCoastStages[1]<startupCoastStages[2]&&
-  startupCoastWarmup.includes("await yieldStartupCoastFrame();")&&
-  startupCoastWarmup.includes("initialCoastReady")&&
+  startupCoastWarmup.includes("budgetMs:coastBudgetMs")&&startupCoastWarmup.includes("coastBudgetMs=8000")&&
+  startupCoastWarmup.includes("runCoastStage")&&startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncActiveBeachIsland')")&&
+  startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncActiveTidalFoamIsland')")&&
+  startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland')")&&
+  startupCoastWarmup.includes("coastReport.checks={seabed:")&&startupCoastWarmup.includes("coastReport.checks={seabed:")&&
+  startupCoastWarmup.includes("degraded-timeout")&&
   startupCoastWarmup.includes("recordStartupTask('Costa, rompiente y reflejos de la isla inicial'"),
-  "Initial beach, tidal foam and reflection must be ready and measured before the first playable frame, with a yield between stages.");
+  "Initial coastal stages and waits must be individually timed and diagnosed, with a bounded 8-second deadline and a fail-open recovery path.");
 assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)'),
   "Initial coastal warm-up must be inserted before the complete scene/shader readiness barrier.");
 const faunaOrderAt=buildSite.indexOf("html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]");
@@ -54,8 +58,8 @@ const coastInsertionAt=buildSite.indexOf("html = html.replace(fauna_scene_marker
 assert.ok(faunaOrderAt>=0&&coastInsertionAt>faunaOrderAt,
   "The coast and reflection prewarm must run after the required fauna has been added to the scene.");
 assert.ok(buildSite.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null")&&
-  buildSite.includes("startupResourceSnapshot.coast.status!=='ready'"),
-  "The blocking startup gate must verify the initial coast, foam and reflection rather than merely attempting to prewarm them.");
+  buildSite.includes("!['ready','degraded','degraded-timeout'].includes(startupResourceSnapshot.coast.status)"),
+  "The startup gate must accept a reported degraded coast after the 8-second recovery deadline.");
 
 
 const sourceVersion="0.6.274";
@@ -64,7 +68,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.363","The release validator must target the packaged 0.6.363 release.");
+assert.equal(expectedVersion,"0.6.365","The release validator must target the packaged 0.6.365 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -135,7 +139,7 @@ assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.356
   buildSite.includes('npc-village-brain-core.js?v=0.6.356-npcbrain7'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.363"\)/,"The build must promote every visible source version to 0.6.363.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.365"\)/,"The build must promote every visible source version to 0.6.365.");
 assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!qualityLabAdaptiveActive") && buildSite.includes("qualityScaleAdaptive:qualityLabAdaptiveActive") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must keep its native render scale fixed for the session.");
 const qualityAdaptiveCode=buildSite.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||"";
 assert.ok(!qualityAdaptiveCode.includes("engine.setHardwareScalingLevel") && !qualityAdaptiveCode.includes("qualityDprSlowSamples") && !qualityAdaptiveCode.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction; manual DPR changes remain debug-only.");
@@ -171,7 +175,7 @@ assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.include
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.363")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.363.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.365")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.365.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -262,10 +266,10 @@ assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone(
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.363" && buildSite.includes('html = html.replace("0.6.274", "0.6.363")'), "The correction package must be release 0.6.363.");
+assert.ok(expectedVersion==="0.6.365" && buildSite.includes('html = html.replace("0.6.274", "0.6.365")'), "The correction package must be release 0.6.365.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now);') && buildSite.includes('scene.onBeforeRenderObservable.add'), "The flock must be updated after Babylon animation evaluation in the pre-render observer.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.363-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.365-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
 assert.ok(serviceWorker.includes('"./assets/vendor/babylon.js"') && serviceWorker.includes('"./assets/vendor/babylonjs.loaders.min.js"') && serviceWorker.includes('"./assets/vendor/meshopt_decoder.js"'),
   "The shell install must pre-cache Babylon, the glTF loader and meshopt so offline reload can boot.");
 assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.js")') && serviceWorker.includes('cacheFirst(request, SHELL_CACHE)'),

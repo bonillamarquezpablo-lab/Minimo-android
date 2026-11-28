@@ -32,21 +32,71 @@ assert.ok(!html.includes('https://raw.githubusercontent.com/nishit47/Blender-Pre
   'The player must not fetch animal GLBs from GitHub Raw during startup.');
 assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildlife-0128ca51-v1\';'),
   'The wildlife GLBs need a persistent Cache API bucket.');
+assert.ok(html.includes("wildlifeCacheOperation") &&
+  html.includes("Math.max(500,timeoutMs)") &&
+  html.includes("Promise.race([pending,timeout])") &&
+  html.includes("cache-open") &&
+  html.includes("cache-match") &&
+  html.includes("cache-write") &&
+  html.includes("window.__ELSN_WILDLIFE_STARTUP_TRACE__"),
+  'Persistent wildlife cache reads and writes must be bounded and expose their live stage, so a stalled Cache API cannot hold startup indefinitely.');
+assert.ok(html.includes("glb-container-inspection") &&
+  html.includes("babylon-import-ready") &&
+  html.includes("texture-readiness") &&
+  html.includes("rig-validation") &&
+  html.includes("network-fetch-start") &&
+  html.includes("glb-stream-read") &&
+  html.includes("cache-persist"),
+  'Wildlife startup evidence must identify the exact model stage that is waiting.');
 assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.includes('startupResourceFailures.length'),
   'The player must publish a final readiness gate based on actual resources.');
 assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));
 
 assert.ok(html.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null"),
   'The startup report must include measured initial beach, seabed, foam and reflection readiness.');
-assert.ok(html.includes("startupResourceSnapshot.coast.status!=='ready'"),
-  'Gameplay must remain blocked until the complete initial coast is ready.');
-assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__={")&&
-  html.includes("syncActiveBeachIsland();")&&
-  html.includes("syncActiveTidalFoamIsland();")&&
-  html.includes("syncNordicWaterReflectionIsland();"),
-  'The full initial coastal systems must be built before the player enters the world.');
+assert.ok(html.includes("!['ready','degraded','degraded-timeout'].includes(startupResourceSnapshot.coast.status)"),
+  'The final gate must accept a diagnosed degraded coast after its fixed deadline.');
+assert.ok(html.includes("budgetMs:coastBudgetMs")&&html.includes("degraded-timeout")&&
+  html.includes("syncActiveBeachIsland")&&html.includes("syncActiveTidalFoamIsland")&&
+  html.includes("syncNordicWaterReflectionIsland")&&html.includes("forceCompilationAsync(mesh)")&&
+  html.includes("KHR_parallel_shader_compile")&&html.includes("long-animation-frame")&&
+  html.includes("frameDiagnostics:window.__ELSN_FRAME_DIAGNOSTICS__"),
+  'Coast diagnostics must measure the three stages, enforce 8 seconds, warm reflection shaders asynchronously and export Long Animation Frame evidence.');
+assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__=coastReport")&&
+  html.includes("runCoastStage('syncActiveBeachIsland',()=>syncActiveBeachIsland())")&&
+  html.includes("runCoastStage('syncActiveTidalFoamIsland',()=>syncActiveTidalFoamIsland())")&&
+  html.includes("runCoastStage('syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland())"),
+  'All three initial coastal preparation routines must run and be measured before world entry, with the coast-specific fallback handled separately.');
+
+assert.ok(html.includes("coastCompileGeneration=0")&&
+  html.includes("attempts:0,maxAttempts:2,timeoutMs:4000")&&
+  html.includes("Promise.race([compileWork,timeoutWork])")&&
+  html.includes("coastCompilePromise=null")&&
+  html.includes("compileState.status='deferred'")&&
+  html.includes("setCoastReflectionEnabled(true)"),
+  'A stalled shader warm-up must time out, permit one fresh recovery attempt, and restore the mirror instead of retaining a pending promise forever.');
+assert.ok(html.includes("coastCompilePromise===attemptPromise")&&
+  html.includes("attempt!==coastCompileGeneration")&&
+  html.includes("coastReport.shaderCompile.status!=='deferred'"),
+  'Late shader attempts must not overwrite a newer recovery and a deferred mirror must not be disabled again by the startup gate.');
 
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
+assert.ok(html.includes("glbTimings:glbTimingRecords.slice(-40)") &&
+  html.includes("recordGlbTiming('Caballero ") &&
+  html.includes("recordGlbTiming('Aldeano ") &&
+  html.includes("instanciación y montaje"),
+  'Startup diagnostics must expose bounded per-model humanoid import/rig timings without running the Inspector.');
+assert.ok(html.includes("setWaterState:({time,tide})=>") &&
+  html.includes("tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP)") &&
+  html.includes("animateWater(0)"),
+  'The island inspector must set the GPU water clock through the current shoreline update path.');
+for (const legacyWaterSymbol of [
+  'waterAccumulator','waterNormalAccumulator','waterFarAccumulator',
+  'waterVertexStep','waterNormalStep','waterFarStep'
+]) {
+  assert.ok(!html.includes(legacyWaterSymbol),
+    'The generated GPU runtime must not retain stale CPU water cadence variable: ' + legacyWaterSymbol);
+}
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
 assert.ok(html.includes("fauna:'blocking-required'"),
@@ -75,4 +125,4 @@ assert.ok(html.indexOf("Preparando fauna de la isla inicial") < html.indexOf("Pr
 assert.ok(sw.includes('const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-0128ca51-v1";'));
 assert.ok(sw.includes('WILDLIFE_MODEL_CACHE].includes(key)'),
   'Service Worker activation must preserve the persistent wildlife model cache.');
-console.log('STARTUP RESOURCE GATE OK: same-origin fauna, persistent cache, HTMLAudio streaming and complete pre-entry readiness.');
+console.log('STARTUP RESOURCE GATE OK: same-origin fauna, persistent cache, HTMLAudio streaming and bounded coastal readiness fallback.');

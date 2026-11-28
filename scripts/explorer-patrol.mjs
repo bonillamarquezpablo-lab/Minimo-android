@@ -191,13 +191,35 @@ async function startGame(page) {
       document.body.classList.contains('boot-failed'),
     undefined, { timeout: 180000, polling: 250 });
   } catch (error) {
-    report.startup = await page.evaluate(() => ({
-      worldReady: window.__elSinNombreStartupSmoke?.worldReady === true,
-      bootFailed: document.body.classList.contains('boot-failed'),
-      bodyClass: document.body.className,
-      loadingText: document.querySelector('#loadText')?.textContent || null,
-      loadingHelp: document.querySelector('#loadHelp')?.textContent || null
-    }));
+    report.startup = await page.evaluate(() => {
+      const smoke = window.__elSinNombreStartupSmoke || null;
+      const trace = window.__ELSN_WILDLIFE_STARTUP_TRACE__ || null;
+      const resourceRows = performance.getEntriesByType('resource')
+        .filter(entry => /(?:Deer|Wolf|Stag)\.glb(?:$|[?#])/i.test(entry.name))
+        .slice(-12)
+        .map(entry => ({name:entry.name,durationMs:Number(entry.duration.toFixed(1)),transferSize:entry.transferSize,encodedBodySize:entry.encodedBodySize,responseStart:entry.responseStart,responseEnd:entry.responseEnd}));
+      let wildlife = null;
+      try { wildlife = window.__ELSN_WILDLIFE_DIAGNOSTICS__?.getSnapshot?.() || null; } catch (_) {}
+      let frameDiagnostics = null;
+      try { frameDiagnostics = window.__ELSN_FRAME_DIAGNOSTICS__?.snapshot?.() || null; } catch (_) {}
+      return {
+        worldReady: smoke?.worldReady === true,
+        bootFailed: document.body.classList.contains('boot-failed'),
+        bodyClass: document.body.className,
+        loadingText: document.querySelector('#loadText')?.textContent || null,
+        loadingHelp: document.querySelector('#loadHelp')?.textContent || null,
+        wildlifeStartupTrace: trace ? {...trace,history:Array.isArray(trace.history)?trace.history.slice(-24):[]} : null,
+        wildlifeReadiness: wildlife?.readiness || wildlife?.byKind || null,
+        glbStageTimings: (window.__elSinNombreGlbTimings || []).slice(-40),
+        glbResources: resourceRows,
+        startupErrors: smoke ? {
+          consoleErrors:(smoke.consoleErrors||[]).slice(-12),
+          runtimeErrors:(smoke.runtimeErrors||[]).slice(-12),
+          unhandledRejections:(smoke.unhandledRejections||[]).slice(-12)
+        } : null,
+        frameDiagnostics
+      };
+    });
     throw new Error('El arranque no alcanzó worldReady: ' + JSON.stringify(report.startup) + ' · ' + String(error?.message || error));
   }
   report.startup = await page.evaluate(() => ({

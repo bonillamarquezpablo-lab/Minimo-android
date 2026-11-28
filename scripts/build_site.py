@@ -1617,18 +1617,50 @@ function setLoadingProgress(value,label){
     # control state on the very first visit. A later SW release preserves this bucket.
     wildlife_loader_marker = " async function downloadWildlifeBlob(kind){"
     wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-0128ca51-v1';
+ const wildlifeStartupTrace={kind:null,stage:'idle',startedAt:0,updatedAt:0,lastError:null,history:[]};
+ window.__ELSN_WILDLIFE_STARTUP_TRACE__=wildlifeStartupTrace;
+ function markWildlifeStartupTrace(kind,stage,detail=null){
+  const now=performance.now();
+  if(kind!==wildlifeStartupTrace.kind){wildlifeStartupTrace.kind=kind;wildlifeStartupTrace.startedAt=now;}
+  wildlifeStartupTrace.stage=stage;wildlifeStartupTrace.updatedAt=now;
+  wildlifeStartupTrace.history.push({kind,stage,atMs:Number(now.toFixed(1)),detail:detail&&typeof detail==='object'?detail:null});
+  if(wildlifeStartupTrace.history.length>24)wildlifeStartupTrace.history.splice(0,wildlifeStartupTrace.history.length-24);
+  if(stage.endsWith('-failed')||stage.endsWith('-timeout'))wildlifeStartupTrace.lastError=detail||stage;
+ }
+ async function wildlifeCacheOperation(kind,stage,operation,timeoutMs=1500){
+  markWildlifeStartupTrace(kind,stage+'-start');
+  let timer=null;
+  const pending=Promise.resolve().then(operation).then(value=>({ok:true,value}),error=>({ok:false,error}));
+  const timeout=new Promise(resolve=>{timer=setTimeout(()=>resolve({ok:false,timeout:true}),Math.max(500,timeoutMs));});
+  const result=await Promise.race([pending,timeout]);
+  if(timer!==null)clearTimeout(timer);
+  if(!result.ok){
+   markWildlifeStartupTrace(kind,stage+(result.timeout?'-timeout':'-failed'),{timeout:!!result.timeout,error:result.error?String(result.error.message||result.error).slice(0,180):null});
+   return result;
+  }
+  markWildlifeStartupTrace(kind,stage+'-ready');
+  return result;
+ }
  async function readWildlifeModelCache(kind){
-  if(!window.caches||typeof window.caches.open!=='function')return null;
+  if(!window.caches||typeof window.caches.open!=='function'){markWildlifeStartupTrace(kind,'cache-unavailable');return null;}
   const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return null;
   const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
   try{
-   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE),response=await cache.match(url);
-   if(!response)return null;
-   const blob=await response.blob();
-   if(await isValidGLB(blob))return blob;
-   await cache.delete(url);
+   const opened=await wildlifeCacheOperation(kind,'cache-open',()=>window.caches.open(WILDLIFE_MODEL_CACHE),1500);
+   if(!opened.ok)return null;
+   const matched=await wildlifeCacheOperation(kind,'cache-match',()=>opened.value.match(url),1500);
+   if(!matched.ok||!matched.value)return null;
+   const loaded=await wildlifeCacheOperation(kind,'cache-blob-read',()=>matched.value.blob(),2500);
+   if(!loaded.ok||!loaded.value)return null;
+   const validated=await wildlifeCacheOperation(kind,'cache-glb-validation',()=>isValidGLB(loaded.value),2500);
+   if(validated.ok&&validated.value){markWildlifeStartupTrace(kind,'cache-hit',{bytes:loaded.value.size});return loaded.value;}
+   if(!validated.ok)return null;
+   await wildlifeCacheOperation(kind,'cache-delete-invalid',()=>opened.value.delete(url),750);
    console.warn('Se eliminó una copia de fauna inválida:',kind);
-  }catch(error){console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);}
+  }catch(error){
+   markWildlifeStartupTrace(kind,'cache-read-failed',{error:String(error&&error.message||error).slice(0,180)});
+   console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);
+  }
   return null;
  }
  async function saveWildlifeModelCache(kind,blob){
@@ -1636,10 +1668,15 @@ function setLoadingProgress(value,label){
   const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return false;
   const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
   try{
-   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE);
-   await cache.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}}));
+   const opened=await wildlifeCacheOperation(kind,'cache-write-open',()=>window.caches.open(WILDLIFE_MODEL_CACHE),1200);
+   if(!opened.ok)return false;
+   const stored=await wildlifeCacheOperation(kind,'cache-write',()=>opened.value.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}})),1500);
+   if(!stored.ok){console.info('La fauna queda lista en memoria; se omitió una caché persistente lenta:',kind);return false;}
    return true;
-  }catch(error){console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;}
+  }catch(error){
+   markWildlifeStartupTrace(kind,'cache-write-failed',{error:String(error&&error.message||error).slice(0,180)});
+   console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;
+  }
  }
 """
     if html.count(wildlife_loader_marker) != 1:
@@ -1665,16 +1702,29 @@ function setLoadingProgress(value,label){
 
 
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
-    wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
+    wildlife_download_cached = wildlife_download_head + "\n  markWildlifeStartupTrace(kind,'cache-read');const cached=await readWildlifeModelCache(kind);if(cached){markWildlifeStartupTrace(kind,'blob-from-cache',{bytes:cached.size});return cached;}markWildlifeStartupTrace(kind,'network-fetch-start');"
     if html.count(wildlife_download_head) != 1:
         raise SystemExit("No se encontró la cabecera de descarga de fauna.")
     html = html.replace(wildlife_download_head, wildlife_download_cached, 1)
 
     wildlife_blob_ready = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   return blob;"
-    wildlife_blob_persist = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   await saveWildlifeModelCache(kind,blob);\n   return blob;"
+    wildlife_blob_persist = "   markWildlifeStartupTrace(kind,'glb-validation');if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   markWildlifeStartupTrace(kind,'cache-persist');await saveWildlifeModelCache(kind,blob);\n   markWildlifeStartupTrace(kind,'blob-ready',{bytes:blob.size});return blob;"
     if html.count(wildlife_blob_ready) != 1:
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
+
+    wildlife_stream_read_marker = "   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70);"
+    wildlife_stream_read_replacement = "   markWildlifeStartupTrace(kind,'network-response-ready',{status:response.status});\n   markWildlifeStartupTrace(kind,'glb-stream-read');\n"+wildlife_stream_read_marker
+    if html.count(wildlife_stream_read_marker) != 1:
+        raise SystemExit("No se encontró el punto único de lectura del cuerpo GLB de fauna.")
+    html = html.replace(wildlife_stream_read_marker, wildlife_stream_read_replacement, 1)
+
+    wildlife_download_catch_marker = "  }catch(err){if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
+    wildlife_download_catch_replacement = "  }catch(err){markWildlifeStartupTrace(kind,'download-failed',{error:String(err&&err.message||err).slice(0,180)});if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
+    if html.count(wildlife_download_catch_marker) != 1:
+        raise SystemExit("No se encontró el catch único de descarga GLB de fauna.")
+    html = html.replace(wildlife_download_catch_marker, wildlife_download_catch_replacement, 1)
+
 
     glb_validator_marker = " async function isValidGLB(blob){\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\n }"
     glb_validator_required = r""" async function inspectGLBContainer(blob){
@@ -1768,10 +1818,16 @@ function setLoadingProgress(value,label){
     html = html.replace(glb_validator_marker, glb_validator_required, 1)
 
     wildlife_import_snapshot_marker = "  let imported=null,objectUrl=null,actor=null;\n  try{\n   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.\n   objectUrl=URL.createObjectURL(blob);"
-    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
+    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   markWildlifeStartupTrace(kind,'glb-container-inspection');\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
     if html.count(wildlife_import_snapshot_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_import_snapshot_marker.")
     html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
+
+    wildlife_babylon_import_marker = "   imported=await timedGlbStage('Fauna '+kind,'importación Babylon',()=>B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb'),blob.size);"
+    wildlife_babylon_import_replacement = wildlife_babylon_import_marker + "\n   markWildlifeStartupTrace(kind,'babylon-import-ready');"
+    if html.count(wildlife_babylon_import_marker) != 1:
+        raise SystemExit("No se encontró el punto único de importación Babylon de fauna.")
+    html = html.replace(wildlife_babylon_import_marker, wildlife_babylon_import_replacement, 1)
 
     wildlife_animal_marker = "const animal={kind,root:actor,"
     wildlife_animal_replacement = "const animal={textureReadiness,kind,root:actor,"
@@ -1780,7 +1836,7 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_animal_marker, wildlife_animal_replacement, 1)
 
     wildlife_mesh_texture_marker = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');"
-    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
+    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   markWildlifeStartupTrace(kind,'texture-readiness');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);\n   markWildlifeStartupTrace(kind,'rig-validation');"
     if html.count(wildlife_mesh_texture_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_mesh_texture_marker.")
     html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)
@@ -2110,34 +2166,240 @@ function updateWildlife(dt){
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
     startup_coast_warmup_code = """ if(!coastalReferenceMode){
   const startupCoastWarmupStartedAt=performance.now();
-  const yieldStartupCoastFrame=()=>new Promise(resolve=>{
-   let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
-   requestAnimationFrame(finish);setTimeout(finish,90);
-  });
-  setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
-  syncActiveBeachIsland();
-  await yieldStartupCoastFrame();
-  const initialCoastIslandIndex=activeBeachIslandIndex;
-  if(initialCoastIslandIndex<0)throw new Error('RECURSO OBLIGATORIO: no se pudo identificar la costa de la isla inicial.');
-  syncActiveTidalFoamIsland();
-  await yieldStartupCoastFrame();
-  syncNordicWaterReflectionIsland();
-  await yieldStartupCoastFrame();
-  const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
-   !!livingBeachLayers[initialCoastIslandIndex]&&
-   tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
-   (isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
-  window.__ELSN_INITIAL_COAST_WARMUP__={
-   status:initialCoastReady?'ready':'failed',
-   islandIndex:initialCoastIslandIndex,
-   seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
-   beachReady:!!livingBeachLayers[initialCoastIslandIndex],
-   foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
-   reflectionReady:isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
-   durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
+  const coastParams=new URLSearchParams(window.location.search);
+  const coastDiagnosticsEnabled=coastParams.get('debug')==='1'||coastParams.get('test')==='1'||coastParams.get('profile')==='1';
+  const coastBudgetMs=8000;
+  let coastDeadlineExceeded=false;
+  let coastAborted=false;
+  let coastCompilePromise=null;
+  let coastCompileGeneration=0;
+  let coastOriginalRenderList=null;
+  const coastReport={
+   schema:2,status:'pending',budgetMs:coastBudgetMs,islandIndex:null,
+   stages:[],waits:[],checks:null,errors:[],deadlineExceeded:false,
+   shaderCompile:{status:'not-started',parallelExtensionSupported:false,materialCount:0,compiledCount:0,failedMaterials:[],durationMs:null,attempts:0,maxAttempts:2,timeoutMs:4000},
+   startedAt:startupCoastWarmupStartedAt,updatedAt:startupCoastWarmupStartedAt
   };
-  if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
-  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
+  window.__ELSN_INITIAL_COAST_WARMUP__=coastReport;
+  const coastMark=(name,phase)=>{try{performance.mark('elsn:coast:'+name+':'+phase);}catch(_){}};
+  const coastMeasure=(name,startedAt,status,error)=>{
+   const endedAt=performance.now(),durationMs=Number((endedAt-startedAt).toFixed(2));
+   coastReport.stages.push({name,status,durationMs,error:error||null});
+   coastReport.updatedAt=endedAt;
+   coastMark(name,'end');
+   try{performance.measure('elsn:coast:'+name,'elsn:coast:'+name+':start','elsn:coast:'+name+':end');performance.clearMarks('elsn:coast:'+name+':start');performance.clearMarks('elsn:coast:'+name+':end');performance.clearMeasures('elsn:coast:'+name);}catch(_){}
+   return durationMs;
+  };
+  const runCoastStage=(name,work)=>{
+   const startedAt=performance.now();coastMark(name,'start');
+   try{const value=work();coastMeasure(name,startedAt,'complete',null);return value;}
+   catch(error){const message=String(error&&error.message||error).slice(0,240);coastReport.errors.push({stage:name,message});coastMeasure(name,startedAt,'error',message);return null;}
+  };
+  const yieldStartupCoastFrame=(label)=>new Promise(resolve=>{
+   const startedAt=performance.now();let settled=false;
+   const finish=reason=>{if(settled)return;settled=true;const durationMs=Number((performance.now()-startedAt).toFixed(2));coastReport.waits.push({label,durationMs,reason});coastReport.updatedAt=performance.now();resolve({durationMs,reason});};
+   try{requestAnimationFrame(()=>finish('animation-frame'));}catch(_){finish('raf-unavailable');}
+   setTimeout(()=>finish('90ms-fallback'),90);
+  });
+  const resourceState=(resource,label)=>{
+   if(!resource)return {ready:false,reason:'no creado: '+label};
+   try{if(typeof resource.isDisposed==='function'&&resource.isDisposed())return {ready:false,reason:'objeto eliminado: '+label};}catch(_){}
+   let enabled=null;try{if(typeof resource.isEnabled==='function')enabled=!!resource.isEnabled();}catch(_){}
+   return {ready:true,reason:null,type:resource.constructor&&resource.constructor.name||typeof resource,enabled};
+  };
+  const updateCoastChecks=()=>{
+   const index=Number.isInteger(coastReport.islandIndex)?coastReport.islandIndex:activeBeachIslandIndex;
+   const seabed=resourceState(index>=0?coastalSeabedMeshes[index]:null,'fondo marino de isla '+index);
+   const beach=resourceState(index>=0?livingBeachLayers[index]:null,'capa de playa de isla '+index);
+   const foamItem=Array.isArray(tidalFoamMeshes)?tidalFoamMeshes.find(item=>item&&item.index===index):null;
+   const foam=foamItem?resourceState(foamItem.mesh||foamItem.root||foamItem,'espuma de isla '+index):{ready:false,reason:'no existe entrada de espuma para la isla '+index};
+   let reflection;
+   if(isPerformanceMode){reflection={ready:true,reason:'no aplica: perfil Rendimiento no crea espejo de agua'};}
+   else if(!nordicWaterMirror){reflection={ready:false,reason:'nordicWaterMirror no está creado'};}
+   else if(activeWaterReflectionIslandIndex!==index){reflection={ready:false,reason:'isla del reflejo '+activeWaterReflectionIslandIndex+' distinta de la isla activa '+index};}
+   else if(!['ready','not-required'].includes(coastReport.shaderCompile.status)){reflection={ready:false,reason:'compilación de materiales del reflejo '+coastReport.shaderCompile.status};}
+   else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
+   else{reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:coastReport.shaderCompile.status};}
+   coastReport.checks={seabed:{label:'Fondo marino',...seabed},beach:{label:'Playa',...beach},foam:{label:'Espuma',...foam},reflection:{label:'Reflejo',...reflection}};
+   coastReport.checks.allReady=Object.values(coastReport.checks).filter(item=>item&&typeof item==='object'&&'ready'in item).every(item=>item.ready);
+   coastReport.updatedAt=performance.now();
+   return coastReport.checks;
+  };
+  const setCoastReflectionEnabled=enabled=>{
+   if(!nordicWaterMirror)return;
+   if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalLevel'))coastReport.reflectionOriginalLevel=Number.isFinite(Number(nordicWaterMirror.level))?Number(nordicWaterMirror.level):1;
+   if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalRefreshRate'))coastReport.reflectionOriginalRefreshRate=Number.isFinite(Number(nordicWaterMirror.refreshRate))?Number(nordicWaterMirror.refreshRate):(isTouchDevice?12:8);
+   if(!enabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length)coastOriginalRenderList=nordicWaterMirror.renderList.slice();
+   nordicWaterMirror.level=enabled?coastReport.reflectionOriginalLevel:0;
+   if(enabled&&Array.isArray(coastOriginalRenderList))nordicWaterMirror.renderList=coastOriginalRenderList.slice();
+   else if(!enabled)nordicWaterMirror.renderList=[];
+   if(enabled)coastOriginalRenderList=null;
+   nordicWaterMirror.refreshRate=enabled?coastReport.reflectionOriginalRefreshRate:0;
+   coastReport.reflectionTemporarilyDisabled=!enabled;
+  };
+  const startReflectionShaderWarmup=()=>{
+   const compileState=coastReport.shaderCompile;
+   if(compileState.status==='ready'||compileState.status==='not-required')return Promise.resolve(true);
+   if(compileState.status==='pending'&&coastCompilePromise)return coastCompilePromise;
+   if(isPerformanceMode||!nordicWaterMirror){compileState.status='not-required';return Promise.resolve(true);}
+   const list=Array.isArray(nordicWaterMirror.renderList)?nordicWaterMirror.renderList:[];
+   const targets=new Map();
+   for(const mesh of list){const material=mesh&&mesh.material;if(material&&typeof material.forceCompilationAsync==='function'&&!targets.has(material))targets.set(material,mesh);}
+   let parallelExtension=null;
+   try{parallelExtension=graphicsContext&&graphicsContext.getExtension?graphicsContext.getExtension('KHR_parallel_shader_compile'):null;}catch(_){}
+   compileState.parallelExtensionSupported=!!parallelExtension;
+   compileState.materialCount=targets.size;
+   if(!targets.size){compileState.status='not-required';compileState.durationMs=0;return Promise.resolve(true);}
+   const maxAttempts=Math.max(1,Number(compileState.maxAttempts)||2);
+   if((Number(compileState.attempts)||0)>=maxAttempts){
+    compileState.status='deferred';
+    compileState.exhausted=true;
+    setCoastReflectionEnabled(true);
+    updateCoastChecks();
+    return Promise.resolve(false);
+   }
+   const attempt=++coastCompileGeneration;
+   compileState.attempts=attempt;
+   setCoastReflectionEnabled(false);
+   compileState.status='pending';
+   const startedAt=performance.now();
+   const entries=Array.from(targets.entries());
+   const compileWork=(async()=>{
+    let compiledCount=0;
+    const failedMaterials=[];
+    try{
+     for(let offset=0;offset<entries.length;offset+=4){
+      const batch=entries.slice(offset,offset+4);
+      const outcomes=await Promise.all(batch.map(async([material,mesh])=>{
+       try{await material.forceCompilationAsync(mesh);return {ok:true};}
+       catch(error){
+        const name=String(material.name||material.id||'material-'+(offset+1)).slice(0,100);
+        return {ok:false,name,error:String(error&&error.message||error).slice(0,180)};
+       }
+      }));
+      compiledCount+=outcomes.filter(result=>result.ok).length;
+      failedMaterials.push(...outcomes.filter(result=>!result.ok).map(result=>({name:result.name,error:result.error})));
+      if(outcomes.some(result=>!result.ok))throw new Error('Uno o más materiales no completaron forceCompilationAsync.');
+     }
+     if(attempt!==coastCompileGeneration)return false;
+     compileState.compiledCount=compiledCount;
+     compileState.failedMaterials=failedMaterials;
+     compileState.status='ready';
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     setCoastReflectionEnabled(true);
+     updateCoastChecks();
+     if(coastReport.checks&&coastReport.checks.allReady)coastReport.status='ready';
+     coastReport.updatedAt=performance.now();
+     return true;
+    }catch(error){
+     if(attempt!==coastCompileGeneration)return false;
+     compileState.compiledCount=compiledCount;
+     compileState.failedMaterials=failedMaterials;
+     const message=String(error&&error.message||error).slice(0,240);
+     compileState.error=message;
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     coastReport.errors.push({stage:'forceCompilationAsync',message});
+     if(attempt>=maxAttempts){
+      compileState.status='deferred';
+      compileState.exhausted=true;
+      setCoastReflectionEnabled(true);
+     }else{
+      compileState.status='failed';
+      setCoastReflectionEnabled(false);
+     }
+     updateCoastChecks();
+     coastReport.updatedAt=performance.now();
+     return false;
+    }
+   })();
+   let timeoutId=null;
+   let attemptPromise=null;
+   const timeoutWork=new Promise(resolve=>{
+    timeoutId=setTimeout(()=>resolve('timeout'),Math.max(1000,Number(compileState.timeoutMs)||4000));
+   });
+   attemptPromise=Promise.race([compileWork,timeoutWork]).then(result=>{
+    if(result==='timeout'&&attempt===coastCompileGeneration){
+     compileState.status='deferred';
+     compileState.timeoutCount=(Number(compileState.timeoutCount)||0)+1;
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     compileState.warning='La compilación asíncrona superó su plazo; se reactiva el espejo y se permite la compilación normal en segundo plano.';
+     if(attempt>=maxAttempts)compileState.exhausted=true;
+     setCoastReflectionEnabled(true);
+     updateCoastChecks();
+     coastReport.updatedAt=performance.now();
+     return false;
+    }
+    return result===true;
+   }).finally(()=>{
+    if(timeoutId!==null)clearTimeout(timeoutId);
+    if(coastCompilePromise===attemptPromise)coastCompilePromise=null;
+   });
+   coastCompilePromise=attemptPromise;
+   return attemptPromise;
+  };
+  if(coastDiagnosticsEnabled&&!window.__ELSN_FRAME_DIAGNOSTICS__){
+   const frameState={enabled:true,supportedTypes:[],unsupportedTypes:[],entries:[],maxDurationMs:0,observers:[]};
+   const supported=typeof PerformanceObserver!=='undefined'?Array.from(PerformanceObserver.supportedEntryTypes||[]):[];
+   for(const type of ['long-animation-frame','longtask']){
+    if(!supported.includes(type)){frameState.unsupportedTypes.push(type);continue;}
+    try{
+     const observer=new PerformanceObserver(list=>{
+      for(const entry of list.getEntries()){
+       const scripts=Array.isArray(entry.scripts)?entry.scripts.slice(0,8).map(script=>({sourceURL:String(script.sourceURL||'').slice(0,180),sourceFunctionName:String(script.sourceFunctionName||'').slice(0,120),invoker:String(script.invoker||'').slice(0,120),invokerType:String(script.invokerType||'').slice(0,80),durationMs:Number(Number(script.duration||0).toFixed(2)),forcedStyleAndLayoutDurationMs:Number(Number(script.forcedStyleAndLayoutDuration||0).toFixed(2))})):[];
+       const attribution=Array.isArray(entry.attribution)?entry.attribution.slice(0,6).map(item=>({name:String(item.name||'').slice(0,80),containerType:String(item.containerType||'').slice(0,80),containerName:String(item.containerName||'').slice(0,80),containerId:String(item.containerId||'').slice(0,80),containerSrc:String(item.containerSrc||'').slice(0,180)})):[];
+       const record={type,startTimeMs:Number(Number(entry.startTime||0).toFixed(2)),durationMs:Number(Number(entry.duration||0).toFixed(2)),blockingDurationMs:Number(Number(entry.blockingDuration||0).toFixed(2)),renderStartMs:Number(Number(entry.renderStart||0).toFixed(2)),styleAndLayoutStartMs:Number(Number(entry.styleAndLayoutStart||0).toFixed(2)),scripts,attribution};
+       frameState.entries.push(record);
+       frameState.maxDurationMs=Math.max(frameState.maxDurationMs,record.durationMs);
+       if(frameState.entries.length>40)frameState.entries.shift();
+      }
+     });
+     observer.observe({type,buffered:true});frameState.observers.push(observer);frameState.supportedTypes.push(type);
+    }catch(error){frameState.unsupportedTypes.push(type+': '+String(error&&error.message||error).slice(0,120));}
+   }
+   frameState.snapshot=()=>({enabled:frameState.enabled,supportedTypes:frameState.supportedTypes,unsupportedTypes:frameState.unsupportedTypes,maxDurationMs:frameState.maxDurationMs,entries:frameState.entries.slice()});
+   window.__ELSN_FRAME_DIAGNOSTICS__=frameState;
+  }
+  const runCoastPreparation=async()=>{
+   setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
+   runCoastStage('syncActiveBeachIsland',()=>syncActiveBeachIsland());
+   await yieldStartupCoastFrame('después de syncActiveBeachIsland');
+   if(coastAborted)return;
+   coastReport.islandIndex=activeBeachIslandIndex;
+   if(coastReport.islandIndex<0){coastReport.errors.push({stage:'isla inicial',message:'activeBeachIslandIndex es '+coastReport.islandIndex});return;}
+   runCoastStage('syncActiveTidalFoamIsland',()=>syncActiveTidalFoamIsland());
+   await yieldStartupCoastFrame('después de syncActiveTidalFoamIsland');
+   if(coastAborted)return;
+   runCoastStage('syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
+   const compilePromise=startReflectionShaderWarmup();
+   await yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland');
+   if(coastAborted)return;
+   if(compilePromise)await compilePromise.catch(()=>false);
+  };
+  let coastDeadlineTimer=null;
+  const deadlinePromise=new Promise(resolve=>{coastDeadlineTimer=setTimeout(()=>{coastDeadlineExceeded=true;coastAborted=true;coastReport.deadlineExceeded=true;resolve('deadline');},coastBudgetMs);});
+  const workPromise=runCoastPreparation().catch(error=>{coastReport.errors.push({stage:'preparación de costa',message:String(error&&error.message||error).slice(0,240)});});
+  await Promise.race([workPromise,deadlinePromise]);
+  if(coastDeadlineTimer!==null)clearTimeout(coastDeadlineTimer);
+  coastReport.deadlineExceeded=coastDeadlineExceeded;
+  coastReport.elapsedMs=Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2));
+  coastReport.islandIndex=Number.isInteger(coastReport.islandIndex)?coastReport.islandIndex:activeBeachIslandIndex;
+  const coastChecks=updateCoastChecks();
+  coastReport.status=coastChecks.allReady?'ready':(coastDeadlineExceeded?'degraded-timeout':'degraded');
+  coastReport.timeoutReason=coastDeadlineExceeded?'La fase de costa superó el límite de 8000 ms; el arranque continúa sin esperar a la costa completa.':null;
+  if(!coastChecks.reflection.ready&&coastReport.shaderCompile.status!=='deferred')setCoastReflectionEnabled(false);
+  coastReport.diagnosticSummary=Object.values(coastChecks).filter(item=>item&&typeof item==='object'&&'ready'in item&&!item.ready).map(item=>item.label+': '+item.reason);
+  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),coastReport.status,coastReport);
+  if(coastReport.status!=='ready')console.warn('EL SIN NOMBRE: costa inicial degradada, se continúa el arranque:',coastReport.diagnosticSummary,coastReport);
+  if(!coastChecks.reflection.ready&&!isPerformanceMode){
+   coastReport.recovery={scheduled:true,attempts:0};
+   setTimeout(()=>{
+    if(!scene||scene.isDisposed&&scene.isDisposed())return;
+    coastReport.recovery.attempts++;
+    runCoastStage('recovery.syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
+    const recoveryCompile=startReflectionShaderWarmup();
+    if(recoveryCompile)recoveryCompile.then(()=>{updateCoastChecks();coastReport.updatedAt=performance.now();}).catch(()=>{});
+   },1800);
+  }
  }"""
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
@@ -2318,6 +2580,7 @@ function updateWildlife(dt){
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
   coast:window.__ELSN_INITIAL_COAST_WARMUP__||null,
+  frameDiagnostics:window.__ELSN_FRAME_DIAGNOSTICS__&&window.__ELSN_FRAME_DIAGNOSTICS__.snapshot?window.__ELSN_FRAME_DIAGNOSTICS__.snapshot():null,
   world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
  };
  const startupResourceFailures=[];
@@ -2329,7 +2592,7 @@ function updateWildlife(dt){
   if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
-  if(!startupResourceSnapshot.coast||startupResourceSnapshot.coast.status!=='ready')startupResourceFailures.push('playa, fondo submarino, rompiente y reflejo de la isla inicial');
+  if(!startupResourceSnapshot.coast||!['ready','degraded','degraded-timeout'].includes(startupResourceSnapshot.coast.status))startupResourceFailures.push('diagnóstico de costa inicial ausente o inválido');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
@@ -3040,25 +3303,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.363; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.365; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.363\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.365\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.363.")
-    html = html.replace("0.6.274", "0.6.363")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.365.")
+    html = html.replace("0.6.274", "0.6.365")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'71',build:'0.6.363'"
+    diagnostic_build_replacement = "reportVersion:'73',build:'0.6.365'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.363 para normalizar.")
-    game_version = "0.6.363"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.365 para normalizar.")
+    game_version = "0.6.365"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -5514,6 +5777,35 @@ function getWorldPhaseTimingSnapshot(){
   waterLastUpdateMs=performance.now()-workStart;
  }"""
     html = html[:water_animation_start] + water_animation_replacement + html[water_animation_end:]
+
+    # The GPU water renderer no longer uses the retired CPU vertex/normal accumulators.
+    # Inspector and debug controls drive the current shader clock and shoreline foam only.
+    water_tide_button_old = "debugForcedTideOffset=value;waterAccumulator=waterVertexStep;waterFarAccumulator=waterFarStep;waterNormalAccumulator=waterNormalStep;animateWater(1/60);refreshDiagnostics();"
+    water_tide_button_new = "debugForcedTideOffset=value;tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP);animateWater(1/60);refreshDiagnostics();"
+    if html.count(water_tide_button_old) != 1:
+        raise SystemExit("The debug tide button still needs a unique GPU-compatible update path.")
+    html = html.replace(water_tide_button_old, water_tide_button_new, 1)
+
+    water_test_state_old = "waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;waterFarAccumulator=waterFarStep;tidalFoamAccumulator=TIDAL_FOAM_UPDATE_STEP;"
+    water_test_state_new = "tidalFoamAccumulator=Math.max(tidalFoamAccumulator,TIDAL_FOAM_UPDATE_STEP);"
+    if html.count(water_test_state_old) != 1:
+        raise SystemExit("The test water-state setter still references removed CPU water accumulators.")
+    html = html.replace(water_test_state_old, water_test_state_new, 1)
+
+    water_near_detail_old = "waterAccumulator=waterVertexStep;waterNormalAccumulator=waterNormalStep;"
+    water_near_detail_new = "animateWater(0);"
+    if html.count(water_near_detail_old) != 1:
+        raise SystemExit("The near-water diagnostic toggle still references removed CPU water accumulators.")
+    html = html.replace(water_near_detail_old, water_near_detail_new, 1)
+
+    retired_water_symbols = (
+        "waterAccumulator", "waterNormalAccumulator", "waterFarAccumulator",
+        "waterVertexStep", "waterNormalStep", "waterFarStep"
+    )
+    remaining_water_symbols = [symbol for symbol in retired_water_symbols if symbol in html]
+    if remaining_water_symbols:
+        raise SystemExit("Retired CPU water symbols remain in the generated GPU runtime: " + ", ".join(remaining_water_symbols))
+
 
 
     water_perf_vertices_marker = "waterVertices:waterPositions.length/3"

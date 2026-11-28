@@ -485,6 +485,11 @@ async function main() {
     assert.equal(startupResources.music?.decodedToAudioBuffer, false,
       'La música debe conservar el streaming HTMLAudio, sin decodificarse a AudioBuffer.');
     manifest.startupTimeline = manifest.startupResourceGate.startupTimeline || null;
+    manifest.glbStageTimings = await page.evaluate(() => (window.__elSinNombreGlbTimings || []).slice(-40));
+    assert.ok(manifest.glbStageTimings.length > 0, 'GLB stage timing evidence is missing.');
+    assert.ok(manifest.glbStageTimings.some(item => item.model === 'Vikingo' && item.stage === 'montaje y rig' && item.ok), 'The protagonist rig-attachment timing was not recorded.');
+    const npcMountTimings = manifest.glbStageTimings.filter(item => /^(Caballero|Aldeano) /.test(item.model) && item.stage === 'instanciación y montaje' && item.ok);
+    assert.ok(npcMountTimings.length >= 5, 'Expected mount timings for all 3 guards and 2 villagers: ' + JSON.stringify(npcMountTimings));
     await page.waitForFunction(() => {
       const readiness=window.__ELSN_AUDIO_READINESS__;
       return readiness?.soundEffects?.status !== 'loading' &&

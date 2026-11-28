@@ -155,6 +155,42 @@
     }
   }
 
+  function captureStartupDiagnostics() {
+    const gate = window.__ELSN_STARTUP_RESOURCE_GATE__ && typeof window.__ELSN_STARTUP_RESOURCE_GATE__ === "object"
+      ? window.__ELSN_STARTUP_RESOURCE_GATE__ : null;
+    const coast = gate && gate.resources && gate.resources.coast
+      ? gate.resources.coast
+      : (window.__ELSN_INITIAL_COAST_WARMUP__ || null);
+    let frameDiagnostics = null;
+    try {
+      const source = window.__ELSN_FRAME_DIAGNOSTICS__;
+      if (source && typeof source.snapshot === "function") frameDiagnostics = source.snapshot();
+    } catch (_) {}
+    try {
+      const snapshot = {
+        capturedAt: new Date().toISOString(),
+        gate: gate ? {
+          ready: gate.ready === true,
+          checkedAt: text(gate.checkedAt, 40),
+          failures: Array.isArray(gate.failures) ? gate.failures.slice(0, 12).map(item => text(item, 180)) : [],
+          startupTimeline: gate.startupTimeline && typeof gate.startupTimeline === "object" ? gate.startupTimeline : null
+        } : null,
+        coast: coast && typeof coast === "object" ? coast : null,
+        frameDiagnostics: frameDiagnostics && typeof frameDiagnostics === "object" ? {
+          enabled: frameDiagnostics.enabled === true,
+          supportedTypes: Array.isArray(frameDiagnostics.supportedTypes) ? frameDiagnostics.supportedTypes.slice(0, 4) : [],
+          unsupportedTypes: Array.isArray(frameDiagnostics.unsupportedTypes) ? frameDiagnostics.unsupportedTypes.slice(0, 4).map(item => text(item, 160)) : [],
+          maxDurationMs: number(frameDiagnostics.maxDurationMs),
+          entries: Array.isArray(frameDiagnostics.entries) ? frameDiagnostics.entries.slice(-40) : []
+        } : null
+      };
+      return typeof window.structuredClone === "function"
+        ? window.structuredClone(snapshot) : JSON.parse(JSON.stringify(snapshot));
+    } catch (_) {
+      return { capturedAt: new Date().toISOString(), unavailable: true };
+    }
+  }
+
   function captureStartupScriptLoads() {
     const entries = Array.isArray(window.__ELSN_RUNTIME_SCRIPT_LOADS) ? window.__ELSN_RUNTIME_SCRIPT_LOADS : [];
     return entries.slice(-16).map(entry => ({
@@ -595,6 +631,7 @@
         status: "active",
         gameBuild: build ? text(build.content, 40) : null,
         startupScriptLoads: captureStartupScriptLoads(),
+        startupDiagnostics: captureStartupDiagnostics(),
         device: {
           userAgent: text(window.navigator && window.navigator.userAgent, 220),
           devicePixelRatio: number(window.devicePixelRatio),

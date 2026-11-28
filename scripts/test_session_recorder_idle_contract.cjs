@@ -84,6 +84,10 @@ assert.match(source,/sceneInventory = \{ capturedAt: sample\.capturedAt, dynamic
 assert.match(source,/window\.structuredClone\(inventory\)/,"The one-time scene inventory must be detached from the live renderer object.");
 assert.match(source,/delete sample\.scene\.meshSelectionDynamicSamplesByReason/);
 assert.match(source,/state\.sessionStartedPerformanceAt/);
+assert.match(source,/function captureStartupDiagnostics\(\)/,"The session report must retain startup coast readiness and debug frame evidence.");
+assert.match(source,/startupDiagnostics: captureStartupDiagnostics\(\)/,"Startup diagnostics must be captured into the persistent gameplay report.");
+assert.match(source,/window\.__ELSN_INITIAL_COAST_WARMUP__/);
+assert.match(source,/window\.__ELSN_FRAME_DIAGNOSTICS__/);
 const observerStart=source.indexOf("function installLongTaskObserver()");
 const observerEnd=source.indexOf("function stopSessionDiagnostics()",observerStart);
 assert.ok(observerStart>=0&&observerEnd>observerStart,"Gameplay long-task capture must remain available.");

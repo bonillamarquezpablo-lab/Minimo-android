@@ -121,6 +121,13 @@ assert.equal(diagnosis.anomalies.criticalCount, 1);
 assert.ok(diagnosis.firstAction && diagnosis.firstAction.length > 10);
 assert.ok(diagnosis.interpretationNote.includes("no deben sumarse"), "Overlapping timers must not be presented as additive costs.");
 
+const coastSession = {
+  startupDiagnostics: { coast: { status: "degraded-timeout", budgetMs: 8000, checks: { reflection: { ready: false, reason: "shader pending" } } }, frameDiagnostics: { maxDurationMs: 43856, entries: [{ type: "long-animation-frame", durationMs: 43856 }] } },
+  samples: [], longTasks: [], anomalies: [], runtimeErrors: []
+};
+assert.equal(coastSession.startupDiagnostics.coast.budgetMs, 8000);
+assert.equal(coastSession.startupDiagnostics.frameDiagnostics.entries[0].type, "long-animation-frame");
+
 const stableSession = {
   startedAt: new Date(startedAt).toISOString(),
   finishedAt: new Date(startedAt + 15000).toISOString(),

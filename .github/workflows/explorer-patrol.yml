@@ -3,10 +3,21 @@ name: Patrulla Nivel 1 — Exploradores EL SIN NOMBRE
 on:
   schedule:
     - cron: '0 */6 * * *'
+  # Execute the 13-island patrol on every game/runtime PR so startup regressions
+  # are caught before a candidate can be merged or published.
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'scripts/build_site.py'
+      - 'scripts/explorer-patrol.mjs'
+      - 'scripts/test_explorer_patrol.mjs'
+      - '.github/workflows/explorer-patrol.yml'
   workflow_dispatch:
   push:
     branches:
       - level1/explorer-patrol
+      - fix/coast-startup-timeout-0.6.364
 
 permissions:
   contents: write
