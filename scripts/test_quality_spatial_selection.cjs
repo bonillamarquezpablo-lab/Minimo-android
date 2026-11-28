@@ -19,6 +19,8 @@ for(const marker of [
   'const spatialDynamicReasonForMesh=',
   'const isSpatialDynamicMesh=mesh=>',
   'scene.createOrUpdateSelectionOctree(64,3)',
+  'scene.selectionOctree!==octree',
+  "typeof octree.select!=='function',"
   'scene.onNewMeshAddedObservable.add',
   'scene.onMeshRemovedObservable.add',
   "scene.onNewMeshAddedObservable.add(mesh=>{if(spatialSelectionOctree)addSpatialDynamicMesh(mesh,spatialDynamicReasonForMesh(mesh)||'created-after-octree',true);});",
@@ -61,7 +63,7 @@ assert.ok(builder.includes("EnemyHumanFallPivot_\\d+|VillageGuard\\d+_\\d+|Villa
   'Numeric NPC, guard and ship root names must be classified with working regular expressions.');
 assert.ok(builder.includes('const spatialDynamicUngroupedMeshSet=new Set()') &&
   builder.includes('const spatialActorBoundsGroups=[]') &&
-  builder.includes('octree.dynamicContent=spatialEmptyDynamicContent') &&
+  builder.includes('scene.selectionOctree!==octree') && builder.includes('octree.dynamicContent=spatialEmptyDynamicContent') &&
   builder.includes('dynamicProviderSuppressed=octree.dynamicContent===spatialEmptyDynamicContent') &&
   builder.includes('base.data[writeIndex++]=mesh') && builder.includes('base.length=writeIndex'),
   'The candidate provider must isolate the static octree, maintain explicit grouped/ungrouped dynamic sets and compact only static candidates in place.');
