@@ -36,9 +36,9 @@ assert.ok(startupCoastWarmupStart>=0&&startupCoastWarmupEnd>startupCoastWarmupSt
   "The full initial coastline must be prepared during the blocking startup stage.");
 const startupCoastWarmup=buildSite.slice(startupCoastWarmupStart,startupCoastWarmupEnd);
 const startupCoastStages=[
-  "syncActiveBeachIsland();",
-  "syncActiveTidalFoamIsland();",
-  "syncNordicWaterReflectionIsland();"
+  "runCoastStage('syncActiveBeachIsland'",
+  "runCoastStage('syncActiveTidalFoamIsland'",
+  "runCoastStage('syncNordicWaterReflectionIsland'"
 ].map(stage=>startupCoastWarmup.indexOf(stage));
 assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
   startupCoastStages.every(index=>index>=0)&&
