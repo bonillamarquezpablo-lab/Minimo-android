@@ -1352,7 +1352,8 @@ def main() -> None:
    if(!templateMeshes.length||templateMeshes.length>Math.max(4,templateSourceMeshes.length)){
     throw new Error('La plantilla forestal no pudo compactarse por material: '+spec.label);
    }
-   templateMeshes.forEach(mesh=>{mesh.isVisible=false;mesh.visibility=0;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
+   // Babylon must keep the source mesh render-enabled for its InstancedMesh batch; visibility=0 hides only the source geometry while instances override it to 1.
+   templateMeshes.forEach(mesh=>{mesh.isVisible=true;mesh.visibility=0;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
    recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,sourceMeshes:templateSourceMeshes.length,templateMeshes:templateMeshes.length,source:'Innerscene CC0 shared-instancing'});
    return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,sourceMeshCount:templateSourceMeshes.length,textureCount,materialCount};
   }));
@@ -4642,7 +4643,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const mineableRockGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockGeometryTemplate',{radius:1,subdivisions:2,flat:true},scene);
   const mineableRockCapGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockCapGeometryTemplate',{radius:1,subdivisions:1,flat:true},scene);
   mineableRockGeometryTemplate.material=mineableGraniteMaterial;mineableRockCapGeometryTemplate.material=M.stone;
-  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=false;source.visibility=0;source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
+  // Keep source meshes enabled for Babylon's instance batch; zero visibility suppresses the source itself.
+  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=true;source.visibility=0;source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
   const mineableRockInstancingStats={instances:0,instanceMeshes:0,sourceGeometryMeshes:2,sharedGeometry:true};
   window.__ELSN_ROCK_INSTANCING__=()=>({...mineableRockInstancingStats});
   const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
