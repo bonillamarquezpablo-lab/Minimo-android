@@ -109,6 +109,12 @@ assert.ok(capture.includes("const skinned=!!mesh.skeleton&&Number(mesh.numBoneIn
 assert.ok(capture.includes('alwaysSelectAsActiveMesh') && capture.includes("code:'skinned-mesh-frustum-culling-enabled'"), 'Fauna acceptance must inspect the final Babylon frustum-protection flag and reject any skinned animal mesh that remains cullable against stale bind-pose bounds.');
 assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a measured 0.834 m span must pass the realistic 1 m size ceiling while giant outliers remain rejected.');
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
+assert.ok(capture.includes("const sampleGullWorldPositions=()=>page.evaluate") &&
+  capture.includes("await new Promise(resolve=>setTimeout(resolve,2200))") &&
+  capture.includes("visualMeshDisplacementMeters") &&
+  capture.includes("code:'gull-flight-translation-stalled'") &&
+  capture.includes("requiredDisplacementMeters:.35"),
+  'Fauna acceptance must prove real world-space translation of both the gull actor and a rendered mesh; wing animation alone is insufficient.');
 assert.ok(capture.includes('animationGroups'));
 assert.ok(capture.includes('captureCanvas'));
 const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.()!==false;');
