@@ -22,6 +22,8 @@ for(const marker of [
   'p95Ms:at(.95)',
   'p99Ms:at(.99)',
   'worldPhases:getWorldPhaseTimingSnapshot()',
+  "forestInstancing:typeof window.__ELSN_FOREST_INSTANCING_STATS__==='function'?window.__ELSN_FOREST_INSTANCING_STATS__():null",
+  "rockInstancing:typeof window.__ELSN_ROCK_INSTANCING__==='function'?window.__ELSN_ROCK_INSTANCING__():null",
   'getPerformanceSnapshot()',
   'gpuContextLifecycle',
   'perf_gpu_query_marker',
