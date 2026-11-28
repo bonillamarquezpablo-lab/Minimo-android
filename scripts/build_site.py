@@ -2146,8 +2146,8 @@ function updateWildlife(dt){
   const resourceState=(resource,label)=>{
    if(!resource)return {ready:false,reason:'no creado: '+label};
    try{if(typeof resource.isDisposed==='function'&&resource.isDisposed())return {ready:false,reason:'objeto eliminado: '+label};}catch(_){}
-   try{if(typeof resource.isEnabled==='function'&&!resource.isEnabled())return {ready:false,reason:'objeto deshabilitado: '+label};}catch(_){}
-   return {ready:true,reason:null,type:resource.constructor&&resource.constructor.name||typeof resource};
+   let enabled=null;try{if(typeof resource.isEnabled==='function')enabled=!!resource.isEnabled();}catch(_){}
+   return {ready:true,reason:null,type:resource.constructor&&resource.constructor.name||typeof resource,enabled};
   };
   const updateCoastChecks=()=>{
    const index=Number.isInteger(coastReport.islandIndex)?coastReport.islandIndex:activeBeachIslandIndex;
