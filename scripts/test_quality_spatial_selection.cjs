@@ -121,6 +121,9 @@ assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must 
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
 assert.ok(recorder.includes('meshSelectionStaticWorldMatrixFreezeMs: number(runtime.meshSelectionStaticWorldMatrixFreezeMs)'), 'Session reports must preserve static-matrix freeze cost.');
+for (const field of ['meshSelectionDynamicFilterMode','meshSelectionDynamicProviderSuppressed','meshSelectionDynamicFilterStaticCandidates','meshSelectionDynamicFilterStaticDynamicDuplicates','meshSelectionDynamicFilterGroupChecks','meshSelectionDynamicFilterUngroupedChecks','meshSelectionDynamicUngroupedMeshCount']) {
+  assert.ok(recorder.includes(field + ':'), 'Session reports must preserve structural selection evidence: ' + field);
+}
 const dynamicFilterStart=builder.indexOf('const installSpatialDynamicCandidateFilter=()=>{');
 const dynamicFilterEnd=builder.indexOf('spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',dynamicFilterStart);
 assert.ok(dynamicFilterStart>=0&&dynamicFilterEnd>dynamicFilterStart,'The live dynamic candidate filter must remain inspectable.');
