@@ -195,7 +195,7 @@ async function startGame(page) {
       const smoke = window.__elSinNombreStartupSmoke || null;
       const trace = window.__ELSN_WILDLIFE_STARTUP_TRACE__ || null;
       const resourceRows = performance.getEntriesByType('resource')
-        .filter(entry => /(?:Deer|Wolf|Stag)\\.glb(?:$|[?#])/i.test(entry.name))
+        .filter(entry => /(?:Deer|Wolf|Stag)\.glb(?:$|[?#])/i.test(entry.name))
         .slice(-12)
         .map(entry => ({name:entry.name,durationMs:Number(entry.duration.toFixed(1)),transferSize:entry.transferSize,encodedBodySize:entry.encodedBodySize,responseStart:entry.responseStart,responseEnd:entry.responseEnd}));
       let wildlife = null;
