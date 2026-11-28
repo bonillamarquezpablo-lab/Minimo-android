@@ -25,7 +25,7 @@ assert.ok(html.includes("const groups=inst.animationGroups||[],nativeFlightClip=
   html.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
 const nativeClipIndex=html.indexOf("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;");
-const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'");
+const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:");
 const nativeClipStartIndex=html.indexOf("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);");
 const nativeFlightPoseIndex=html.indexOf("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);");
 assert.ok(nativeClipIndex>=0&&nativeClipIndex<nativeClipStartIndex&&nativeClipStartIndex<nativeFlightPoseIndex&&nativeFlightPoseIndex<flightRigIndex,
