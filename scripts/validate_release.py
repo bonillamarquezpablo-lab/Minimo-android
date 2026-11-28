@@ -429,7 +429,7 @@ def main() -> None:
         "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
         "const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]",
-        "flightRig={actor,visualRoot,bodyAxis",
+        "flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,firstFlightMesh",
         "alignAxis=(from,to)",
         "visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))",
         "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
