@@ -2110,34 +2110,177 @@ function updateWildlife(dt){
     fauna_scene_marker = " let sceneWarmupStatus='unavailable';"
     startup_coast_warmup_code = """ if(!coastalReferenceMode){
   const startupCoastWarmupStartedAt=performance.now();
-  const yieldStartupCoastFrame=()=>new Promise(resolve=>{
-   let settled=false;const finish=()=>{if(settled)return;settled=true;resolve();};
-   requestAnimationFrame(finish);setTimeout(finish,90);
-  });
-  setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
-  syncActiveBeachIsland();
-  await yieldStartupCoastFrame();
-  const initialCoastIslandIndex=activeBeachIslandIndex;
-  if(initialCoastIslandIndex<0)throw new Error('RECURSO OBLIGATORIO: no se pudo identificar la costa de la isla inicial.');
-  syncActiveTidalFoamIsland();
-  await yieldStartupCoastFrame();
-  syncNordicWaterReflectionIsland();
-  await yieldStartupCoastFrame();
-  const initialCoastReady=!!coastalSeabedMeshes[initialCoastIslandIndex]&&
-   !!livingBeachLayers[initialCoastIslandIndex]&&
-   tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex)&&
-   (isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex);
-  window.__ELSN_INITIAL_COAST_WARMUP__={
-   status:initialCoastReady?'ready':'failed',
-   islandIndex:initialCoastIslandIndex,
-   seabedReady:!!coastalSeabedMeshes[initialCoastIslandIndex],
-   beachReady:!!livingBeachLayers[initialCoastIslandIndex],
-   foamReady:tidalFoamMeshes.some(item=>item.index===initialCoastIslandIndex),
-   reflectionReady:isPerformanceMode||!nordicWaterMirror||activeWaterReflectionIslandIndex===initialCoastIslandIndex,
-   durationMs:Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2))
+  const coastParams=new URLSearchParams(window.location.search);
+  const coastDiagnosticsEnabled=coastParams.get('debug')==='1'||coastParams.get('test')==='1'||coastParams.get('profile')==='1';
+  const coastBudgetMs=8000;
+  let coastDeadlineExceeded=false;
+  let coastAborted=false;
+  const coastReport={
+   schema:2,status:'pending',budgetMs:coastBudgetMs,islandIndex:null,
+   stages:[],waits:[],checks:null,errors:[],deadlineExceeded:false,
+   shaderCompile:{status:'not-started',parallelExtensionSupported:false,materialCount:0,compiledCount:0,failedMaterials:[],durationMs:null},
+   startedAt:startupCoastWarmupStartedAt,updatedAt:startupCoastWarmupStartedAt
   };
-  if(!initialCoastReady)throw new Error('RECURSO OBLIGATORIO: costa, rompiente o reflejo de la isla inicial incompleto.');
-  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),'ready',window.__ELSN_INITIAL_COAST_WARMUP__);
+  window.__ELSN_INITIAL_COAST_WARMUP__=coastReport;
+  const coastMark=(name,phase)=>{try{performance.mark('elsn:coast:'+name+':'+phase);}catch(_){}};
+  const coastMeasure=(name,startedAt,status,error)=>{
+   const endedAt=performance.now(),durationMs=Number((endedAt-startedAt).toFixed(2));
+   coastReport.stages.push({name,status,durationMs,error:error||null});
+   coastReport.updatedAt=endedAt;
+   coastMark(name,'end');
+   try{performance.measure('elsn:coast:'+name,'elsn:coast:'+name+':start','elsn:coast:'+name+':end');performance.clearMarks('elsn:coast:'+name+':start');performance.clearMarks('elsn:coast:'+name+':end');performance.clearMeasures('elsn:coast:'+name);}catch(_){}
+   return durationMs;
+  };
+  const runCoastStage=(name,work)=>{
+   const startedAt=performance.now();coastMark(name,'start');
+   try{const value=work();coastMeasure(name,startedAt,'complete',null);return value;}
+   catch(error){const message=String(error&&error.message||error).slice(0,240);coastReport.errors.push({stage:name,message});coastMeasure(name,startedAt,'error',message);return null;}
+  };
+  const yieldStartupCoastFrame=(label)=>new Promise(resolve=>{
+   const startedAt=performance.now();let settled=false;
+   const finish=reason=>{if(settled)return;settled=true;const durationMs=Number((performance.now()-startedAt).toFixed(2));coastReport.waits.push({label,durationMs,reason});coastReport.updatedAt=performance.now();resolve({durationMs,reason});};
+   try{requestAnimationFrame(()=>finish('animation-frame'));}catch(_){finish('raf-unavailable');}
+   setTimeout(()=>finish('90ms-fallback'),90);
+  });
+  const resourceState=(resource,label)=>{
+   if(!resource)return {ready:false,reason:'no creado: '+label};
+   try{if(typeof resource.isDisposed==='function'&&resource.isDisposed())return {ready:false,reason:'objeto eliminado: '+label};}catch(_){}
+   try{if(typeof resource.isEnabled==='function'&&!resource.isEnabled())return {ready:false,reason:'objeto deshabilitado: '+label};}catch(_){}
+   return {ready:true,reason:null,type:resource.constructor&&resource.constructor.name||typeof resource};
+  };
+  const updateCoastChecks=()=>{
+   const index=Number.isInteger(coastReport.islandIndex)?coastReport.islandIndex:activeBeachIslandIndex;
+   const seabed=resourceState(index>=0?coastalSeabedMeshes[index]:null,'fondo marino de isla '+index);
+   const beach=resourceState(index>=0?livingBeachLayers[index]:null,'capa de playa de isla '+index);
+   const foamItem=Array.isArray(tidalFoamMeshes)?tidalFoamMeshes.find(item=>item&&item.index===index):null;
+   const foam=foamItem?resourceState(foamItem.mesh||foamItem.root||foamItem,'espuma de isla '+index):{ready:false,reason:'no existe entrada de espuma para la isla '+index};
+   let reflection;
+   if(isPerformanceMode){reflection={ready:true,reason:'no aplica: perfil Rendimiento no crea espejo de agua'};}
+   else if(!nordicWaterMirror){reflection={ready:false,reason:'nordicWaterMirror no está creado'};}
+   else if(activeWaterReflectionIslandIndex!==index){reflection={ready:false,reason:'isla del reflejo '+activeWaterReflectionIslandIndex+' distinta de la isla activa '+index};}
+   else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
+   else if(!['ready','not-required'].includes(coastReport.shaderCompile.status)){reflection={ready:false,reason:'compilación de materiales del reflejo '+coastReport.shaderCompile.status};}
+   else{reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:coastReport.shaderCompile.status};}
+   coastReport.checks={seabed:{label:'Fondo marino',...seabed},beach:{label:'Playa',...beach},foam:{label:'Espuma',...foam},reflection:{label:'Reflejo',...reflection}};
+   coastReport.checks.allReady=Object.values(coastReport.checks).filter(item=>item&&typeof item==='object'&&'ready'in item).every(item=>item.ready);
+   coastReport.updatedAt=performance.now();
+   return coastReport.checks;
+  };
+  const setCoastReflectionEnabled=enabled=>{
+   if(!nordicWaterMirror)return;
+   if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalLevel'))coastReport.reflectionOriginalLevel=Number.isFinite(Number(nordicWaterMirror.level))?Number(nordicWaterMirror.level):1;
+   if(!Object.prototype.hasOwnProperty.call(coastReport,'reflectionOriginalRefreshRate'))coastReport.reflectionOriginalRefreshRate=Number.isFinite(Number(nordicWaterMirror.refreshRate))?Number(nordicWaterMirror.refreshRate):(isTouchDevice?12:8);
+   nordicWaterMirror.level=enabled?coastReport.reflectionOriginalLevel:0;
+   nordicWaterMirror.refreshRate=enabled?coastReport.reflectionOriginalRefreshRate:0;
+   coastReport.reflectionTemporarilyDisabled=!enabled;
+  };
+  const startReflectionShaderWarmup=()=>{
+   if(isPerformanceMode||!nordicWaterMirror){coastReport.shaderCompile.status='not-required';return Promise.resolve();}
+   const list=Array.isArray(nordicWaterMirror.renderList)?nordicWaterMirror.renderList:[];
+   const targets=new Map();
+   for(const mesh of list){const material=mesh&&mesh.material;if(material&&typeof material.forceCompilationAsync==='function'&&!targets.has(material))targets.set(material,mesh);}
+   let parallelExtension=null;
+   try{parallelExtension=graphicsContext&&graphicsContext.getExtension?graphicsContext.getExtension('KHR_parallel_shader_compile'):null;}catch(_){}
+   coastReport.shaderCompile.parallelExtensionSupported=!!parallelExtension;
+   coastReport.shaderCompile.materialCount=targets.size;
+   if(!targets.size){coastReport.shaderCompile.status='not-required';coastReport.shaderCompile.durationMs=0;return Promise.resolve();}
+   setCoastReflectionEnabled(false);
+   coastReport.shaderCompile.status='pending';
+   const startedAt=performance.now();
+   const entries=Array.from(targets.entries());
+   const compilePromise=(async()=>{
+    try{
+     for(let offset=0;offset<entries.length;offset+=4){
+      const batch=entries.slice(offset,offset+4);
+      const outcomes=await Promise.all(batch.map(async([material,mesh])=>{
+       try{await material.forceCompilationAsync(mesh);coastReport.shaderCompile.compiledCount++;return {ok:true};}
+       catch(error){const name=String(material.name||material.id||'material-'+(offset+1)).slice(0,100);coastReport.shaderCompile.failedMaterials.push({name,error:String(error&&error.message||error).slice(0,180)});return {ok:false};}
+      }));
+      if(outcomes.some(result=>!result.ok))throw new Error('Uno o más materiales no completaron forceCompilationAsync.');
+     }
+     coastReport.shaderCompile.status='ready';
+     coastReport.shaderCompile.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     setCoastReflectionEnabled(true);
+     updateCoastChecks();
+     if(coastReport.checks&&coastReport.checks.allReady)coastReport.status='ready';
+     coastReport.updatedAt=performance.now();
+     return true;
+    }catch(error){
+     coastReport.shaderCompile.status='failed';
+     coastReport.shaderCompile.error=String(error&&error.message||error).slice(0,240);
+     coastReport.shaderCompile.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     coastReport.errors.push({stage:'forceCompilationAsync',message:coastReport.shaderCompile.error});
+     setCoastReflectionEnabled(false);
+     updateCoastChecks();
+     coastReport.updatedAt=performance.now();
+     return false;
+    }
+   })();
+   return compilePromise;
+  };
+  if(coastDiagnosticsEnabled&&!window.__ELSN_FRAME_DIAGNOSTICS__){
+   const frameState={enabled:true,supportedTypes:[],unsupportedTypes:[],entries:[],maxDurationMs:0,observers:[]};
+   const supported=typeof PerformanceObserver!=='undefined'&&Array.isArray(PerformanceObserver.supportedEntryTypes)?PerformanceObserver.supportedEntryTypes:[];
+   for(const type of ['long-animation-frame','longtask']){
+    if(!supported.includes(type)){frameState.unsupportedTypes.push(type);continue;}
+    try{
+     const observer=new PerformanceObserver(list=>{
+      for(const entry of list.getEntries()){
+       const scripts=Array.isArray(entry.scripts)?entry.scripts.slice(0,8).map(script=>({sourceURL:String(script.sourceURL||'').slice(0,180),sourceFunctionName:String(script.sourceFunctionName||'').slice(0,120),invoker:String(script.invoker||'').slice(0,120),invokerType:String(script.invokerType||'').slice(0,80),durationMs:Number(Number(script.duration||0).toFixed(2)),forcedStyleAndLayoutDurationMs:Number(Number(script.forcedStyleAndLayoutDuration||0).toFixed(2)})):[];
+       const attribution=Array.isArray(entry.attribution)?entry.attribution.slice(0,6).map(item=>({name:String(item.name||'').slice(0,80),containerType:String(item.containerType||'').slice(0,80),containerName:String(item.containerName||'').slice(0,80),containerId:String(item.containerId||'').slice(0,80),containerSrc:String(item.containerSrc||'').slice(0,180)})):[];
+       const record={type,startTimeMs:Number(Number(entry.startTime||0).toFixed(2)),durationMs:Number(Number(entry.duration||0).toFixed(2)),blockingDurationMs:Number(Number(entry.blockingDuration||0).toFixed(2)),renderStartMs:Number(Number(entry.renderStart||0).toFixed(2)),styleAndLayoutStartMs:Number(Number(entry.styleAndLayoutStart||0).toFixed(2)),scripts,attribution};
+       frameState.entries.push(record);
+       frameState.maxDurationMs=Math.max(frameState.maxDurationMs,record.durationMs);
+       if(frameState.entries.length>40)frameState.entries.shift();
+      }
+     });
+     observer.observe({type,buffered:true});frameState.observers.push(observer);frameState.supportedTypes.push(type);
+    }catch(error){frameState.unsupportedTypes.push(type+': '+String(error&&error.message||error).slice(0,120));}
+   }
+   frameState.snapshot=()=>({enabled:frameState.enabled,supportedTypes:frameState.supportedTypes,unsupportedTypes:frameState.unsupportedTypes,maxDurationMs:frameState.maxDurationMs,entries:frameState.entries.slice()});
+   window.__ELSN_FRAME_DIAGNOSTICS__=frameState;
+  }
+  const runCoastPreparation=async()=>{
+   setLoadingProgress(94,'Preparando la costa y los reflejos de la isla inicial…');
+   runCoastStage('syncActiveBeachIsland',()=>syncActiveBeachIsland());
+   await yieldStartupCoastFrame('después de syncActiveBeachIsland');
+   if(coastAborted)return;
+   coastReport.islandIndex=activeBeachIslandIndex;
+   if(coastReport.islandIndex<0){coastReport.errors.push({stage:'isla inicial',message:'activeBeachIslandIndex es '+coastReport.islandIndex});return;}
+   runCoastStage('syncActiveTidalFoamIsland',()=>syncActiveTidalFoamIsland());
+   await yieldStartupCoastFrame('después de syncActiveTidalFoamIsland');
+   if(coastAborted)return;
+   runCoastStage('syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
+   const compilePromise=startReflectionShaderWarmup();
+   await yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland');
+   if(coastAborted)return;
+   if(compilePromise)compilePromise.catch(()=>{});
+  };
+  let coastDeadlineTimer=null;
+  const workPromise=runCoastPreparation().catch(error=>{coastReport.errors.push({stage:'preparación de costa',message:String(error&&error.message||error).slice(0,240)});});
+  const deadlinePromise=new Promise(resolve=>{coastDeadlineTimer=setTimeout(()=>{coastDeadlineExceeded=true;coastAborted=true;coastReport.deadlineExceeded=true;resolve('deadline');},coastBudgetMs);});
+  await Promise.race([workPromise,deadlinePromise]);
+  if(coastDeadlineTimer!==null)clearTimeout(coastDeadlineTimer);
+  coastReport.deadlineExceeded=coastDeadlineExceeded;
+  coastReport.elapsedMs=Number((performance.now()-startupCoastWarmupStartedAt).toFixed(2));
+  coastReport.islandIndex=Number.isInteger(coastReport.islandIndex)?coastReport.islandIndex:activeBeachIslandIndex;
+  const coastChecks=updateCoastChecks();
+  coastReport.status=coastChecks.allReady?'ready':(coastDeadlineExceeded?'degraded-timeout':'degraded');
+  coastReport.timeoutReason=coastDeadlineExceeded?'La fase de costa superó el límite de 8000 ms; el arranque continúa sin esperar a la costa completa.':null;
+  if(!coastChecks.reflection.ready)setCoastReflectionEnabled(false);
+  coastReport.diagnosticSummary=Object.values(coastChecks).filter(item=>item&&typeof item==='object'&&'ready'in item&&!item.ready).map(item=>item.label+': '+item.reason);
+  recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),coastReport.status,coastReport);
+  if(coastReport.status!=='ready')console.warn('EL SIN NOMBRE: costa inicial degradada, se continúa el arranque:',coastReport.diagnosticSummary,coastReport);
+  if(!coastChecks.reflection.ready&&!isPerformanceMode){
+   coastReport.recovery={scheduled:true,attempts:0};
+   setTimeout(()=>{
+    if(!scene||scene.isDisposed&&scene.isDisposed())return;
+    coastReport.recovery.attempts++;
+    runCoastStage('recovery.syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
+    const recoveryCompile=startReflectionShaderWarmup();
+    if(recoveryCompile)recoveryCompile.then(()=>{updateCoastChecks();coastReport.updatedAt=performance.now();}).catch(()=>{});
+   },1800);
+  }
  }"""
     if html.count(fauna_start_marker) != 1 or html.count(fauna_end_marker) != 1 or html.count(fauna_scene_marker) != 1:
         raise SystemExit("No se encontró un único bloque de fauna/escena para ordenar el arranque.")
@@ -2318,6 +2461,7 @@ function updateWildlife(dt){
   music:{results:startupMusicPreloadResult,menuReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[0]&&startupMusicPreloadResult[0].ready),gameplayReady:!!(startupMusicPreloadResult&&startupMusicPreloadResult[1]&&startupMusicPreloadResult[1].ready),streaming:true,decodedToAudioBuffer:false},
   scene:{status:sceneWarmupStatus,waitingItemsAfter:window.__elSinNombreStartupSceneWarmup&&window.__elSinNombreStartupSceneWarmup.waitingItemsAfter,meshes:scene&&scene.meshes?scene.meshes.length:0,firstFrameRendered:!!firstFrameRendered},
   coast:window.__ELSN_INITIAL_COAST_WARMUP__||null,
+  frameDiagnostics:window.__ELSN_FRAME_DIAGNOSTICS__&&window.__ELSN_FRAME_DIAGNOSTICS__.snapshot?window.__ELSN_FRAME_DIAGNOSTICS__.snapshot():null,
   world:{islands:land.length,grassClumps:grassInstanceCount,grassBatches:grassBatchCount,profile:activeGraphicsProfile}
  };
  const startupResourceFailures=[];
@@ -2329,7 +2473,7 @@ function updateWildlife(dt){
   if(!startupResourceSnapshot.soundEffects||startupResourceSnapshot.soundEffects.failed||startupResourceSnapshot.soundEffects.pending||startupResourceSnapshot.soundEffects.ready!==startupResourceSnapshot.soundEffects.total)startupResourceFailures.push('efectos de sonido');
   if(!startupResourceSnapshot.music.menuReady||!startupResourceSnapshot.music.gameplayReady)startupResourceFailures.push('bandas sonoras');
   if(startupResourceSnapshot.scene.status!=='ready'||startupResourceSnapshot.scene.meshes<=0||!startupResourceSnapshot.scene.firstFrameRendered)startupResourceFailures.push('escena, texturas y shaders de la vista inicial');
-  if(!startupResourceSnapshot.coast||startupResourceSnapshot.coast.status!=='ready')startupResourceFailures.push('playa, fondo submarino, rompiente y reflejo de la isla inicial');
+  if(!startupResourceSnapshot.coast||!['ready','degraded','degraded-timeout'].includes(startupResourceSnapshot.coast.status))startupResourceFailures.push('diagnóstico de costa inicial ausente o inválido');
   if(startupResourceSnapshot.world.islands!==13)startupResourceFailures.push('mundo de 13 islas');
   if(startupResourceSnapshot.fauna.requested!==3||startupResourceSnapshot.fauna.loaded!==3)startupResourceFailures.push('fauna terrestre '+startupResourceSnapshot.fauna.loaded+'/'+startupResourceSnapshot.fauna.requested);
   if(!isPerformanceMode){
@@ -3040,25 +3184,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.363; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.364; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.363\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.364\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.363.")
-    html = html.replace("0.6.274", "0.6.363")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.364.")
+    html = html.replace("0.6.274", "0.6.364")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'71',build:'0.6.363'"
+    diagnostic_build_replacement = "reportVersion:'72',build:'0.6.364'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.363 para normalizar.")
-    game_version = "0.6.363"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.364 para normalizar.")
+    game_version = "0.6.364"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
