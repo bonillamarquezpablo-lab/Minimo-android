@@ -3,9 +3,9 @@
   "project": "EL SIN NOMBRE",
   "level": 1,
   "mode": "test-only-read-only-observer-patrol",
-  "startedAt": "2026-11-28T02:48:08.777Z",
-  "finishedAt": "2026-11-28T02:51:13.548Z",
-  "build": null,
+  "startedAt": "2026-11-28T02:58:02.149Z",
+  "finishedAt": "2026-11-28T03:01:01.974Z",
+  "build": "0.6.365",
   "renderer": "Chromium headless + ANGLE SwiftShader",
   "query": "?test=1",
   "run": {
@@ -20,16 +20,211 @@
     "islands": []
   },
   "startup": {
-    "worldReady": false,
+    "worldReady": true,
     "bootFailed": false,
-    "bodyClass": "booting",
-    "loadingText": "Cargando modelo animal · WOLF",
+    "bodyClass": "intro-open",
+    "loadingText": "Mundo preparado.",
     "loadingHelp": null
   },
   "audioNetwork": {
     "requests": [
       {
         "url": "http://127.0.0.1:4175/assets/audio/menu/winter_s_final_toll.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
         "method": "GET",
         "resourceType": "media"
       },
@@ -261,9 +456,179 @@
         "statusText": "OK"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
@@ -271,32 +636,57 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
-        "status": 200,
-        "statusText": "OK"
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -307,8 +697,13 @@
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
-        "status": 200,
-        "statusText": "OK"
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
@@ -317,26 +712,6 @@
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -356,6 +731,11 @@
         "statusText": "Partial Content"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
@@ -366,7 +746,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -376,14 +756,19 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
-        "status": 200,
-        "statusText": "OK"
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 200,
-        "statusText": "OK"
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
@@ -406,39 +791,1421 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
-        "status": 200,
-        "statusText": "OK"
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       }
     ],
     "failures": [
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
         "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "error": "net::ERR_ABORTED"
       }
     ]
   },
-  "agents": [],
+  "agents": [
+    {
+      "id": "eira",
+      "name": "Eira",
+      "specialization": "Costa y pisadas",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Eira ha comprobado los contadores reales de pisadas, salpicaduras y perfil de la orilla. No simula pasos que el personaje no haya dado.",
+      "readings": {
+        "wetSteps": null,
+        "waterParticlesEmitted": null,
+        "activeSplashParticles": null,
+        "maxShoreStepMeters": null
+      },
+      "issues": [],
+      "missing": [
+        "El motor no expone un contador válido de pisadas húmedas.",
+        "El motor no expone cuántas partículas de salpicadura siguen vivas.",
+        "No existe una medición explícita del escalón arena-agua en esta ejecución."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 0,
+        "route": []
+      }
+    },
+    {
+      "id": "sol",
+      "name": "Sól",
+      "specialization": "Vegetación y fluidez",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Sól registra hierba, draw calls y tiempos de actualización/render. No declara cobertura por isla si el motor solo entrega totales globales.",
+      "readings": {
+        "grassInstances": 57200,
+        "grassBatches": 4,
+        "drawCalls": null,
+        "worldUpdateMs": 0.1,
+        "renderCpuMs": 45.8,
+        "frameTimeP95Ms": 9225.8,
+        "perIslandGrass": []
+      },
+      "issues": [],
+      "missing": [
+        "No hay contador de draw calls válido.",
+        "El p95 de 9225.80 ms procede de Chromium/SwiftShader; no permite diagnosticar los FPS de la GPU física del móvil."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 0,
+        "route": []
+      }
+    },
+    {
+      "id": "ulf",
+      "name": "Ulf",
+      "specialization": "Física y cimentación",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Ulf compara las medidas de apoyo disponibles con la tolerancia solicitada de 2 cm. La patrulla no finge recorrer rutas físicas si falta una API de locomoción.",
+      "readings": {
+        "structuresMeasured": 68,
+        "structures": [
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 24.69,
+            "z": -13.35,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 21.59,
+            "z": -17.41,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 28.69,
+            "z": -16.35,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 135,
+            "z": 14,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 129,
+            "z": 19.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 142,
+            "z": 9.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -132,
+            "z": 45,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -138.5,
+            "z": 50,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -125,
+            "z": 40.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 28,
+            "z": 143,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 21.5,
+            "z": 148,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 35,
+            "z": 138.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 4,
+            "name": "IslandGarrisonOutpost_4",
+            "kind": "IslandGarrisonOutpost",
+            "x": 144.65,
+            "z": -134.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 5,
+            "name": "IslandGarrisonOutpost_5",
+            "kind": "IslandGarrisonOutpost",
+            "x": -141.87,
+            "z": -125.12,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 6,
+            "name": "IslandGarrisonOutpost_6",
+            "kind": "IslandGarrisonOutpost",
+            "x": 285.32,
+            "z": 154.82,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 7,
+            "name": "IslandGarrisonOutpost_7",
+            "kind": "IslandGarrisonOutpost",
+            "x": -286.66,
+            "z": 229.84,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 8,
+            "name": "IslandGarrisonOutpost_8",
+            "kind": "IslandGarrisonOutpost",
+            "x": 292.04,
+            "z": -264.71,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 9,
+            "name": "IslandGarrisonOutpost_9",
+            "kind": "IslandGarrisonOutpost",
+            "x": 470,
+            "z": 100,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 10,
+            "name": "IslandGarrisonOutpost_10",
+            "kind": "IslandGarrisonOutpost",
+            "x": -470,
+            "z": -310,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 11,
+            "name": "IslandGarrisonOutpost_11",
+            "kind": "IslandGarrisonOutpost",
+            "x": 60,
+            "z": 465,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 12,
+            "name": "IslandGarrisonOutpost_12",
+            "kind": "IslandGarrisonOutpost",
+            "x": -41.92,
+            "z": -466.42,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "NorseBlacksmithForge_0",
+            "kind": "NorseBlacksmithForge",
+            "x": 11.65,
+            "z": -14.6,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "NorseWatchTower_0",
+            "kind": "NorseWatchTower",
+            "x": 31.19,
+            "z": -18.95,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "NorseBlacksmithForge_1",
+            "kind": "NorseBlacksmithForge",
+            "x": 128.2,
+            "z": 12.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "NorseWatchTower_1",
+            "kind": "NorseWatchTower",
+            "x": 141.04,
+            "z": 5.79,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "NorseBlacksmithForge_2",
+            "kind": "NorseBlacksmithForge",
+            "x": -138.8,
+            "z": 43.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "NorseWatchTower_2",
+            "kind": "NorseWatchTower",
+            "x": -121.5,
+            "z": 37.4,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "NorseBlacksmithForge_3",
+            "kind": "NorseBlacksmithForge",
+            "x": 21.2,
+            "z": 141.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "NorseWatchTower_3",
+            "kind": "NorseWatchTower",
+            "x": 38.5,
+            "z": 135.4,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "IslandOutpost_0",
+            "kind": "IslandOutpostCamp",
+            "x": 33.05,
+            "z": 6.05,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "IslandScoutCamp_0",
+            "kind": "IslandScoutCamp",
+            "x": 10.15,
+            "z": 7.9,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "IslandOutpost_1",
+            "kind": "IslandOutpostCamp",
+            "x": 134.59,
+            "z": 29.34,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "IslandScoutCamp_1",
+            "kind": "IslandScoutCamp",
+            "x": 126.69,
+            "z": 31.94,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "IslandOutpost_2",
+            "kind": "IslandOutpostCamp",
+            "x": -129.43,
+            "z": 51.32,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "IslandScoutCamp_2",
+            "kind": "IslandScoutCamp",
+            "x": -133.58,
+            "z": 66.67,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "IslandOutpost_3",
+            "kind": "IslandOutpostCamp",
+            "x": 14.82,
+            "z": 147.82,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "IslandScoutCamp_3",
+            "kind": "IslandScoutCamp",
+            "x": 19.67,
+            "z": 162.42,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 9,
+            "name": "NorseGreatMeadHall_9",
+            "kind": "NorseGreatHall",
+            "x": 468.2,
+            "z": 98.6,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "PoorNorseCastawayCamp",
+            "kind": "StarterCastawayCamp",
+            "x": -40,
+            "z": 15.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 24.69,
+            "z": -13.35,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 21.59,
+            "z": -17.41,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0.0163,
+              "maximumStructuralBaseGapMeters": 0.0164
+            },
+            "gapMeters": 0.0164
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 28.69,
+            "z": -16.35,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 135,
+            "z": 14,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 129,
+            "z": 19.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 142,
+            "z": 9.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -132,
+            "z": 45,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -138.5,
+            "z": 50,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -125,
+            "z": 40.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 28,
+            "z": 143,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 21.5,
+            "z": 148,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 35,
+            "z": 138.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 0,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 33.04999923706055,
+            "z": 6.050000190734863,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.0194,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0193
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0194
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0003
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.009
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.0091
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_0",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.0194
+            },
+            "gapMeters": 0.0194
+          },
+          {
+            "source": "camps",
+            "islandIndex": 0,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 10.149999618530273,
+            "z": 7.900000095367432,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_0",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 1,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 134.58999633789062,
+            "z": 29.34000015258789,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.014,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.0138
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.014
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.008
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.0083
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_1",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.014
+            },
+            "gapMeters": 0.014
+          },
+          {
+            "source": "camps",
+            "islandIndex": 1,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 126.69000244140625,
+            "z": 31.940000534057617,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_1",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 2,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": -129.42999267578125,
+            "z": 51.31999969482422,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_2",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_2",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 2,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": -133.5800018310547,
+            "z": 66.66999816894531,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_2",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_2",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 3,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 14.819999694824219,
+            "z": 147.82000732421875,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.0006,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0006
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0005
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0.0004
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0.0004
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_3",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_3",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.0006
+            },
+            "gapMeters": 0.0006
+          },
+          {
+            "source": "camps",
+            "islandIndex": 3,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 19.670000076293945,
+            "z": 162.4199981689453,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_3",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_3",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 4,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0043,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0043
+            },
+            "gapMeters": 0.0043
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 5,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0013,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0013
+            },
+            "gapMeters": 0.0013
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 6,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0013,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0013
+            },
+            "gapMeters": 0.0013
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 7,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0032,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0032
+            },
+            "gapMeters": 0.0032
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 8,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0026,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0026
+            },
+            "gapMeters": 0.0026
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 9,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0016,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0016
+            },
+            "gapMeters": 0.0016
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 10,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0065,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0065
+            },
+            "gapMeters": 0.0065
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 11,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0014,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0014
+            },
+            "gapMeters": 0.0014
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 12,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0003,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0003
+            },
+            "gapMeters": 0.0003
+          }
+        ],
+        "movementSupported": false
+      },
+      "issues": [],
+      "missing": [
+        "La API de prueba no expone locomoción autónoma para recorrer rutas y detectar bloqueos físicos."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 0,
+        "route": []
+      }
+    },
+    {
+      "id": "tyr",
+      "name": "Týr",
+      "specialization": "Actividades por isla",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Týr consulta el inventario disponible. No etiqueta actividades como ausentes sin un catálogo oficial de actividades esperadas.",
+      "readings": {
+        "activityCount": null,
+        "inventoryCount": 2652,
+        "islandCount": 0
+      },
+      "issues": [],
+      "missing": [
+        "No existe un catálogo/contador de actividades jugables por isla en la API de prueba."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 0,
+        "route": []
+      }
+    }
+  ],
   "limitations": [
     "La patrulla mueve únicamente la cámara de observación de la API de prueba; no mueve NPCs ni controla la partida normal.",
     "El motor de juego no expone actualmente una orden de locomoción de NPC para recorrer rutas físicas.",
@@ -451,9 +2218,70 @@
   "pageErrors": [],
   "failures": [
     {
-      "phase": "runner",
-      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":false,\"bodyClass\":\"booting\",\"loadingText\":\"Cargando modelo animal · WOLF\",\"loadingHelp\":null} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:201:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:394:5)"
+      "phase": "island-observation",
+      "islandIndex": 0,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 1,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 2,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 3,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 4,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 5,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 6,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 7,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 8,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 9,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 10,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 11,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
+    },
+    {
+      "phase": "island-observation",
+      "islandIndex": 12,
+      "error": "page.evaluate: ReferenceError: waterVertexStep is not defined\n    at Object.setWaterState (http://127.0.0.1:4175/?test=1:16205:5)\n    at eval (eval at evaluate (:370:30), <anonymous>:9:54)\n    at UtilityScript.evaluate (<anonymous>:372:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)"
     }
   ],
-  "verdict": "failed"
+  "verdict": "issues-found"
 }
