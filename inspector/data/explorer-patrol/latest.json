@@ -3,16 +3,16 @@
   "project": "EL SIN NOMBRE",
   "level": 1,
   "mode": "test-only-read-only-observer-patrol",
-  "startedAt": "2026-11-28T01:37:14.225Z",
-  "finishedAt": "2026-11-28T01:40:28.863Z",
+  "startedAt": "2026-11-28T02:48:08.777Z",
+  "finishedAt": "2026-11-28T02:51:13.548Z",
   "build": null,
   "renderer": "Chromium headless + ANGLE SwiftShader",
   "query": "?test=1",
   "run": {
-    "id": "46093919225",
-    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/46093919225",
+    "id": "46099772985",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/46099772985",
     "branch": "level1/explorer-patrol",
-    "sha": "a0e6f81e81317a19f864afcb6e03934e42ce5ee9"
+    "sha": "ec04d258b74d1cb2486ad0a97b773252d1370bf9"
   },
   "world": {
     "expectedIslands": 13,
@@ -23,7 +23,7 @@
     "worldReady": false,
     "bootFailed": false,
     "bodyClass": "booting",
-    "loadingText": "Preparando la costa y los reflejos de la isla inicial…",
+    "loadingText": "Cargando modelo animal · WOLF",
     "loadingHelp": null
   },
   "audioNetwork": {
@@ -241,37 +241,17 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
         "status": 200,
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -279,6 +259,31 @@
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
@@ -289,11 +294,6 @@
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
         "status": 200,
         "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
@@ -321,19 +321,9 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
-        "status": 206,
-        "statusText": "Partial Content"
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 200,
+        "statusText": "OK"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
@@ -341,9 +331,29 @@
         "statusText": "OK"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 200,
-        "statusText": "OK"
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
@@ -356,17 +366,7 @@
         "statusText": "Partial Content"
       },
       {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -381,37 +381,27 @@
         "statusText": "OK"
       },
       {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
-        "status": 200,
-        "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
         "status": 206,
         "statusText": "Partial Content"
       },
@@ -419,16 +409,26 @@
         "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
         "status": 200,
         "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
       },
       {
         "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
         "status": 200,
         "statusText": "OK"
-      },
-      {
-        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
-        "status": 206,
-        "statusText": "Partial Content"
       }
     ],
     "failures": [
@@ -452,7 +452,7 @@
   "failures": [
     {
       "phase": "runner",
-      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":false,\"bodyClass\":\"booting\",\"loadingText\":\"Preparando la costa y los reflejos de la isla inicial…\",\"loadingHelp\":null} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:201:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:394:5)"
+      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":false,\"bodyClass\":\"booting\",\"loadingText\":\"Cargando modelo animal · WOLF\",\"loadingHelp\":null} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:201:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:394:5)"
     }
   ],
   "verdict": "failed"
