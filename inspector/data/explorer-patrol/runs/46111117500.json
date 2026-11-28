@@ -1,0 +1,5301 @@
+{
+  "schema": 1,
+  "project": "EL SIN NOMBRE",
+  "level": 1,
+  "mode": "test-only-read-only-observer-patrol",
+  "startedAt": "2026-11-28T05:14:14.725Z",
+  "finishedAt": "2026-11-28T05:17:56.531Z",
+  "build": "0.6.366",
+  "renderer": "Chromium headless + ANGLE SwiftShader",
+  "query": "?test=1",
+  "run": {
+    "id": "46111117500",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/46111117500",
+    "branch": "268/merge",
+    "sha": "df840ded1f796a44b0e15531d49e7a9040e7e3a1"
+  },
+  "world": {
+    "expectedIslands": 13,
+    "visitedIslands": 13,
+    "islands": [
+      {
+        "island": {
+          "index": 0,
+          "name": "Isla del Cuervo",
+          "x": 0,
+          "z": 0,
+          "radius": 60
+        },
+        "observationPoint": {
+          "x": 78,
+          "y": 14,
+          "z": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "targetZ": 0
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 65,
+            "average": 1726.9,
+            "p50": 165.9,
+            "p95": 6860.9,
+            "p99": 17687.6,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 19.5,
+          "renderCpuMs": 10879.9,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.395,
+          "localWaveDisplacement": -0.478,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.53,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 3597,
+          "foamVerticesChecked": 331,
+          "foamVerticesOutsideBand": 0,
+          "foamMaxOffshoreDistanceMeters": 0.705,
+          "foamUpdateLastMs": 2.5,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 42,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.883,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 42,
+          "coastSolver": {
+            "samples": 1347,
+            "bracketFailures": 0,
+            "finiteResiduals": 1347,
+            "converged": 254,
+            "lastResidualMeters": 0.0014755427959427525,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 10.599999999831198,
+            "lastMs": 0,
+            "maxMs": 0.20000000001164153,
+            "initial": {
+              "samples": 1283,
+              "bracketFailures": 0,
+              "finiteResiduals": 1283,
+              "converged": 203,
+              "lastResidualMeters": 0.0014755427959427525,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 10.299999999813735,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008028059236020058
+            },
+            "animated": {
+              "samples": 64,
+              "bracketFailures": 0,
+              "finiteResiduals": 64,
+              "converged": 51,
+              "lastResidualMeters": 0.00237573287764431,
+              "maxResidualMeters": 0.01422719718252169,
+              "totalMs": 0.3000000000174623,
+              "lastMs": 0,
+              "maxMs": 0.1000000000349246,
+              "meanMs": 0.004687500000272848
+            },
+            "meanMs": 0.007869339272331995,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 42,
+              "meanMetersPerSecond": 0.883,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 42
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00001172762115164705,
+            "maxRadialSlopeDifference": 0.0000938209692131764,
+            "maxNormalDiscontinuityDegrees": 0.01491440405988407
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00011791838316782544,
+            "maxRadialSlopeDifference": 0.0009433470653426035,
+            "maxNormalDiscontinuityDegrees": 0.10719845479839321
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 42,
+            "meanMetersPerSecond": 0.883,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 42
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 78,
+            "y": 14,
+            "z": 0.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 1,
+          "name": "Costa de Skall",
+          "x": 135,
+          "z": 14,
+          "radius": 31
+        },
+        "observationPoint": {
+          "x": 184,
+          "y": 14,
+          "z": 14,
+          "targetX": 135,
+          "targetY": 0,
+          "targetZ": 14
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 67,
+            "average": 1994.94,
+            "p50": 165.9,
+            "p95": 6947.5,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 37.4,
+          "renderCpuMs": 52.5,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.4,
+          "localWaveDisplacement": -0.482,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.497,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 3069,
+          "foamVerticesChecked": 1252,
+          "foamVerticesOutsideBand": 0,
+          "foamMaxOffshoreDistanceMeters": 0.705,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 215,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.891,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 215,
+          "coastSolver": {
+            "samples": 1589,
+            "bracketFailures": 64,
+            "finiteResiduals": 1525,
+            "converged": 339,
+            "lastResidualMeters": 0.0017893752357626136,
+            "maxResidualMeters": 0.37293577310507164,
+            "totalMs": 11.899999999644933,
+            "lastMs": 0,
+            "maxMs": 0.20000000001164153,
+            "initial": {
+              "samples": 1349,
+              "bracketFailures": 0,
+              "finiteResiduals": 1349,
+              "converged": 205,
+              "lastResidualMeters": 0.0017893752357626136,
+              "maxResidualMeters": 0.37293577310507164,
+              "totalMs": 10.699999999720603,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.007931801334114606
+            },
+            "animated": {
+              "samples": 240,
+              "bracketFailures": 64,
+              "finiteResiduals": 176,
+              "converged": 134,
+              "lastResidualMeters": 0.00645579401587737,
+              "maxResidualMeters": 0.01422719718252169,
+              "totalMs": 1.19999999992433,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.004999999999684709
+            },
+            "meanMs": 0.007488986783917516,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 215,
+              "meanMetersPerSecond": 0.891,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 215
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000016782863013375948,
+            "maxRadialSlopeDifference": 0.0001342629041071186,
+            "maxNormalDiscontinuityDegrees": 0.015431968456678899
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00011018344724755824,
+            "maxRadialSlopeDifference": 0.0008814675779804659,
+            "maxNormalDiscontinuityDegrees": 0.10050734685685948
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 215,
+            "meanMetersPerSecond": 0.891,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 215
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 184,
+            "y": 14,
+            "z": 14.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 135,
+            "y": 0,
+            "z": 14
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 2,
+          "name": "Isla de los Pinos",
+          "x": -132,
+          "z": 45,
+          "radius": 33
+        },
+        "observationPoint": {
+          "x": -81,
+          "y": 14,
+          "z": 45,
+          "targetX": -132,
+          "targetY": 0,
+          "targetZ": 45
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 69,
+            "average": 2103.05,
+            "p50": 165.9,
+            "p95": 8759.7,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 21.5,
+          "renderCpuMs": 6808.9,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.395,
+          "localWaveDisplacement": -0.478,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.53,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 2510,
+          "foamVerticesChecked": 1881,
+          "foamVerticesOutsideBand": 0,
+          "foamMaxOffshoreDistanceMeters": 0.763,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 423,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.896,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 423,
+          "coastSolver": {
+            "samples": 1957,
+            "bracketFailures": 221,
+            "finiteResiduals": 1736,
+            "converged": 365,
+            "lastResidualMeters": 0.0014755427959427525,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 14.799999999726424,
+            "lastMs": 0,
+            "maxMs": 0.20000000001164153,
+            "initial": {
+              "samples": 1509,
+              "bracketFailures": 0,
+              "finiteResiduals": 1509,
+              "converged": 208,
+              "lastResidualMeters": 0.0014755427959427525,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.499999999883585,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008283631543991773
+            },
+            "animated": {
+              "samples": 448,
+              "bracketFailures": 221,
+              "finiteResiduals": 227,
+              "converged": 157,
+              "lastResidualMeters": null,
+              "maxResidualMeters": 0.015529494330204008,
+              "totalMs": 2.2999999998428393,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.005133928571077766
+            },
+            "meanMs": 0.007562595809773339,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 423,
+              "meanMetersPerSecond": 0.896,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 423
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000019022656712053276,
+            "maxRadialSlopeDifference": 0.0001521812536968703,
+            "maxNormalDiscontinuityDegrees": 0.01747277274969742
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00007649455975772268,
+            "maxRadialSlopeDifference": 0.0006119564780618925,
+            "maxNormalDiscontinuityDegrees": 0.06993638998705448
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 423,
+            "meanMetersPerSecond": 0.896,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 423
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": -81,
+            "y": 14,
+            "z": 45.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": -132,
+            "y": 0,
+            "z": 45
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 3,
+          "name": "Bahía de Hrafn",
+          "x": 28,
+          "z": 143,
+          "radius": 33
+        },
+        "observationPoint": {
+          "x": 79,
+          "y": 14,
+          "z": 143,
+          "targetX": 28,
+          "targetY": 0,
+          "targetZ": 143
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 71,
+            "average": 2241.84,
+            "p50": 165.9,
+            "p95": 11349.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 13.5,
+          "renderCpuMs": 14632.3,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.395,
+          "localWaveDisplacement": -0.478,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.53,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 1598,
+          "foamVerticesChecked": 3608,
+          "foamVerticesOutsideBand": 0,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 773,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.87,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 772,
+          "coastSolver": {
+            "samples": 2354,
+            "bracketFailures": 224,
+            "finiteResiduals": 2130,
+            "converged": 637,
+            "lastResidualMeters": 0.0014755427959427525,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 16.29999999984284,
+            "lastMs": 0,
+            "maxMs": 0.20000000001164153,
+            "initial": {
+              "samples": 1514,
+              "bracketFailures": 0,
+              "finiteResiduals": 1514,
+              "converged": 210,
+              "lastResidualMeters": 0.0014755427959427525,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.599999999860302,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.00832232496688263
+            },
+            "animated": {
+              "samples": 840,
+              "bracketFailures": 224,
+              "finiteResiduals": 616,
+              "converged": 427,
+              "lastResidualMeters": 0.0022819866814485223,
+              "maxResidualMeters": 0.10146727405563132,
+              "totalMs": 3.6999999999825377,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.004404761904741116
+            },
+            "meanMs": 0.006924384027121002,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 773,
+              "meanMetersPerSecond": 0.87,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 772
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000017886103464981318,
+            "maxRadialSlopeDifference": 0.00014308882771985054,
+            "maxNormalDiscontinuityDegrees": 0.016528497925152482
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00010697331494680107,
+            "maxRadialSlopeDifference": 0.0008557865195744085,
+            "maxNormalDiscontinuityDegrees": 0.09621554540028361
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 773,
+            "meanMetersPerSecond": 0.87,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 772
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 79,
+            "y": 14,
+            "z": 143.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 28,
+            "y": 0,
+            "z": 143
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 4,
+          "name": "Islote del Hielo",
+          "x": 146,
+          "z": -132,
+          "radius": 25
+        },
+        "observationPoint": {
+          "x": 189,
+          "y": 14,
+          "z": -132,
+          "targetX": 146,
+          "targetY": 0,
+          "targetZ": -132
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 72,
+            "average": 2422.82,
+            "p50": 165.9,
+            "p95": 14003.6,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 11.3,
+          "renderCpuMs": 8052.6,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.518,
+          "localWaveDisplacement": -0.601,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.333,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 827,
+          "foamVerticesChecked": 4626,
+          "foamVerticesOutsideBand": 0,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 847,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.872,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 846,
+          "coastSolver": {
+            "samples": 2661,
+            "bracketFailures": 224,
+            "finiteResiduals": 2437,
+            "converged": 810,
+            "lastResidualMeters": 0.0018634829593957014,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 17.599999999714782,
+            "lastMs": 0,
+            "maxMs": 0.5999999999767169,
+            "initial": {
+              "samples": 1517,
+              "bracketFailures": 0,
+              "finiteResiduals": 1517,
+              "converged": 213,
+              "lastResidualMeters": 0.0018634829593957014,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.699999999837019,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008371786420459472
+            },
+            "animated": {
+              "samples": 1144,
+              "bracketFailures": 224,
+              "finiteResiduals": 920,
+              "converged": 597,
+              "lastResidualMeters": 0.0015670902592989158,
+              "maxResidualMeters": 0.13187766338351234,
+              "totalMs": 4.899999999877764,
+              "lastMs": 0,
+              "maxMs": 0.5999999999767169,
+              "meanMs": 0.004283216783109933
+            },
+            "meanMs": 0.006614054866484323,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 847,
+              "meanMetersPerSecond": 0.872,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 846
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.0000194080498796545,
+            "maxRadialSlopeDifference": 0.000155264399037236,
+            "maxNormalDiscontinuityDegrees": 0.01777609594301501
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00009805822191977231,
+            "maxRadialSlopeDifference": 0.0007844657753580675,
+            "maxNormalDiscontinuityDegrees": 0.0894467469646533
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 847,
+            "meanMetersPerSecond": 0.872,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 846
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 189,
+            "y": 14,
+            "z": -131.999,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 146,
+            "y": 0,
+            "z": -132
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 5,
+          "name": "Isla de las Cenizas",
+          "x": -145,
+          "z": -126,
+          "radius": 27
+        },
+        "observationPoint": {
+          "x": -100,
+          "y": 14,
+          "z": -126,
+          "targetX": -145,
+          "targetY": 0,
+          "targetZ": -126
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 74,
+            "average": 2468.46,
+            "p50": 165.9,
+            "p95": 14003.6,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 12.3,
+          "renderCpuMs": 47.8,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.395,
+          "localWaveDisplacement": -0.478,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.53,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 485,
+          "foamVerticesChecked": 4951,
+          "foamVerticesOutsideBand": 1,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 933,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.859,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 968,
+          "coastSolver": {
+            "samples": 2905,
+            "bracketFailures": 224,
+            "finiteResiduals": 2681,
+            "converged": 988,
+            "lastResidualMeters": 0.0014755427959427525,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 17.999999999738066,
+            "lastMs": 0,
+            "maxMs": 0.5999999999767169,
+            "initial": {
+              "samples": 1519,
+              "bracketFailures": 0,
+              "finiteResiduals": 1519,
+              "converged": 215,
+              "lastResidualMeters": 0.0014755427959427525,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.699999999837019,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008360763660195536
+            },
+            "animated": {
+              "samples": 1386,
+              "bracketFailures": 224,
+              "finiteResiduals": 1162,
+              "converged": 773,
+              "lastResidualMeters": 0.003954051965889938,
+              "maxResidualMeters": 0.13187766338351234,
+              "totalMs": 5.299999999901047,
+              "lastMs": 0,
+              "maxMs": 0.5999999999767169,
+              "meanMs": 0.0038239538238824295
+            },
+            "meanMs": 0.006196213425038921,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 933,
+              "meanMetersPerSecond": 0.859,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 968
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000017497261685095467,
+            "maxRadialSlopeDifference": 0.00013997809348076373,
+            "maxNormalDiscontinuityDegrees": 0.016346840510112863
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.0000888281968927096,
+            "maxRadialSlopeDifference": 0.0007106255751416768,
+            "maxNormalDiscontinuityDegrees": 0.08091437381529573
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 933,
+            "meanMetersPerSecond": 0.859,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 968
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": -100,
+            "y": 14,
+            "z": -125.999,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": -145,
+            "y": 0,
+            "z": -126
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 6,
+          "name": "Cabo de Bruma",
+          "x": 286,
+          "z": 154,
+          "radius": 33
+        },
+        "observationPoint": {
+          "x": 337,
+          "y": 14,
+          "z": 154,
+          "targetX": 286,
+          "targetY": 0,
+          "targetZ": 154
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 74,
+            "average": 2468.46,
+            "p50": 165.9,
+            "p95": 14003.6,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 12.3,
+          "renderCpuMs": 47.8,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 485,
+          "foamVerticesChecked": 5023,
+          "foamVerticesOutsideBand": 1,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2.1,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 931,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.855,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 968,
+          "coastSolver": {
+            "samples": 3027,
+            "bracketFailures": 224,
+            "finiteResiduals": 2803,
+            "converged": 999,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 18.59999999977299,
+            "lastMs": 0,
+            "maxMs": 0.5999999999767169,
+            "initial": {
+              "samples": 1521,
+              "bracketFailures": 0,
+              "finiteResiduals": 1521,
+              "converged": 217,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.699999999837019,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008349769888124272
+            },
+            "animated": {
+              "samples": 1506,
+              "bracketFailures": 224,
+              "finiteResiduals": 1282,
+              "converged": 782,
+              "lastResidualMeters": 0.09228263448822493,
+              "maxResidualMeters": 0.1430542522131147,
+              "totalMs": 5.899999999935972,
+              "lastMs": 0,
+              "maxMs": 0.5999999999767169,
+              "meanMs": 0.003917662682560406
+            },
+            "meanMs": 0.006144697720440366,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 931,
+              "meanMetersPerSecond": 0.855,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 968
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000019014647005238805,
+            "maxRadialSlopeDifference": 0.00015211717604191044,
+            "maxNormalDiscontinuityDegrees": 0.017908495172356067
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.0000934920418582813,
+            "maxRadialSlopeDifference": 0.0007479363348662504,
+            "maxNormalDiscontinuityDegrees": 0.08541676102197229
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 931,
+            "meanMetersPerSecond": 0.855,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 968
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 337,
+            "y": 14,
+            "z": 154.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 286,
+            "y": 0,
+            "z": 154
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 7,
+          "name": "Isla del Cuerno",
+          "x": -286,
+          "z": 232,
+          "radius": 31
+        },
+        "observationPoint": {
+          "x": -237,
+          "y": 14,
+          "z": 232,
+          "targetX": -286,
+          "targetY": 0,
+          "targetZ": 232
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 75,
+            "average": 2594.04,
+            "p50": 166.8,
+            "p95": 14003.6,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 6.8,
+          "renderCpuMs": 2527,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.567,
+          "localWaveDisplacement": -0.649,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.341,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 485,
+          "foamVerticesChecked": 5311,
+          "foamVerticesOutsideBand": 1,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 3.6,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 931,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.82,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 968,
+          "coastSolver": {
+            "samples": 3165,
+            "bracketFailures": 224,
+            "finiteResiduals": 2941,
+            "converged": 1022,
+            "lastResidualMeters": 0.0013950291872646403,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 20.099999999831198,
+            "lastMs": 0,
+            "maxMs": 0.7999999999883585,
+            "initial": {
+              "samples": 1523,
+              "bracketFailures": 0,
+              "finiteResiduals": 1523,
+              "converged": 219,
+              "lastResidualMeters": 0.0013950291872646403,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.699999999837019,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008338804990044005
+            },
+            "animated": {
+              "samples": 1642,
+              "bracketFailures": 224,
+              "finiteResiduals": 1418,
+              "converged": 803,
+              "lastResidualMeters": 0.0027556894897550477,
+              "maxResidualMeters": 0.15880554147528358,
+              "totalMs": 7.399999999994179,
+              "lastMs": 0,
+              "maxMs": 0.7999999999883585,
+              "meanMs": 0.004506699147377697
+            },
+            "meanMs": 0.0063507109004206,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 931,
+              "meanMetersPerSecond": 0.82,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 968
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000015137067560067052,
+            "maxRadialSlopeDifference": 0.00012109654048009233,
+            "maxNormalDiscontinuityDegrees": 0.014093504462524942
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00009881638977948803,
+            "maxRadialSlopeDifference": 0.0007905311182363484,
+            "maxNormalDiscontinuityDegrees": 0.08968005708749409
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 931,
+            "meanMetersPerSecond": 0.82,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 968
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": -237,
+            "y": 14,
+            "z": 232.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": -286,
+            "y": 0,
+            "z": 232
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 8,
+          "name": "Costa de las Tormentas",
+          "x": 292,
+          "z": -264,
+          "radius": 36
+        },
+        "observationPoint": {
+          "x": 346,
+          "y": 14,
+          "z": -264,
+          "targetX": 292,
+          "targetY": 0,
+          "targetZ": -264
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 82,
+            "average": 2405.93,
+            "p50": 139.7,
+            "p95": 11887.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 4.4,
+          "renderCpuMs": 11,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 510,
+          "foamVerticesChecked": 5728,
+          "foamVerticesOutsideBand": 3,
+          "foamMaxOffshoreDistanceMeters": 0.773,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 5,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 792,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.508,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 1164,
+          "coastSolver": {
+            "samples": 4465,
+            "bracketFailures": 224,
+            "finiteResiduals": 4241,
+            "converged": 1669,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 23.799999999435386,
+            "lastMs": 0,
+            "maxMs": 0.7999999999883585,
+            "initial": {
+              "samples": 1525,
+              "bracketFailures": 0,
+              "finiteResiduals": 1525,
+              "converged": 221,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.699999999837019,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008327868852352144
+            },
+            "animated": {
+              "samples": 2940,
+              "bracketFailures": 224,
+              "finiteResiduals": 2716,
+              "converged": 1448,
+              "lastResidualMeters": 0.017296762169493718,
+              "maxResidualMeters": 0.15880554147528358,
+              "totalMs": 11.099999999598367,
+              "lastMs": 0,
+              "maxMs": 0.7999999999883585,
+              "meanMs": 0.003775510203945023
+            },
+            "meanMs": 0.005330347144330434,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 792,
+              "meanMetersPerSecond": 0.508,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 1164
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000015220801597548572,
+            "maxRadialSlopeDifference": 0.00012176641278083267,
+            "maxNormalDiscontinuityDegrees": 0.01400427155911944
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00009826404789436971,
+            "maxRadialSlopeDifference": 0.0007861123831549577,
+            "maxNormalDiscontinuityDegrees": 0.08991632785032065
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 792,
+            "meanMetersPerSecond": 0.508,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 1164
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 346,
+            "y": 14,
+            "z": -263.999,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 292,
+            "y": 0,
+            "z": -264
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 9,
+          "name": "Skjoldheim",
+          "x": 470,
+          "z": 100,
+          "radius": 31
+        },
+        "observationPoint": {
+          "x": 519,
+          "y": 14,
+          "z": 100,
+          "targetX": 470,
+          "targetY": 0,
+          "targetZ": 100
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 0,
+          "frameTimingMs": {
+            "samples": 83,
+            "average": 2377.9,
+            "p50": 139.7,
+            "p95": 11887.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 6.1,
+          "renderCpuMs": 5198.2,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 495,
+          "foamVerticesChecked": 5726,
+          "foamVerticesOutsideBand": 3,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 5,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 787,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.475,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 1164,
+          "coastSolver": {
+            "samples": 4667,
+            "bracketFailures": 224,
+            "finiteResiduals": 4443,
+            "converged": 1802,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 25.699999999516876,
+            "lastMs": 0.1000000000349246,
+            "maxMs": 0.9000000000232831,
+            "initial": {
+              "samples": 1527,
+              "bracketFailures": 0,
+              "finiteResiduals": 1527,
+              "converged": 223,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.799999999871943,
+              "lastMs": 0.1000000000349246,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008382449246805463
+            },
+            "animated": {
+              "samples": 3140,
+              "bracketFailures": 224,
+              "finiteResiduals": 2916,
+              "converged": 1579,
+              "lastResidualMeters": 0.0013515391877935157,
+              "maxResidualMeters": 0.15880554147528358,
+              "totalMs": 12.899999999644933,
+              "lastMs": 0,
+              "maxMs": 0.9000000000232831,
+              "meanMs": 0.004108280254663992
+            },
+            "meanMs": 0.00550674951778806,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 787,
+              "meanMetersPerSecond": 0.475,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 1164
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000020460044262704535,
+            "maxRadialSlopeDifference": 0.00016368035410163628,
+            "maxNormalDiscontinuityDegrees": 0.01867162877614873
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00007619835462729929,
+            "maxRadialSlopeDifference": 0.0006095868370183943,
+            "maxNormalDiscontinuityDegrees": 0.07017312226294309
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 787,
+            "meanMetersPerSecond": 0.475,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 1164
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 519,
+            "y": 14,
+            "z": 100.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 470,
+            "y": 0,
+            "z": 100
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 10,
+          "name": "Isla de los Juramentos",
+          "x": -470,
+          "z": -310,
+          "radius": 34
+        },
+        "observationPoint": {
+          "x": -418,
+          "y": 14,
+          "z": -310,
+          "targetX": -470,
+          "targetY": 0,
+          "targetZ": -310
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 1,
+          "frameTimingMs": {
+            "samples": 84,
+            "average": 2445.2,
+            "p50": 139.7,
+            "p95": 11887.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 9.3,
+          "renderCpuMs": 1327.1,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 486,
+          "foamVerticesChecked": 5616,
+          "foamVerticesOutsideBand": 3,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2,
+          "foamUpdateMaxMs": 5,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 775,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.417,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 1163,
+          "coastSolver": {
+            "samples": 5126,
+            "bracketFailures": 224,
+            "finiteResiduals": 4902,
+            "converged": 2052,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 28.899999999528518,
+            "lastMs": 0,
+            "maxMs": 2.2999999999883585,
+            "initial": {
+              "samples": 1530,
+              "bracketFailures": 0,
+              "finiteResiduals": 1530,
+              "converged": 226,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.799999999871943,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008366013071811727
+            },
+            "animated": {
+              "samples": 3596,
+              "bracketFailures": 224,
+              "finiteResiduals": 3372,
+              "converged": 1826,
+              "lastResidualMeters": 0.002436766011586086,
+              "maxResidualMeters": 0.15880554147528358,
+              "totalMs": 16.099999999656575,
+              "lastMs": 0,
+              "maxMs": 2.2999999999883585,
+              "meanMs": 0.004477196885332752
+            },
+            "meanMs": 0.005637924307360226,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 775,
+              "meanMetersPerSecond": 0.417,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 1163
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000016964885558579113,
+            "maxRadialSlopeDifference": 0.0001357190844686329,
+            "maxNormalDiscontinuityDegrees": 0.015612343737921143
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00011176720162279705,
+            "maxRadialSlopeDifference": 0.0008941376129823764,
+            "maxNormalDiscontinuityDegrees": 0.10293382816059897
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 775,
+            "meanMetersPerSecond": 0.417,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 1163
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": -418,
+            "y": 14,
+            "z": -309.999,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": -470,
+            "y": 0,
+            "z": -310
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 11,
+          "name": "Isla del Altar",
+          "x": 60,
+          "z": 465,
+          "radius": 34
+        },
+        "observationPoint": {
+          "x": 112,
+          "y": 14,
+          "z": 465,
+          "targetX": 60,
+          "targetY": 0,
+          "targetZ": 465
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 1,
+          "frameTimingMs": {
+            "samples": 85,
+            "average": 2432.61,
+            "p50": 151.3,
+            "p95": 11887.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 6.3,
+          "renderCpuMs": 13.3,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 486,
+          "foamVerticesChecked": 5760,
+          "foamVerticesOutsideBand": 4,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 1.2,
+          "foamUpdateMaxMs": 5,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 908,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.452,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 1163,
+          "coastSolver": {
+            "samples": 5306,
+            "bracketFailures": 224,
+            "finiteResiduals": 5082,
+            "converged": 2086,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 30.39999999947031,
+            "lastMs": 0,
+            "maxMs": 2.2999999999883585,
+            "initial": {
+              "samples": 1532,
+              "bracketFailures": 0,
+              "finiteResiduals": 1532,
+              "converged": 228,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.799999999871943,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.008355091383728423
+            },
+            "animated": {
+              "samples": 3774,
+              "bracketFailures": 224,
+              "finiteResiduals": 3550,
+              "converged": 1858,
+              "lastResidualMeters": 0.012477487110313115,
+              "maxResidualMeters": 0.15880554147528358,
+              "totalMs": 17.599999999598367,
+              "lastMs": 0,
+              "maxMs": 2.2999999999883585,
+              "meanMs": 0.004663487016321772
+            },
+            "meanMs": 0.005729362985199832,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 908,
+              "meanMetersPerSecond": 0.452,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 1163
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.000015312783666621144,
+            "maxRadialSlopeDifference": 0.00012250226933296915,
+            "maxNormalDiscontinuityDegrees": 0.013969580050444299
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00009389906547252469,
+            "maxRadialSlopeDifference": 0.0007511925237801975,
+            "maxNormalDiscontinuityDegrees": 0.08462758548842879
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 908,
+            "meanMetersPerSecond": 0.452,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 1163
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 112,
+            "y": 14,
+            "z": 465.001,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": 60,
+            "y": 0,
+            "z": 465
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      },
+      {
+        "island": {
+          "index": 12,
+          "name": "Cabo del Vigía",
+          "x": -45,
+          "z": -465,
+          "radius": 32
+        },
+        "observationPoint": {
+          "x": 5,
+          "y": 14,
+          "z": -465,
+          "targetX": -45,
+          "targetY": 0,
+          "targetZ": -465
+        },
+        "cameraVerified": true,
+        "runtime": {
+          "fps": 1,
+          "frameTimingMs": {
+            "samples": 85,
+            "average": 2432.61,
+            "p50": 151.3,
+            "p95": 11887.3,
+            "p99": 21292.7,
+            "max": 27690.6
+          },
+          "drawCalls": null,
+          "worldUpdateMs": 6.3,
+          "renderCpuMs": 13.3,
+          "grassInstances": 57200,
+          "grassBatches": 4,
+          "grassDebugClumpCount": null,
+          "grassDebugBatchCount": null,
+          "grassByIsland": null
+        },
+        "coast": {
+          "baseSeaLevel": 0,
+          "tideOffset": 0.082,
+          "tidePhaseDegrees": 55.5,
+          "tideMode": "natural",
+          "seaSurfaceAtPlayer": -0.571,
+          "localWaveDisplacement": -0.653,
+          "waveAmplitudeBoundMeters": 0.977,
+          "shorelineRadius": 60.311,
+          "wetBandPeak": 0,
+          "wetBandDistanceMeters": null,
+          "activeIsland": "Isla del Cuervo",
+          "activeBeachIslandIndex": 0,
+          "foamActiveMeshes": 1,
+          "foamFallbackIntersections": 0,
+          "foamActiveSegments": 1257,
+          "foamSegmentCapacity": 1257,
+          "foamValidIntersections": 1257,
+          "foamIntersectionCapacity": 1257,
+          "foamGeometryVerticesChecked": 32708,
+          "foamGeometryVerticesOutsideBand": 486,
+          "foamVerticesChecked": 5743,
+          "foamVerticesOutsideBand": 4,
+          "foamMaxOffshoreDistanceMeters": 0.772,
+          "foamUpdateLastMs": 2.2,
+          "foamUpdateMaxMs": 5,
+          "foamBackwashSamples": 1257,
+          "foamBackwashActiveColumns": 908,
+          "foamBackwashMeanVelocityMetersPerSecond": 0.452,
+          "foamBackwashPeakVelocityMetersPerSecond": 0.9,
+          "foamRetreatResidueColumns": 1163,
+          "coastSolver": {
+            "samples": 5452,
+            "bracketFailures": 224,
+            "finiteResiduals": 5228,
+            "converged": 2116,
+            "lastResidualMeters": 0.0015120169859133004,
+            "maxResidualMeters": 0.38900263424936693,
+            "totalMs": 30.999999999447027,
+            "lastMs": 0,
+            "maxMs": 2.2999999999883585,
+            "initial": {
+              "samples": 1534,
+              "bracketFailures": 0,
+              "finiteResiduals": 1534,
+              "converged": 230,
+              "lastResidualMeters": 0.0015120169859133004,
+              "maxResidualMeters": 0.38900263424936693,
+              "totalMs": 12.799999999871943,
+              "lastMs": 0,
+              "maxMs": 0.20000000001164153,
+              "meanMs": 0.00834419817462317
+            },
+            "animated": {
+              "samples": 3918,
+              "bracketFailures": 224,
+              "finiteResiduals": 3694,
+              "converged": 1886,
+              "lastResidualMeters": 0.028108556454049888,
+              "maxResidualMeters": 0.20297303223571045,
+              "totalMs": 18.199999999575084,
+              "lastMs": 0.09999999997671694,
+              "maxMs": 2.2999999999883585,
+              "meanMs": 0.004645227156604156
+            },
+            "meanMs": 0.005685986793735698,
+            "physicalBackwashVelocity": {
+              "implemented": true,
+              "unit": "m/s",
+              "samples": 1257,
+              "activeColumns": 908,
+              "meanMetersPerSecond": 0.452,
+              "peakMetersPerSecond": 0.9,
+              "retreatResidueColumns": 1163
+            }
+          },
+          "renderedVertexAgreement": {
+            "implemented": true,
+            "mode": "gpu-vertex-displacement",
+            "requested": 0,
+            "sampled": 0,
+            "meanAbsErrorMeters": null,
+            "p95AbsErrorMeters": null,
+            "maxAbsErrorMeters": null,
+            "gpuReadback": false,
+            "meshVertexCount": 103041,
+            "cpuMeshVertexEvaluations": 0,
+            "dynamicPositionUploads": 0,
+            "dynamicNormalUploads": 0,
+            "comparison": "El vertex shader evalúa las mismas siete ondas y la envolvente analítica. No se fuerza una lectura GPU-CPU que sincronice y bloquee la canalización."
+          },
+          "waterLodBoundary": {
+            "implemented": true,
+            "radiusMeters": 300,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.00001740606182699944,
+            "maxRadialSlopeDifference": 0.00013924849461599553,
+            "maxNormalDiscontinuityDegrees": 0.01711504119518671
+          },
+          "waterLodBoundary90": {
+            "implemented": true,
+            "radiusMeters": 90,
+            "samples": 36,
+            "maxHeightContinuityErrorMeters": 0.0001024079740397088,
+            "maxRadialSlopeDifference": 0.0008192637923176704,
+            "maxNormalDiscontinuityDegrees": 0.09273237169456833
+          },
+          "physicalBackwashVelocity": {
+            "implemented": true,
+            "unit": "m/s",
+            "samples": 1257,
+            "activeColumns": 908,
+            "meanMetersPerSecond": 0.452,
+            "peakMetersPerSecond": 0.9,
+            "retreatResidueColumns": 1163
+          }
+        },
+        "water": null,
+        "sceneView": {
+          "player": {
+            "x": -47,
+            "y": 1.99,
+            "z": 8
+          },
+          "camera": {
+            "x": 5,
+            "y": 14,
+            "z": -464.999,
+            "yaw": 0,
+            "pitch": 0.48,
+            "distance": 10.35,
+            "fov": 0.78
+          },
+          "target": {
+            "x": -45,
+            "y": 0,
+            "z": -465
+          },
+          "viewport": {
+            "width": 1280,
+            "height": 800,
+            "cssWidth": 1280,
+            "cssHeight": 800
+          },
+          "onShip": false
+        }
+      }
+    ]
+  },
+  "startup": {
+    "worldReady": true,
+    "bootFailed": false,
+    "bodyClass": "intro-open",
+    "loadingText": "Mundo preparado.",
+    "loadingHelp": null
+  },
+  "audioNetwork": {
+    "requests": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/menu/winter_s_final_toll.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      }
+    ],
+    "responses": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/menu/winter_s_final_toll.mp3",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      }
+    ],
+    "failures": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "error": "net::ERR_ABORTED"
+      }
+    ]
+  },
+  "agents": [
+    {
+      "id": "eira",
+      "name": "Eira",
+      "specialization": "Costa y pisadas",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Eira ha comprobado los contadores reales de pisadas, salpicaduras y perfil de la orilla. No simula pasos que el personaje no haya dado.",
+      "readings": {
+        "wetSteps": null,
+        "waterParticlesEmitted": null,
+        "activeSplashParticles": null,
+        "maxShoreStepMeters": null
+      },
+      "issues": [],
+      "missing": [
+        "El motor no expone un contador válido de pisadas húmedas.",
+        "El motor no expone cuántas partículas de salpicadura siguen vivas.",
+        "No existe una medición explícita del escalón arena-agua en esta ejecución."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 13,
+        "route": [
+          {
+            "islandIndex": 0,
+            "island": "Isla del Cuervo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 78,
+              "y": 14,
+              "z": 0,
+              "targetX": 0,
+              "targetY": 0,
+              "targetZ": 0
+            }
+          },
+          {
+            "islandIndex": 1,
+            "island": "Costa de Skall",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 184,
+              "y": 14,
+              "z": 14,
+              "targetX": 135,
+              "targetY": 0,
+              "targetZ": 14
+            }
+          },
+          {
+            "islandIndex": 2,
+            "island": "Isla de los Pinos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -81,
+              "y": 14,
+              "z": 45,
+              "targetX": -132,
+              "targetY": 0,
+              "targetZ": 45
+            }
+          },
+          {
+            "islandIndex": 3,
+            "island": "Bahía de Hrafn",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 79,
+              "y": 14,
+              "z": 143,
+              "targetX": 28,
+              "targetY": 0,
+              "targetZ": 143
+            }
+          },
+          {
+            "islandIndex": 4,
+            "island": "Islote del Hielo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 189,
+              "y": 14,
+              "z": -132,
+              "targetX": 146,
+              "targetY": 0,
+              "targetZ": -132
+            }
+          },
+          {
+            "islandIndex": 5,
+            "island": "Isla de las Cenizas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -100,
+              "y": 14,
+              "z": -126,
+              "targetX": -145,
+              "targetY": 0,
+              "targetZ": -126
+            }
+          },
+          {
+            "islandIndex": 6,
+            "island": "Cabo de Bruma",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 337,
+              "y": 14,
+              "z": 154,
+              "targetX": 286,
+              "targetY": 0,
+              "targetZ": 154
+            }
+          },
+          {
+            "islandIndex": 7,
+            "island": "Isla del Cuerno",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -237,
+              "y": 14,
+              "z": 232,
+              "targetX": -286,
+              "targetY": 0,
+              "targetZ": 232
+            }
+          },
+          {
+            "islandIndex": 8,
+            "island": "Costa de las Tormentas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 346,
+              "y": 14,
+              "z": -264,
+              "targetX": 292,
+              "targetY": 0,
+              "targetZ": -264
+            }
+          },
+          {
+            "islandIndex": 9,
+            "island": "Skjoldheim",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 519,
+              "y": 14,
+              "z": 100,
+              "targetX": 470,
+              "targetY": 0,
+              "targetZ": 100
+            }
+          },
+          {
+            "islandIndex": 10,
+            "island": "Isla de los Juramentos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -418,
+              "y": 14,
+              "z": -310,
+              "targetX": -470,
+              "targetY": 0,
+              "targetZ": -310
+            }
+          },
+          {
+            "islandIndex": 11,
+            "island": "Isla del Altar",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 112,
+              "y": 14,
+              "z": 465,
+              "targetX": 60,
+              "targetY": 0,
+              "targetZ": 465
+            }
+          },
+          {
+            "islandIndex": 12,
+            "island": "Cabo del Vigía",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 5,
+              "y": 14,
+              "z": -465,
+              "targetX": -45,
+              "targetY": 0,
+              "targetZ": -465
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "sol",
+      "name": "Sól",
+      "specialization": "Vegetación y fluidez",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Sól registra hierba, draw calls y tiempos de actualización/render. No declara cobertura por isla si el motor solo entrega totales globales.",
+      "readings": {
+        "grassInstances": 57200,
+        "grassBatches": 4,
+        "drawCalls": null,
+        "worldUpdateMs": 0,
+        "renderCpuMs": 22.5,
+        "frameTimeP95Ms": 6860.9,
+        "perIslandGrass": [
+          {
+            "islandIndex": 0,
+            "name": "Isla del Cuervo",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 1,
+            "name": "Costa de Skall",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 2,
+            "name": "Isla de los Pinos",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 3,
+            "name": "Bahía de Hrafn",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 4,
+            "name": "Islote del Hielo",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 5,
+            "name": "Isla de las Cenizas",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 6,
+            "name": "Cabo de Bruma",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 7,
+            "name": "Isla del Cuerno",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 8,
+            "name": "Costa de las Tormentas",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 9,
+            "name": "Skjoldheim",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 10,
+            "name": "Isla de los Juramentos",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 11,
+            "name": "Isla del Altar",
+            "instances": null,
+            "batches": null
+          },
+          {
+            "islandIndex": 12,
+            "name": "Cabo del Vigía",
+            "instances": null,
+            "batches": null
+          }
+        ]
+      },
+      "issues": [],
+      "missing": [
+        "No hay contador de draw calls válido.",
+        "La cobertura de hierba por isla no está expuesta; el contador global no demuestra las 13 zonas.",
+        "El p95 de 6860.90 ms procede de Chromium/SwiftShader; no permite diagnosticar los FPS de la GPU física del móvil."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 13,
+        "route": [
+          {
+            "islandIndex": 0,
+            "island": "Isla del Cuervo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 78,
+              "y": 14,
+              "z": 0,
+              "targetX": 0,
+              "targetY": 0,
+              "targetZ": 0
+            }
+          },
+          {
+            "islandIndex": 1,
+            "island": "Costa de Skall",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 184,
+              "y": 14,
+              "z": 14,
+              "targetX": 135,
+              "targetY": 0,
+              "targetZ": 14
+            }
+          },
+          {
+            "islandIndex": 2,
+            "island": "Isla de los Pinos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -81,
+              "y": 14,
+              "z": 45,
+              "targetX": -132,
+              "targetY": 0,
+              "targetZ": 45
+            }
+          },
+          {
+            "islandIndex": 3,
+            "island": "Bahía de Hrafn",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 79,
+              "y": 14,
+              "z": 143,
+              "targetX": 28,
+              "targetY": 0,
+              "targetZ": 143
+            }
+          },
+          {
+            "islandIndex": 4,
+            "island": "Islote del Hielo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 189,
+              "y": 14,
+              "z": -132,
+              "targetX": 146,
+              "targetY": 0,
+              "targetZ": -132
+            }
+          },
+          {
+            "islandIndex": 5,
+            "island": "Isla de las Cenizas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -100,
+              "y": 14,
+              "z": -126,
+              "targetX": -145,
+              "targetY": 0,
+              "targetZ": -126
+            }
+          },
+          {
+            "islandIndex": 6,
+            "island": "Cabo de Bruma",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 337,
+              "y": 14,
+              "z": 154,
+              "targetX": 286,
+              "targetY": 0,
+              "targetZ": 154
+            }
+          },
+          {
+            "islandIndex": 7,
+            "island": "Isla del Cuerno",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -237,
+              "y": 14,
+              "z": 232,
+              "targetX": -286,
+              "targetY": 0,
+              "targetZ": 232
+            }
+          },
+          {
+            "islandIndex": 8,
+            "island": "Costa de las Tormentas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 346,
+              "y": 14,
+              "z": -264,
+              "targetX": 292,
+              "targetY": 0,
+              "targetZ": -264
+            }
+          },
+          {
+            "islandIndex": 9,
+            "island": "Skjoldheim",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 519,
+              "y": 14,
+              "z": 100,
+              "targetX": 470,
+              "targetY": 0,
+              "targetZ": 100
+            }
+          },
+          {
+            "islandIndex": 10,
+            "island": "Isla de los Juramentos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -418,
+              "y": 14,
+              "z": -310,
+              "targetX": -470,
+              "targetY": 0,
+              "targetZ": -310
+            }
+          },
+          {
+            "islandIndex": 11,
+            "island": "Isla del Altar",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 112,
+              "y": 14,
+              "z": 465,
+              "targetX": 60,
+              "targetY": 0,
+              "targetZ": 465
+            }
+          },
+          {
+            "islandIndex": 12,
+            "island": "Cabo del Vigía",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 5,
+              "y": 14,
+              "z": -465,
+              "targetX": -45,
+              "targetY": 0,
+              "targetZ": -465
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "ulf",
+      "name": "Ulf",
+      "specialization": "Física y cimentación",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Ulf compara las medidas de apoyo disponibles con la tolerancia solicitada de 2 cm. La patrulla no finge recorrer rutas físicas si falta una API de locomoción.",
+      "readings": {
+        "structuresMeasured": 68,
+        "structures": [
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 24.69,
+            "z": -13.35,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 21.59,
+            "z": -17.41,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 28.69,
+            "z": -16.35,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 135,
+            "z": 14,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 129,
+            "z": 19.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 142,
+            "z": 9.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -132,
+            "z": 45,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -138.5,
+            "z": 50,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": -125,
+            "z": 40.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 28,
+            "z": 143,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 21.5,
+            "z": 148,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "WeatheredNorseHut",
+            "kind": "NorseHut",
+            "x": 35,
+            "z": 138.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 4,
+            "name": "IslandGarrisonOutpost_4",
+            "kind": "IslandGarrisonOutpost",
+            "x": 144.65,
+            "z": -134.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 5,
+            "name": "IslandGarrisonOutpost_5",
+            "kind": "IslandGarrisonOutpost",
+            "x": -141.87,
+            "z": -125.12,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 6,
+            "name": "IslandGarrisonOutpost_6",
+            "kind": "IslandGarrisonOutpost",
+            "x": 285.32,
+            "z": 154.82,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 7,
+            "name": "IslandGarrisonOutpost_7",
+            "kind": "IslandGarrisonOutpost",
+            "x": -286.66,
+            "z": 229.84,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 8,
+            "name": "IslandGarrisonOutpost_8",
+            "kind": "IslandGarrisonOutpost",
+            "x": 292.04,
+            "z": -264.71,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 9,
+            "name": "IslandGarrisonOutpost_9",
+            "kind": "IslandGarrisonOutpost",
+            "x": 470,
+            "z": 100,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 10,
+            "name": "IslandGarrisonOutpost_10",
+            "kind": "IslandGarrisonOutpost",
+            "x": -470,
+            "z": -310,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 11,
+            "name": "IslandGarrisonOutpost_11",
+            "kind": "IslandGarrisonOutpost",
+            "x": 60,
+            "z": 465,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 12,
+            "name": "IslandGarrisonOutpost_12",
+            "kind": "IslandGarrisonOutpost",
+            "x": -41.92,
+            "z": -466.42,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "NorseBlacksmithForge_0",
+            "kind": "NorseBlacksmithForge",
+            "x": 11.65,
+            "z": -14.6,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "NorseWatchTower_0",
+            "kind": "NorseWatchTower",
+            "x": 31.19,
+            "z": -18.95,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "NorseBlacksmithForge_1",
+            "kind": "NorseBlacksmithForge",
+            "x": 128.2,
+            "z": 12.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "NorseWatchTower_1",
+            "kind": "NorseWatchTower",
+            "x": 141.04,
+            "z": 5.79,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "NorseBlacksmithForge_2",
+            "kind": "NorseBlacksmithForge",
+            "x": -138.8,
+            "z": 43.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "NorseWatchTower_2",
+            "kind": "NorseWatchTower",
+            "x": -121.5,
+            "z": 37.4,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "NorseBlacksmithForge_3",
+            "kind": "NorseBlacksmithForge",
+            "x": 21.2,
+            "z": 141.1,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "NorseWatchTower_3",
+            "kind": "NorseWatchTower",
+            "x": 38.5,
+            "z": 135.4,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "IslandOutpost_0",
+            "kind": "IslandOutpostCamp",
+            "x": 33.05,
+            "z": 6.05,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "IslandScoutCamp_0",
+            "kind": "IslandScoutCamp",
+            "x": 10.15,
+            "z": 7.9,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "IslandOutpost_1",
+            "kind": "IslandOutpostCamp",
+            "x": 134.59,
+            "z": 29.34,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 1,
+            "name": "IslandScoutCamp_1",
+            "kind": "IslandScoutCamp",
+            "x": 126.69,
+            "z": 31.94,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "IslandOutpost_2",
+            "kind": "IslandOutpostCamp",
+            "x": -129.43,
+            "z": 51.32,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 2,
+            "name": "IslandScoutCamp_2",
+            "kind": "IslandScoutCamp",
+            "x": -133.58,
+            "z": 66.67,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "IslandOutpost_3",
+            "kind": "IslandOutpostCamp",
+            "x": 14.82,
+            "z": 147.82,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 3,
+            "name": "IslandScoutCamp_3",
+            "kind": "IslandScoutCamp",
+            "x": 19.67,
+            "z": 162.42,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 9,
+            "name": "NorseGreatMeadHall_9",
+            "kind": "NorseGreatHall",
+            "x": 468.2,
+            "z": 98.6,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "habitable",
+            "islandIndex": 0,
+            "name": "PoorNorseCastawayCamp",
+            "kind": "StarterCastawayCamp",
+            "x": -40,
+            "z": 15.5,
+            "measurements": {
+              "anchorErrorMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 24.69,
+            "z": -13.35,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 21.59,
+            "z": -17.41,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0.0163,
+              "maximumStructuralBaseGapMeters": 0.0164
+            },
+            "gapMeters": 0.0164
+          },
+          {
+            "source": "houses",
+            "islandIndex": 0,
+            "name": "Estructura",
+            "kind": null,
+            "x": 28.69,
+            "z": -16.35,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 135,
+            "z": 14,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 129,
+            "z": 19.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 1,
+            "name": "Estructura",
+            "kind": null,
+            "x": 142,
+            "z": 9.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -132,
+            "z": 45,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -138.5,
+            "z": 50,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 2,
+            "name": "Estructura",
+            "kind": null,
+            "x": -125,
+            "z": 40.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 28,
+            "z": 143,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 21.5,
+            "z": 148,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "houses",
+            "islandIndex": 3,
+            "name": "Estructura",
+            "kind": null,
+            "x": 35,
+            "z": 138.5,
+            "measurements": {
+              "groundingErrorMeters": 0,
+              "maximumFootingGapMeters": 0,
+              "maximumStructuralBaseGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 0,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 33.04999923706055,
+            "z": 6.050000190734863,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.0194,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0193
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0194
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_0_0",
+                  "baseGapMeters": 0.0003
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.009
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.0091
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_0_1",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_0",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.0194
+            },
+            "gapMeters": 0.0194
+          },
+          {
+            "source": "camps",
+            "islandIndex": 0,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 10.149999618530273,
+            "z": 7.900000095367432,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_0",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 1,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 134.58999633789062,
+            "z": 29.34000015258789,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.014,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.0138
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.014
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_1_0",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.008
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.0083
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_1_1",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_1",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.014
+            },
+            "gapMeters": 0.014
+          },
+          {
+            "source": "camps",
+            "islandIndex": 1,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 126.69000244140625,
+            "z": 31.940000534057617,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_1",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 2,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": -129.42999267578125,
+            "z": 51.31999969482422,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_2_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_2_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_2",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_2",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 2,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": -133.5800018310547,
+            "z": 66.66999816894531,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_2",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_2",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "camps",
+            "islandIndex": 3,
+            "name": "IslandOutpost",
+            "kind": "IslandOutpost",
+            "x": 14.819999694824219,
+            "z": 147.82000732421875,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0.0006,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "OutpostTentPoleA_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "OutpostTentPoleB_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 2,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0006
+                },
+                {
+                  "index": 3,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0001
+                },
+                {
+                  "index": 4,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 5,
+                  "name": "OutpostBedroll_3_0",
+                  "baseGapMeters": 0.0005
+                },
+                {
+                  "index": 6,
+                  "name": "OutpostTentPoleA_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 7,
+                  "name": "OutpostTentPoleB_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 8,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0.0004
+                },
+                {
+                  "index": 9,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 10,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 11,
+                  "name": "OutpostBedroll_3_1",
+                  "baseGapMeters": 0.0004
+                },
+                {
+                  "index": 12,
+                  "name": "OutpostSupplyCrate_3",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 13,
+                  "name": "OutpostHearthGlow_3",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0.0006
+            },
+            "gapMeters": 0.0006
+          },
+          {
+            "source": "camps",
+            "islandIndex": 3,
+            "name": "IslandScoutCamp",
+            "kind": "IslandScoutCamp",
+            "x": 19.670000076293945,
+            "z": 162.4199981689453,
+            "measurements": {
+              "anchorErrorMeters": 0,
+              "maximumBaseGapMeters": 0,
+              "supportPointGaps": [
+                {
+                  "index": 0,
+                  "name": "ScoutCampSupplies_3",
+                  "baseGapMeters": 0
+                },
+                {
+                  "index": 1,
+                  "name": "ScoutCampEmbers_3",
+                  "baseGapMeters": 0
+                }
+              ],
+              "maximumSupportPointGapMeters": 0
+            },
+            "gapMeters": 0
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 4,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0043,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0043
+            },
+            "gapMeters": 0.0043
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 5,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0013,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0013
+            },
+            "gapMeters": 0.0013
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 6,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0013,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0013
+            },
+            "gapMeters": 0.0013
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 7,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0032,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0032
+            },
+            "gapMeters": 0.0032
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 8,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0026,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0026
+            },
+            "gapMeters": 0.0026
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 9,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0016,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0016
+            },
+            "gapMeters": 0.0016
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 10,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0065,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0065
+            },
+            "gapMeters": 0.0065
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 11,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0014,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0014
+            },
+            "gapMeters": 0.0014
+          },
+          {
+            "source": "garrisons",
+            "islandIndex": 12,
+            "name": "Estructura",
+            "kind": null,
+            "x": null,
+            "z": null,
+            "measurements": {
+              "outpostErrorMeters": 0,
+              "guardErrorMeters": 0.0003,
+              "flagErrorMeters": 0,
+              "maximumAnchorErrorMeters": 0.0003
+            },
+            "gapMeters": 0.0003
+          }
+        ],
+        "movementSupported": false
+      },
+      "issues": [],
+      "missing": [
+        "La API de prueba no expone locomoción autónoma para recorrer rutas y detectar bloqueos físicos."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 13,
+        "route": [
+          {
+            "islandIndex": 0,
+            "island": "Isla del Cuervo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 78,
+              "y": 14,
+              "z": 0,
+              "targetX": 0,
+              "targetY": 0,
+              "targetZ": 0
+            }
+          },
+          {
+            "islandIndex": 1,
+            "island": "Costa de Skall",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 184,
+              "y": 14,
+              "z": 14,
+              "targetX": 135,
+              "targetY": 0,
+              "targetZ": 14
+            }
+          },
+          {
+            "islandIndex": 2,
+            "island": "Isla de los Pinos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -81,
+              "y": 14,
+              "z": 45,
+              "targetX": -132,
+              "targetY": 0,
+              "targetZ": 45
+            }
+          },
+          {
+            "islandIndex": 3,
+            "island": "Bahía de Hrafn",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 79,
+              "y": 14,
+              "z": 143,
+              "targetX": 28,
+              "targetY": 0,
+              "targetZ": 143
+            }
+          },
+          {
+            "islandIndex": 4,
+            "island": "Islote del Hielo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 189,
+              "y": 14,
+              "z": -132,
+              "targetX": 146,
+              "targetY": 0,
+              "targetZ": -132
+            }
+          },
+          {
+            "islandIndex": 5,
+            "island": "Isla de las Cenizas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -100,
+              "y": 14,
+              "z": -126,
+              "targetX": -145,
+              "targetY": 0,
+              "targetZ": -126
+            }
+          },
+          {
+            "islandIndex": 6,
+            "island": "Cabo de Bruma",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 337,
+              "y": 14,
+              "z": 154,
+              "targetX": 286,
+              "targetY": 0,
+              "targetZ": 154
+            }
+          },
+          {
+            "islandIndex": 7,
+            "island": "Isla del Cuerno",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -237,
+              "y": 14,
+              "z": 232,
+              "targetX": -286,
+              "targetY": 0,
+              "targetZ": 232
+            }
+          },
+          {
+            "islandIndex": 8,
+            "island": "Costa de las Tormentas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 346,
+              "y": 14,
+              "z": -264,
+              "targetX": 292,
+              "targetY": 0,
+              "targetZ": -264
+            }
+          },
+          {
+            "islandIndex": 9,
+            "island": "Skjoldheim",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 519,
+              "y": 14,
+              "z": 100,
+              "targetX": 470,
+              "targetY": 0,
+              "targetZ": 100
+            }
+          },
+          {
+            "islandIndex": 10,
+            "island": "Isla de los Juramentos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -418,
+              "y": 14,
+              "z": -310,
+              "targetX": -470,
+              "targetY": 0,
+              "targetZ": -310
+            }
+          },
+          {
+            "islandIndex": 11,
+            "island": "Isla del Altar",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 112,
+              "y": 14,
+              "z": 465,
+              "targetX": 60,
+              "targetY": 0,
+              "targetZ": 465
+            }
+          },
+          {
+            "islandIndex": 12,
+            "island": "Cabo del Vigía",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 5,
+              "y": 14,
+              "z": -465,
+              "targetX": -45,
+              "targetY": 0,
+              "targetZ": -465
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "tyr",
+      "name": "Týr",
+      "specialization": "Actividades por isla",
+      "severity": "unknown",
+      "status": "incomplete",
+      "summary": "Týr consulta el inventario disponible. No etiqueta actividades como ausentes sin un catálogo oficial de actividades esperadas.",
+      "readings": {
+        "activityCount": null,
+        "inventoryCount": 2566,
+        "islandCount": 13
+      },
+      "issues": [],
+      "missing": [
+        "No existe un catálogo/contador de actividades jugables por isla en la API de prueba."
+      ],
+      "patrol": {
+        "type": "camera-observation",
+        "visits": 13,
+        "route": [
+          {
+            "islandIndex": 0,
+            "island": "Isla del Cuervo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 78,
+              "y": 14,
+              "z": 0,
+              "targetX": 0,
+              "targetY": 0,
+              "targetZ": 0
+            }
+          },
+          {
+            "islandIndex": 1,
+            "island": "Costa de Skall",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 184,
+              "y": 14,
+              "z": 14,
+              "targetX": 135,
+              "targetY": 0,
+              "targetZ": 14
+            }
+          },
+          {
+            "islandIndex": 2,
+            "island": "Isla de los Pinos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -81,
+              "y": 14,
+              "z": 45,
+              "targetX": -132,
+              "targetY": 0,
+              "targetZ": 45
+            }
+          },
+          {
+            "islandIndex": 3,
+            "island": "Bahía de Hrafn",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 79,
+              "y": 14,
+              "z": 143,
+              "targetX": 28,
+              "targetY": 0,
+              "targetZ": 143
+            }
+          },
+          {
+            "islandIndex": 4,
+            "island": "Islote del Hielo",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 189,
+              "y": 14,
+              "z": -132,
+              "targetX": 146,
+              "targetY": 0,
+              "targetZ": -132
+            }
+          },
+          {
+            "islandIndex": 5,
+            "island": "Isla de las Cenizas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -100,
+              "y": 14,
+              "z": -126,
+              "targetX": -145,
+              "targetY": 0,
+              "targetZ": -126
+            }
+          },
+          {
+            "islandIndex": 6,
+            "island": "Cabo de Bruma",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 337,
+              "y": 14,
+              "z": 154,
+              "targetX": 286,
+              "targetY": 0,
+              "targetZ": 154
+            }
+          },
+          {
+            "islandIndex": 7,
+            "island": "Isla del Cuerno",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -237,
+              "y": 14,
+              "z": 232,
+              "targetX": -286,
+              "targetY": 0,
+              "targetZ": 232
+            }
+          },
+          {
+            "islandIndex": 8,
+            "island": "Costa de las Tormentas",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 346,
+              "y": 14,
+              "z": -264,
+              "targetX": 292,
+              "targetY": 0,
+              "targetZ": -264
+            }
+          },
+          {
+            "islandIndex": 9,
+            "island": "Skjoldheim",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 519,
+              "y": 14,
+              "z": 100,
+              "targetX": 470,
+              "targetY": 0,
+              "targetZ": 100
+            }
+          },
+          {
+            "islandIndex": 10,
+            "island": "Isla de los Juramentos",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": -418,
+              "y": 14,
+              "z": -310,
+              "targetX": -470,
+              "targetY": 0,
+              "targetZ": -310
+            }
+          },
+          {
+            "islandIndex": 11,
+            "island": "Isla del Altar",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 112,
+              "y": 14,
+              "z": 465,
+              "targetX": 60,
+              "targetY": 0,
+              "targetZ": 465
+            }
+          },
+          {
+            "islandIndex": 12,
+            "island": "Cabo del Vigía",
+            "cameraVerified": true,
+            "observationPoint": {
+              "x": 5,
+              "y": 14,
+              "z": -465,
+              "targetX": -45,
+              "targetY": 0,
+              "targetZ": -465
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "La patrulla mueve únicamente la cámara de observación de la API de prueba; no mueve NPCs ni controla la partida normal.",
+    "El motor de juego no expone actualmente una orden de locomoción de NPC para recorrer rutas físicas.",
+    "Los contadores de pisadas y salpicaduras solo se consideran observados cuando el juego los publica; esta patrulla no inventa pasos.",
+    "La cobertura de hierba por isla solo se declara si el motor publica un contador por isla; un contador global no demuestra cobertura individual.",
+    "El catálogo de actividades por isla no está expuesto como contrato estructurado; no se inventan actividades ausentes.",
+    "Chromium/SwiftShader no representa la GPU Adreno física del dispositivo."
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "failures": [],
+  "verdict": "partial"
+}
