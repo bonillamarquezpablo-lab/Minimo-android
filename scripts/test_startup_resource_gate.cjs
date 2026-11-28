@@ -65,6 +65,11 @@ assert.ok(html.includes("coastCompilePromise===attemptPromise")&&
   'Late shader attempts must not overwrite a newer recovery and a deferred mirror must not be disabled again by the startup gate.');
 
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
+assert.ok(html.includes("glbTimings:glbTimingRecords.slice(-40)") &&
+  html.includes("recordGlbTiming('Caballero ") &&
+  html.includes("recordGlbTiming('Aldeano ") &&
+  html.includes("instanciación y montaje"),
+  'Startup diagnostics must expose bounded per-model humanoid import/rig timings without running the Inspector.');
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
 assert.ok(html.includes("fauna:'blocking-required'"),
