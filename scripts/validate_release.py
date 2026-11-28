@@ -468,6 +468,9 @@ def main() -> None:
         fail("Los puntos de aparición de fauna deben estar despejados de arbustos voluminosos y rocas.")
     if "window.__ELSN_ROCK_PLACEMENT__" not in index_html or "mineableRockPlacementStats" not in index_html:
         fail("La colocación de rocas debe rechazar intersecciones con troncos y exponer su auditoría.")
+    rock_instancing_markers = ("MineableRockGeometryTemplate", "MineableRockCapGeometryTemplate", "mineableRockGeometryTemplate.createInstance(", "mineableRockCapGeometryTemplate.createInstance(", "window.__ELSN_ROCK_INSTANCING__")
+    if any(marker not in index_html for marker in rock_instancing_markers) or "CreateIcoSphere('graniteBoulder'" in index_html or "CreateIcoSphere('rockFacet'" in index_html:
+        fail("Las rocas minables deben compartir geometría fuente e instanciar cada depósito sin duplicar buffers.")
     if "for(const rock of rocks)" not in index_html or "rockOverlapPairs" not in index_html or "minRockTreeClearanceMeters" not in index_html:
         fail("La colocación incremental debe comprobar rocas previas al plantar árboles y auditar ambos sentidos de solapamiento.")
     subsystem_diagnostic_markers = (
