@@ -32,6 +32,21 @@ assert.ok(!html.includes('https://raw.githubusercontent.com/nishit47/Blender-Pre
   'The player must not fetch animal GLBs from GitHub Raw during startup.');
 assert.ok(html.includes('const WILDLIFE_MODEL_CACHE=\'el-sin-nombre-models-wildlife-0128ca51-v1\';'),
   'The wildlife GLBs need a persistent Cache API bucket.');
+assert.ok(html.includes("wildlifeCacheOperation") &&
+  html.includes("Math.max(500,timeoutMs)") &&
+  html.includes("Promise.race([pending,timeout])") &&
+  html.includes("cache-open") &&
+  html.includes("cache-match") &&
+  html.includes("cache-write") &&
+  html.includes("window.__ELSN_WILDLIFE_STARTUP_TRACE__"),
+  'Persistent wildlife cache reads and writes must be bounded and expose their live stage, so a stalled Cache API cannot hold startup indefinitely.');
+assert.ok(html.includes("glb-container-inspection") &&
+  html.includes("babylon-import") &&
+  html.includes("texture-readiness") &&
+  html.includes("rig-validation") &&
+  html.includes("network-fetch-start") &&
+  html.includes("cache-persist"),
+  'Wildlife startup evidence must identify the exact model stage that is waiting.');
 assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.includes('startupResourceFailures.length'),
   'The player must publish a final readiness gate based on actual resources.');
 assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));

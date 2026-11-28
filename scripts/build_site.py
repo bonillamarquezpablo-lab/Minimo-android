@@ -1617,18 +1617,50 @@ function setLoadingProgress(value,label){
     # control state on the very first visit. A later SW release preserves this bucket.
     wildlife_loader_marker = " async function downloadWildlifeBlob(kind){"
     wildlife_cache_code = """ const WILDLIFE_MODEL_CACHE='el-sin-nombre-models-wildlife-0128ca51-v1';
+ const wildlifeStartupTrace={kind:null,stage:'idle',startedAt:0,updatedAt:0,lastError:null,history:[]};
+ window.__ELSN_WILDLIFE_STARTUP_TRACE__=wildlifeStartupTrace;
+ function markWildlifeStartupTrace(kind,stage,detail=null){
+  const now=performance.now();
+  if(kind!==wildlifeStartupTrace.kind){wildlifeStartupTrace.kind=kind;wildlifeStartupTrace.startedAt=now;}
+  wildlifeStartupTrace.stage=stage;wildlifeStartupTrace.updatedAt=now;
+  wildlifeStartupTrace.history.push({kind,stage,atMs:Number(now.toFixed(1)),detail:detail&&typeof detail==='object'?detail:null});
+  if(wildlifeStartupTrace.history.length>24)wildlifeStartupTrace.history.splice(0,wildlifeStartupTrace.history.length-24);
+  if(stage.endsWith('-failed')||stage.endsWith('-timeout'))wildlifeStartupTrace.lastError=detail||stage;
+ }
+ async function wildlifeCacheOperation(kind,stage,operation,timeoutMs=1500){
+  markWildlifeStartupTrace(kind,stage+'-start');
+  let timer=null;
+  const pending=Promise.resolve().then(operation).then(value=>({ok:true,value}),error=>({ok:false,error}));
+  const timeout=new Promise(resolve=>{timer=setTimeout(()=>resolve({ok:false,timeout:true}),Math.max(500,timeoutMs));});
+  const result=await Promise.race([pending,timeout]);
+  if(timer!==null)clearTimeout(timer);
+  if(!result.ok){
+   markWildlifeStartupTrace(kind,stage+(result.timeout?'-timeout':'-failed'),{timeout:!!result.timeout,error:result.error?String(result.error.message||result.error).slice(0,180):null});
+   return result;
+  }
+  markWildlifeStartupTrace(kind,stage+'-ready');
+  return result;
+ }
  async function readWildlifeModelCache(kind){
-  if(!window.caches||typeof window.caches.open!=='function')return null;
+  if(!window.caches||typeof window.caches.open!=='function'){markWildlifeStartupTrace(kind,'cache-unavailable');return null;}
   const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return null;
   const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
   try{
-   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE),response=await cache.match(url);
-   if(!response)return null;
-   const blob=await response.blob();
-   if(await isValidGLB(blob))return blob;
-   await cache.delete(url);
+   const opened=await wildlifeCacheOperation(kind,'cache-open',()=>window.caches.open(WILDLIFE_MODEL_CACHE),1500);
+   if(!opened.ok)return null;
+   const matched=await wildlifeCacheOperation(kind,'cache-match',()=>opened.value.match(url),1500);
+   if(!matched.ok||!matched.value)return null;
+   const loaded=await wildlifeCacheOperation(kind,'cache-blob-read',()=>matched.value.blob(),2500);
+   if(!loaded.ok||!loaded.value)return null;
+   const validated=await wildlifeCacheOperation(kind,'cache-glb-validation',()=>isValidGLB(loaded.value),2500);
+   if(validated.ok&&validated.value){markWildlifeStartupTrace(kind,'cache-hit',{bytes:loaded.value.size});return loaded.value;}
+   if(!validated.ok)return null;
+   await wildlifeCacheOperation(kind,'cache-delete-invalid',()=>opened.value.delete(url),750);
    console.warn('Se eliminó una copia de fauna inválida:',kind);
-  }catch(error){console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);}
+  }catch(error){
+   markWildlifeStartupTrace(kind,'cache-read-failed',{error:String(error&&error.message||error).slice(0,180)});
+   console.info('La caché persistente de fauna no está disponible; se descargará el GLB local:',error);
+  }
   return null;
  }
  async function saveWildlifeModelCache(kind,blob){
@@ -1636,10 +1668,15 @@ function setLoadingProgress(value,label){
   const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)return false;
   const url=new URL(encodeURIComponent(definition.file),WILDLIFE_ASSET_ROOT).href;
   try{
-   const cache=await window.caches.open(WILDLIFE_MODEL_CACHE);
-   await cache.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}}));
+   const opened=await wildlifeCacheOperation(kind,'cache-write-open',()=>window.caches.open(WILDLIFE_MODEL_CACHE),1200);
+   if(!opened.ok)return false;
+   const stored=await wildlifeCacheOperation(kind,'cache-write',()=>opened.value.put(url,new Response(blob,{headers:{'Content-Type':'model/gltf-binary','Cache-Control':'public, max-age=31536000'}})),1500);
+   if(!stored.ok){console.info('La fauna queda lista en memoria; se omitió una caché persistente lenta:',kind);return false;}
    return true;
-  }catch(error){console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;}
+  }catch(error){
+   markWildlifeStartupTrace(kind,'cache-write-failed',{error:String(error&&error.message||error).slice(0,180)});
+   console.info('El GLB de fauna está listo para esta sesión, pero no pudo persistirse:',kind,error);return false;
+  }
  }
 """
     if html.count(wildlife_loader_marker) != 1:
@@ -1665,16 +1702,41 @@ function setLoadingProgress(value,label){
 
 
     wildlife_download_head = "  const definition=WILDLIFE_MODEL_DEFS[kind];if(!definition)throw new Error('Especie desconocida: '+kind);"
-    wildlife_download_cached = wildlife_download_head + "\n  const cached=await readWildlifeModelCache(kind);if(cached)return cached;"
+    wildlife_download_cached = wildlife_download_head + "\n  markWildlifeStartupTrace(kind,'cache-read');const cached=await readWildlifeModelCache(kind);if(cached){markWildlifeStartupTrace(kind,'blob-from-cache',{bytes:cached.size});return cached;}markWildlifeStartupTrace(kind,'network-fetch-start');"
     if html.count(wildlife_download_head) != 1:
         raise SystemExit("No se encontró la cabecera de descarga de fauna.")
     html = html.replace(wildlife_download_head, wildlife_download_cached, 1)
 
     wildlife_blob_ready = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   return blob;"
-    wildlife_blob_persist = "   if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   await saveWildlifeModelCache(kind,blob);\n   return blob;"
+    wildlife_blob_persist = "   markWildlifeStartupTrace(kind,'glb-validation');if(!await isValidGLB(blob))throw new Error(kind+': archivo GLB no válido.');\n   markWildlifeStartupTrace(kind,'cache-persist');await saveWildlifeModelCache(kind,blob);\n   markWildlifeStartupTrace(kind,'blob-ready',{bytes:blob.size});return blob;"
     if html.count(wildlife_blob_ready) != 1:
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
+
+    wildlife_stream_read_marker = "   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),88,90);"
+    wildlife_stream_read_replacement = "   markWildlifeStartupTrace(kind,'network-response-ready',{status:response.status});\\n   markWildlifeStartupTrace(kind,'glb-stream-read');\\n"+wildlife_stream_read_marker
+    if html.count(wildlife_stream_read_marker) != 1:
+        raise SystemExit("No se encontró el punto único de lectura del cuerpo GLB de fauna.")
+    html = html.replace(wildlife_stream_read_marker, wildlife_stream_read_replacement, 1)
+
+    wildlife_import_trace_marker = "   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;"
+    wildlife_import_trace_replacement = "   markWildlifeStartupTrace(kind,'glb-container-inspection');\\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\\n   markWildlifeStartupTrace(kind,'babylon-import');"
+    if html.count(wildlife_import_trace_marker) != 1:
+        raise SystemExit("No se encontró el punto único de inspección/importación GLB de fauna.")
+    html = html.replace(wildlife_import_trace_marker, wildlife_import_trace_replacement, 1)
+
+    wildlife_texture_trace_marker = "   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
+    wildlife_texture_trace_replacement = "   markWildlifeStartupTrace(kind,'texture-readiness');\\n"+wildlife_texture_trace_marker+"\\n   markWildlifeStartupTrace(kind,'rig-validation');"
+    if html.count(wildlife_texture_trace_marker) != 1:
+        raise SystemExit("No se encontró el punto único de espera de texturas de fauna.")
+    html = html.replace(wildlife_texture_trace_marker, wildlife_texture_trace_replacement, 1)
+
+    wildlife_download_catch_marker = "  }catch(err){if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
+    wildlife_download_catch_replacement = "  }catch(err){markWildlifeStartupTrace(kind,'download-failed',{error:String(err&&err.message||err).slice(0,180)});if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
+    if html.count(wildlife_download_catch_marker) != 1:
+        raise SystemExit("No se encontró el catch único de descarga GLB de fauna.")
+    html = html.replace(wildlife_download_catch_marker, wildlife_download_catch_replacement, 1)
+
 
     glb_validator_marker = " async function isValidGLB(blob){\n  if(!(blob instanceof Blob)||blob.size<500000)return false;\n  try{const bytes=await blob.slice(0,4).arrayBuffer();const magic=new Uint8Array(bytes);return magic.length===4&&magic[0]===0x67&&magic[1]===0x6c&&magic[2]===0x54&&magic[3]===0x46;}catch(_){return false;}\n }"
     glb_validator_required = r""" async function inspectGLBContainer(blob){
