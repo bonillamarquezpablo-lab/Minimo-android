@@ -136,7 +136,7 @@ assert.ok(dynamicFilterSource.includes('octree.dynamicContent=spatialEmptyDynami
   'The render path must traverse actor groups and a bounded ungrouped fallback, not every dynamic mesh candidate.');
 assert.equal(dynamicFilterSource.split('scene.getRenderId()').length-1,1,'Do not call Scene.getRenderId more than once per filter pass.');
 assert.ok(builder.includes('const buildSpatialActorBoundsGroups=async()=>{') && builder.includes('for(let node=mesh;node&&node!==scene;node=node.parent)') && builder.includes('animatedTransformTargets.has(node)') && builder.includes('mesh.__elsnSpatialActorBoundsGroup=group;') && builder.includes('actorBoundsNestedGroupedMeshes'), 'Rigid actor components, including nested neutral GLB pivots, must be grouped once under their common moving root.');
-assert.ok(builder.includes('mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0') && builder.includes('animatedTransformTargets.has(node)') && builder.includes('if(Array.isArray(node.animations)&&node.animations.length)'), 'Skinned, morph-driven, billboard and independently animated components must remain on the safe per-mesh path.');
+assert.ok(builder.includes('mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0') && builder.includes('animatedTransformTargets.has(node)') && builder.includes('(Array.isArray(node.animations)&&node.animations.length)'), 'Skinned, morph-driven, billboard and independently animated components must remain on the safe per-mesh path.');
 assert.ok(dynamicFilterSource.includes('group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera') &&
   dynamicFilterSource.includes('plane.normal.x*center.x') &&
   dynamicFilterSource.includes('if(!visible)continue;') &&
