@@ -4823,10 +4823,8 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
  const targetFrameRate=isPerformanceMode?30:60;
- const qualityRuntimeAdaptiveActive=!isPerformanceMode;
- const qualityDprAdaptiveFloor=isTouchDevice
-  ?(highHeadroomQualityMobile?Math.min(qualityDpr,Math.max(2.85,qualityDpr*.76)):Math.min(qualityDpr,Math.max(1.15,qualityDpr*.79)))
-  :Math.min(qualityDpr,Math.max(1.25,qualityDpr*.80));
+ const qualityRuntimeAdaptiveActive=false;
+ const qualityDprAdaptiveFloor=qualityDpr;
  const qualityFrameWindow=new Float32Array(120),qualityCpuWindow=new Float32Array(120);
  let qualityWindowCursor=0,qualityWindowCount=0,lastQualityScaleChangeAt=0,lastQualityWarningAt=0;
  const qualityAdaptiveState={enabled:qualityRuntimeAdaptiveActive,reason:'native-quality',gpuBoundInferred:false,frameP95Ms:null,cpuP95Ms:null,minimumRenderDpr:qualityDprAdaptiveFloor,lastChangeAt:0,scaleChanges:0,longFrameCount:0};
@@ -4873,6 +4871,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   const gpuBound=frameP95!==null&&cpuP95!==null&&frameP95>18.5&&cpuP95<Math.max(12,frameP95*.68);
   qualityAdaptiveState.gpuBoundInferred=!!gpuBound;
   const now=performance.now(),adaptiveEnabled=qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive;
+  if(!adaptiveEnabled&&gpuBound)qualityAdaptiveState.reason='gpu-pressure-native-resolution-preserved';
+  else if(!adaptiveEnabled&&frameP95>18.5&&cpuP95!==null&&cpuP95>=Math.max(12,frameP95*.68))qualityAdaptiveState.reason='cpu-bound-native-resolution-preserved';
+  else if(!adaptiveEnabled)qualityAdaptiveState.reason='native-quality';
   if(adaptiveEnabled&&document.visibilityState==='visible'&&!isPerformanceMode){
    if(gpuBound&&qualityDprCurrent>qualityDprAdaptiveFloor+.01&&now-lastQualityScaleChangeAt>=1400){
     setAdaptiveQualityDpr(qualityDprCurrent-.12,'gpu-pressure-inferred',now);
@@ -4881,7 +4882,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    }else if(frameP95<14.2&&qualityDprCurrent<qualityDpr-.01&&now-lastQualityScaleChangeAt>=3200){
     setAdaptiveQualityDpr(qualityDprCurrent+.06,'headroom-recovery',now);
    }else if(gpuBound&&qualityDprCurrent<=qualityDprAdaptiveFloor+.01){
-    qualityAdaptiveState.reason='gpu-pressure-at-quality-floor';
+    qualityAdaptiveState.reason='gpu-pressure-native-resolution-preserved';
    }else if(!gpuBound&&frameP95<=18.5&&qualityDprCurrent>=qualityDpr-.01){
     qualityAdaptiveState.reason='native-quality';
    }
