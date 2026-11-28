@@ -49,6 +49,10 @@ assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
   startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland')")&&
   startupCoastWarmup.includes("coastReport.checks={seabed:")&&startupCoastWarmup.includes("coastReport.checks={seabed:")&&
   startupCoastWarmup.includes("degraded-timeout")&&
+  startupCoastWarmup.includes("coastReport.shaderCompile.status==='deferred'")&&
+  startupCoastWarmup.includes("!coastReport.reflectionTemporarilyDisabled")&&
+  startupCoastWarmup.includes("shaderWarmupComplete:false")&&
+  startupCoastWarmup.includes("runtimeFallback:'Babylon native compilation'")&&
   startupCoastWarmup.includes("recordStartupTask('Costa, rompiente y reflejos de la isla inicial'"),
   "Initial coastal stages and waits must be individually timed and diagnosed, with a bounded 8-second deadline and a fail-open recovery path.");
 assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)'),
