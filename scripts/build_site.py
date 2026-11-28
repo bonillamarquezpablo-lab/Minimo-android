@@ -2003,7 +2003,7 @@ function setLoadingProgress(value,label){
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014,flightClockOrigin:null,flightDistanceMeters:0,flightStallSeconds:0,flightVisualStallSeconds:0,flightCenterX:-36,flightCenterZ:-18});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
@@ -5380,12 +5380,16 @@ function getFrameMaintenanceTimingSnapshot(){
     const radius=Number.isFinite(Number(b.radius))?Math.max(18,Number(b.radius)):18;
     const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
     const baseAngularSpeed=clampGullFlight(Number(b.speed)||.18,.12,.28);
-    b.flightElapsed=(Number(b.flightElapsed)||0)+frameDelta;
-    const flightElapsed=b.flightElapsed;
-    const angle=phase+flightElapsed*baseAngularSpeed+.08*Math.sin(flightElapsed*.47+phase*.37);
-    const angularRate=baseAngularSpeed+.08*.47*Math.cos(flightElapsed*.47+phase*.37);
-    const centerX=Number.isFinite(Number(b.flightCenterX))?Number(b.flightCenterX):-36;
-    const centerZ=Number.isFinite(Number(b.flightCenterZ))?Number(b.flightCenterZ):-18;
+    if(!Number.isFinite(Number(b.flightClockOrigin)))b.flightClockOrigin=nowSeconds;
+    const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
+    b.flightElapsed=flightElapsed;
+    const gustPhase=flightElapsed*.19+phase*1.4;
+    const angle=phase+flightElapsed*baseAngularSpeed+.08*Math.sin(flightElapsed*.47+phase*.37)+.025*Math.sin(gustPhase);
+    const angularRate=baseAngularSpeed+.08*.47*Math.cos(flightElapsed*.47+phase*.37)+.025*.19*Math.cos(gustPhase);
+    const homeCenterX=Number.isFinite(Number(b.flightCenterX))?Number(b.flightCenterX):-36;
+    const homeCenterZ=Number.isFinite(Number(b.flightCenterZ))?Number(b.flightCenterZ):-18;
+    const centerX=homeCenterX+8*Math.sin(flightElapsed*.035+phase*.8);
+    const centerZ=homeCenterZ+6*Math.sin(flightElapsed*.027+phase*1.3);
     const epsilon=.012;
     const currentPoint=evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ);
     const previousPoint=evaluateCoastalGullFlightPoint(angle-epsilon,phase,radius,altitude,centerX,centerZ);
@@ -5416,8 +5420,8 @@ function getFrameMaintenanceTimingSnapshot(){
     if(actorPrevious){
      const dx=actorPosition.x-actorPrevious.x,dy=actorPosition.y-actorPrevious.y,dz=actorPosition.z-actorPrevious.z;
      b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
-     if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;
-     else moving++;
+     if(b.flightLastStepMeters<.0001){gullFlightRenderState.stalledBirds++;b.flightStallSeconds=(Number(b.flightStallSeconds)||0)+frameDelta;}
+     else{moving++;b.flightDistanceMeters=(Number(b.flightDistanceMeters)||0)+b.flightLastStepMeters;b.flightStallSeconds=0;}
     }
     b.flightLastPosition={x:actorPosition.x,y:actorPosition.y,z:actorPosition.z};
     const visualRoot=hierarchy.visualRoot;
@@ -5432,7 +5436,8 @@ function getFrameMaintenanceTimingSnapshot(){
      if(lastVisual){
       const dx=renderedPosition.x-lastVisual.x,dy=renderedPosition.y-lastVisual.y,dz=renderedPosition.z-lastVisual.z;
       b.flightLastVisualStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
-      if(b.flightLastVisualStepMeters<.0001)gullFlightRenderState.stalledVisualBirds++;
+      if(b.flightLastVisualStepMeters<.0001){gullFlightRenderState.stalledVisualBirds++;b.flightVisualStallSeconds=(Number(b.flightVisualStallSeconds)||0)+frameDelta;}
+      else b.flightVisualStallSeconds=0;
      }
      b.flightLastVisualPosition=renderedPosition;
     }
