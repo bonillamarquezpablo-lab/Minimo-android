@@ -68,7 +68,7 @@ const titleVersion=indexHtml.split('Capítulo I: Un hombre sin tierra · ')[1]?.
 const buildVersion=buildSite.split('USER_AGENT = "EL-SIN-NOMBRE-WebBuild/')[1]?.split(' ')[0];
 const shellVersion=serviceWorker.split('const SHELL_CACHE = "el-sin-nombre-shell-')[1]?.split('"')[0];
 
-assert.equal(expectedVersion,"0.6.365","The release validator must target the packaged 0.6.365 release.");
+assert.equal(expectedVersion,"0.6.366","The release validator must target the packaged 0.6.366 release.");
 assert.ok(indexHtml.includes("meshes.forEach(mesh=>{mesh.isPickable=false;mesh.receiveShadows=true;mesh.alwaysSelectAsActiveMesh=!!(mesh.skeleton||Number(mesh.numBoneInfluencers)>0);});"),
   "The published HTML must preserve frustum bypass on skinned fauna meshes after all setup passes.");
 assert.ok(buildSite.includes("mature-scots-pine-tree.glb") &&
@@ -139,10 +139,11 @@ assert.ok(serviceWorker.includes('"./scripts/npc-village-brain-core.js?v=0.6.356
   buildSite.includes('npc-village-brain-core.js?v=0.6.356-npcbrain7'),
   "The NPC brain must use the same versioned URL in the generated page and the service-worker shell cache.");
 assert.match(buildSite,/if game_version != "0\.6\.274"/,"The build must only promote the known 0.6.274 source.");
-assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.365"\)/,"The build must promote every visible source version to 0.6.365.");
-assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!qualityLabAdaptiveActive") && buildSite.includes("qualityScaleAdaptive:qualityLabAdaptiveActive") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must keep its native render scale fixed for the session.");
+assert.match(buildSite,/html = html\.replace\("0\.6\.274", "0\.6\.365"\)/,"The build must promote every visible source version to 0.6.366.");
+assert.ok(buildSite.includes("qualityDprCurrent=qualityDpr") && buildSite.includes("qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{"),"Quality must keep its native render scale fixed for the session.");
 const qualityAdaptiveCode=buildSite.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||"";
-assert.ok(!qualityAdaptiveCode.includes("engine.setHardwareScalingLevel") && !qualityAdaptiveCode.includes("qualityDprSlowSamples") && !qualityAdaptiveCode.includes("qualityDprStableSamples"),"Runtime pressure must not trigger automatic resolution reduction; manual DPR changes remain debug-only.");
+assert.ok(qualityAdaptiveCode.includes("qualityRuntimeAdaptiveActive=!isPerformanceMode") && qualityAdaptiveCode.includes("qualityDprAdaptiveFloor") && qualityAdaptiveCode.includes("engine.setHardwareScalingLevel(1/bounded)") && qualityAdaptiveCode.includes("gpu-pressure-inferred") && qualityAdaptiveCode.includes("cpu-bound-no-resolution-change") && qualityAdaptiveCode.includes("headroom-recovery"),"Adaptive resolution must use bounded, reversible GPU-pressure decisions and must not lower resolution for CPU-bound frames.");
+assert.ok(!qualityAdaptiveCode.includes("qualityDprSlowSamples") && !qualityAdaptiveCode.includes("qualityDprStableSamples"),"The adaptive controller must use bounded rolling frame and CPU windows.");
 assert.ok(buildSite.includes("Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)"),"The high-headroom mobile Quality startup scale must preserve its original full-resolution setting.");
 assert.ok(buildSite.includes("const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024"),"The original mobile water-reflection resolution must be preserved.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?10:4"),"The original flagship mobile shadow-refresh cadence must be preserved.");
@@ -152,7 +153,7 @@ assert.ok(labSource.includes("BENCHMARK_MS=15000") && labSource.includes("PRESET
 assert.ok(buildSite.includes('legacy_fsr_guard = "if(" + "fsr1" + "Candidate){"') && buildSite.includes('html.replace(legacy_fsr_guard, "if(!fsr1Candidate)'),"The legacy FSR branch must be guarded before scene startup.");
 assert.ok(buildSite.includes('"loaderVersion": BABYLON_VERSION') && buildSite.includes('"defaultBackend": "WebGL2-preferred"'),"The asset manifest must record the exact Babylon/glTF loader pair and validated backend.");
 assert.ok(buildSite.includes("new B.EngineInstrumentation(engine)") && buildSite.includes("new B.SceneInstrumentation(scene)"),"The build must expose Babylon-native profiling only to diagnostics.");
-assert.ok(buildSite.includes("qualityScaleFixed:!qualityLabAdaptiveActive") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{") && buildSite.includes("physicalPixelCoveragePct") && !qualityAdaptiveCode.includes("engine.setHardwareScalingLevel"),"The Quality profile must not lower resolution automatically at runtime.");
+assert.ok(buildSite.includes("qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)") && buildSite.includes("window.__ELSN_RENDER_RESOLUTION=()=>{") && buildSite.includes("physicalPixelCoveragePct") && buildSite.includes("window.__ELSN_ADAPTIVE_RESOLUTION__"),"The Quality profile must expose its bounded adaptive render scale and physical-pixel coverage.");
 assert.match(buildSite,/BABYLON_VERSION = "9\.35\.0"/,"The packaged engine must include the DynamicTexture null-update fix.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/babylon.js"'),"The engine URL must use the pinned Babylon version.");
 assert.ok(buildSite.includes('f"https://cdn.babylonjs.com/v{BABYLON_VERSION}/loaders/babylonjs.loaders.min.js"'),"The glTF loader must match the engine version.");
@@ -168,14 +169,14 @@ assert.ok(buildSite.includes('if url.startswith("https://grab3d.com/")'),
   "Large rigged packages from Grab3D must be removed from the concurrent download pool.");
 assert.ok(buildSite.includes("for relative, (url, minimum, kind) in grab3d_downloads.items():"),
   "Grab3D model downloads must be serialized while preserving all validation.");
-assert.ok(buildSite.includes("const targetFrameRate=120;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
+assert.ok(buildSite.includes("const targetFrameRate=60;") && buildSite.includes("renderedFps=measured") && buildSite.includes("fpsHudTime+=rawFrameMs/1000;fpsHudFrames++"),"The Quality runtime must report rendered FPS against a 120 Hz capability target without imposing a lower render cadence.");
 assert.ok(buildSite.includes("frame_loop_replacement = frame_loop_marker") && buildSite.includes("frame_clock_replacement = frame_clock_marker"),"The Babylon loop must remain uncapped and render at the available device refresh rate.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile?2048:1024"),"High-headroom phones must get higher-resolution sand textures.");
 assert.ok(buildSite.includes("reflectionFilteredMeshCount") && buildSite.includes("thinInstanceBatch") && buildSite.includes("list.length<180"),"Water reflections must filter non-essential foliage, instance batches and limit pass submissions.");
 assert.ok(buildSite.includes("renderPipeline.sharpen.edgeAmount=.34") && buildSite.includes("renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))"),"Mobile quality uses native 2x MSAA and restrained sharpening.");
 assert.ok(buildSite.includes("nordicWaterMirror.refreshRate=isTouchDevice?12:8"),"Mobile water reflections must be throttled to protect frame time.");
 assert.ok(buildSite.includes("highHeadroomQualityMobile,reportedMemory"),"The atmosphere system must receive the detected flagship GPU tier.");
-assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.365")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.365.");
+assert.ok(buildSite.includes('game_version = version_match.group(1).strip()') && buildSite.includes('html = html.replace("0.6.274", "0.6.366")'),"After validating the source build marker, the builder must promote the packaged release version to 0.6.366.");
 assert.match(deployWorkflow,/group: github-pages-\$\{\{ github\.ref \}\}/,"Pages deployments must be serialized per branch.");
 assert.match(deployWorkflow,/uses: actions\/deploy-pages@v5/,"The release must publish through native GitHub Pages.");
 assert.ok(!indexHtml.includes('0.6.256'),"Visible HUD and runtime logs must not report an obsolete build.");
@@ -266,10 +267,10 @@ assert.ok(buildSite.includes('visualBodyLocalPosition:visualBody.position.clone(
 assert.ok(buildSite.includes('combat_damage_replacement') && buildSite.includes('enemy_ai_alive_replacement'), 'Dead logical combat entities cannot retain damage authority.');
 console.log('OK: release validator, HUD, service worker, build and deployment use one synchronized version.');
 
-assert.ok(expectedVersion==="0.6.365" && buildSite.includes('html = html.replace("0.6.274", "0.6.365")'), "The correction package must be release 0.6.365.");
+assert.ok(expectedVersion==="0.6.366" && buildSite.includes('html = html.replace("0.6.274", "0.6.366")'), "The correction package must be release 0.6.366.");
 assert.ok(buildSite.includes('updateAmbientGullFlight(now);') && buildSite.includes('scene.onBeforeRenderObservable.add'), "The flock must be updated after Babylon animation evaluation in the pre-render observer.");
 assert.ok(buildSite.includes('warrior_attach_replacement') && buildSite.includes('RealCastawayStickBranch') && buildSite.includes('function updateAmbientGullFlight(nowSeconds){') && buildSite.includes('window.__ELSN_GULL_FLIGHT_RENDER__') && buildSite.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && buildSite.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && buildSite.includes('window.getGameVisualActorDiagnostics'), "The release must include the club, warrior and gull fixes, continuous gull visibility recovery, and read-only acceptance diagnostics.");
-assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.365-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
+assert.ok(serviceWorker.includes("el-sin-nombre-shell-0.6.366-npcbrain7-diag7") && serviceWorker.includes("npc-village-brain-core.js?v=0.6.356-npcbrain7"), "The new shell cache must not reuse the previous NPC brain module entry.");
 assert.ok(serviceWorker.includes('"./assets/vendor/babylon.js"') && serviceWorker.includes('"./assets/vendor/babylonjs.loaders.min.js"') && serviceWorker.includes('"./assets/vendor/meshopt_decoder.js"'),
   "The shell install must pre-cache Babylon, the glTF loader and meshopt so offline reload can boot.");
 assert.ok(serviceWorker.includes('url.pathname.endsWith("/assets/vendor/babylon.js")') && serviceWorker.includes('cacheFirst(request, SHELL_CACHE)'),
