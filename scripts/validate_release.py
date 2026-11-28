@@ -714,6 +714,15 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
+    coast_reflection_fallback_markers = (
+        "coastReport.shaderCompile.status==='deferred'",
+        "!coastReport.reflectionTemporarilyDisabled",
+        "shaderWarmupComplete:false",
+        "runtimeFallback:'Babylon native compilation'",
+    )
+    missing_coast_reflection_fallback = [marker for marker in coast_reflection_fallback_markers if marker not in index_html]
+    if missing_coast_reflection_fallback:
+        fail("El espejo de agua debe seguir operativo cuando el calentamiento de shaders se difiere a Babylon: " + ", ".join(missing_coast_reflection_fallback))
     fps_pacing_markers = (
         "const targetFrameRate=isPerformanceMode?30:60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
