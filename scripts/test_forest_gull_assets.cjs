@@ -53,10 +53,10 @@ assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.include
   'The imported skeleton animation must not be overridden by legacy synthetic wing rotations.');
 assert.ok(html.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add') && html.includes('nativeTarget&&now-state.lastMotionAt<.85') && html.includes('const flap=Math.sin(now*7.1+(Number(bird.phase)||0))*.42*item.sign'), 'When native Fly stops moving a wing pivot, an articulated fallback must flap both wings.');
 assert.ok(html.includes('clampGullFlight(Number(b.speed)||.18,.12,.28)') && html.includes('speed:.18+i*.014') && html.includes("b.flightMode=gliding?'glide':'flap';"), 'Gull cruise speed must remain bounded and include natural flap/glide phases.');
-assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
+assert.ok(html.includes("flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
+  html.includes("alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
   html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
-  'The live gull diagnostic rig must expose the two wings, tail, head, neck and both articulated legs.');
+  'The live gull diagnostic rig must expose its imported hierarchy, rendered meshes, two wings, tail, head, neck and both articulated legs.');
 assert.ok(html.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   html.includes("alignment:{source:'native-Fly-midpoint'") && html.includes("alignmentDot<.995"),
   'The measured body alignment must come from the actual native Fly pose and reject residual tilt.');
