@@ -4878,7 +4878,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    if(gpuBound&&qualityDprCurrent>qualityDprAdaptiveFloor+.01&&now-lastQualityScaleChangeAt>=1400){
     setAdaptiveQualityDpr(qualityDprCurrent-.12,'gpu-pressure-inferred',now);
    }else if(frameP95>18.5&&cpuP95!==null&&cpuP95>=Math.max(12,frameP95*.68)){
-    qualityAdaptiveState.reason='cpu-bound-no-resolution-change';
+    qualityAdaptiveState.reason='cpu-bound-native-resolution-preserved';
    }else if(frameP95<14.2&&qualityDprCurrent<qualityDpr-.01&&now-lastQualityScaleChangeAt>=3200){
     setAdaptiveQualityDpr(qualityDprCurrent+.06,'headroom-recovery',now);
    }else if(gpuBound&&qualityDprCurrent<=qualityDprAdaptiveFloor+.01){
