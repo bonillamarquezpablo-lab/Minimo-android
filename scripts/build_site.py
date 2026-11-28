@@ -1713,23 +1713,11 @@ function setLoadingProgress(value,label){
         raise SystemExit("No se encontró el punto único para persistir cada GLB de fauna validado.")
     html = html.replace(wildlife_blob_ready, wildlife_blob_persist, 1)
 
-    wildlife_stream_read_marker = "   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),88,90);"
+    wildlife_stream_read_marker = "   const blob=await responseBlobWithProgress(response,'Cargando modelo animal · '+kind.toUpperCase(),68,70);"
     wildlife_stream_read_replacement = "   markWildlifeStartupTrace(kind,'network-response-ready',{status:response.status});\\n   markWildlifeStartupTrace(kind,'glb-stream-read');\\n"+wildlife_stream_read_marker
     if html.count(wildlife_stream_read_marker) != 1:
         raise SystemExit("No se encontró el punto único de lectura del cuerpo GLB de fauna.")
     html = html.replace(wildlife_stream_read_marker, wildlife_stream_read_replacement, 1)
-
-    wildlife_import_trace_marker = "   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;"
-    wildlife_import_trace_replacement = "   markWildlifeStartupTrace(kind,'glb-container-inspection');\\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\\n   markWildlifeStartupTrace(kind,'babylon-import');"
-    if html.count(wildlife_import_trace_marker) != 1:
-        raise SystemExit("No se encontró el punto único de inspección/importación GLB de fauna.")
-    html = html.replace(wildlife_import_trace_marker, wildlife_import_trace_replacement, 1)
-
-    wildlife_texture_trace_marker = "   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
-    wildlife_texture_trace_replacement = "   markWildlifeStartupTrace(kind,'texture-readiness');\\n"+wildlife_texture_trace_marker+"\\n   markWildlifeStartupTrace(kind,'rig-validation');"
-    if html.count(wildlife_texture_trace_marker) != 1:
-        raise SystemExit("No se encontró el punto único de espera de texturas de fauna.")
-    html = html.replace(wildlife_texture_trace_marker, wildlife_texture_trace_replacement, 1)
 
     wildlife_download_catch_marker = "  }catch(err){if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
     wildlife_download_catch_replacement = "  }catch(err){markWildlifeStartupTrace(kind,'download-failed',{error:String(err&&err.message||err).slice(0,180)});if(err&&err.name==='AbortError')throw new Error(kind+': descarga agotada.');throw err;}"
@@ -1830,10 +1818,16 @@ function setLoadingProgress(value,label){
     html = html.replace(glb_validator_marker, glb_validator_required, 1)
 
     wildlife_import_snapshot_marker = "  let imported=null,objectUrl=null,actor=null;\n  try{\n   // Import each GLB independently into the live scene; never clone a skinned mesh/skeleton.\n   objectUrl=URL.createObjectURL(blob);"
-    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
+    wildlife_import_snapshot_marker_replacement = "  let imported=null,objectUrl=null,actor=null;\n  const beforeMeshes=new Set(scene.meshes||[]),beforeNodes=new Set(scene.transformNodes||[]),beforeSkeletons=new Set(scene.skeletons||[]),beforeGroups=new Set(scene.animationGroups||[]);\n  try{\n   markWildlifeStartupTrace(kind,'glb-container-inspection');\n   const glbRecord=await inspectGLBContainer(blob),sourceJson=glbRecord&&glbRecord.json;\n   if(!sourceJson||!(sourceJson.skins||[]).some(skin=>Array.isArray(skin.joints)&&skin.joints.length>=12)||!(sourceJson.animations||[]).some(animation=>Array.isArray(animation.channels)&&animation.channels.length>0&&Array.isArray(animation.samplers)&&animation.samplers.length>0)||!(sourceJson.nodes||[]).some(node=>Number.isInteger(node.mesh)&&Number.isInteger(node.skin)))throw new Error(kind+': el GLB no contiene un cuerpo riggeado y clips de animación completos.');\n   objectUrl=URL.createObjectURL(blob);"
     if html.count(wildlife_import_snapshot_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_import_snapshot_marker.")
     html = html.replace(wildlife_import_snapshot_marker, wildlife_import_snapshot_marker_replacement, 1)
+
+    wildlife_babylon_import_marker = "   imported=await timedGlbStage('Fauna '+kind,'importación Babylon',()=>B.SceneLoader.ImportMeshAsync('',objectUrl,'',scene,undefined,'.glb'),blob.size);"
+    wildlife_babylon_import_replacement = wildlife_babylon_import_marker + "\\n   markWildlifeStartupTrace(kind,'babylon-import-ready');"
+    if html.count(wildlife_babylon_import_marker) != 1:
+        raise SystemExit("No se encontró el punto único de importación Babylon de fauna.")
+    html = html.replace(wildlife_babylon_import_marker, wildlife_babylon_import_replacement, 1)
 
     wildlife_animal_marker = "const animal={kind,root:actor,"
     wildlife_animal_replacement = "const animal={textureReadiness,kind,root:actor,"
@@ -1842,7 +1836,7 @@ function setLoadingProgress(value,label){
     html = html.replace(wildlife_animal_marker, wildlife_animal_replacement, 1)
 
     wildlife_mesh_texture_marker = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');"
-    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);"
+    wildlife_mesh_texture_marker_replacement = "   const meshes=getRootMeshes(roots).filter(mesh=>mesh.getTotalVertices()>0);\n   if(!meshes.length)throw new Error('GLB sin malla visible.');\n   markWildlifeStartupTrace(kind,'texture-readiness');\n   const textureReadiness=await waitForAnimalTextures(meshes,kind);\n   markWildlifeStartupTrace(kind,'rig-validation');"
     if html.count(wildlife_mesh_texture_marker) != 1:
         raise SystemExit("No se encontró el marcador único: wildlife_mesh_texture_marker.")
     html = html.replace(wildlife_mesh_texture_marker, wildlife_mesh_texture_marker_replacement, 1)

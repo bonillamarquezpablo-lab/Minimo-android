@@ -41,10 +41,11 @@ assert.ok(html.includes("wildlifeCacheOperation") &&
   html.includes("window.__ELSN_WILDLIFE_STARTUP_TRACE__"),
   'Persistent wildlife cache reads and writes must be bounded and expose their live stage, so a stalled Cache API cannot hold startup indefinitely.');
 assert.ok(html.includes("glb-container-inspection") &&
-  html.includes("babylon-import") &&
+  html.includes("babylon-import-ready") &&
   html.includes("texture-readiness") &&
   html.includes("rig-validation") &&
   html.includes("network-fetch-start") &&
+  html.includes("glb-stream-read") &&
   html.includes("cache-persist"),
   'Wildlife startup evidence must identify the exact model stage that is waiting.');
 assert.ok(html.includes('window.__ELSN_STARTUP_RESOURCE_GATE__') && html.includes('startupResourceFailures.length'),
