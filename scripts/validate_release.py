@@ -664,6 +664,8 @@ def main() -> None:
             fail("La actualización de DynamicTexture debe recuperar el motor vivo o descartar de forma segura una textura huérfana: " + dynamic_texture_guard)
     spatial_selection_markers = (
         "scene.createOrUpdateSelectionOctree(64,3)",
+        "scene.selectionOctree!==octree",
+        "typeof octree.select!=='function'",
         "await yieldSpatialWorkFrame()",
         "babylonOctreeBuildMs",
         "dynamicClassificationMs",
