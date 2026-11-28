@@ -46,11 +46,11 @@ assert.ok(html.includes("budgetMs:coastBudgetMs")&&html.includes("degraded-timeo
   html.includes("KHR_parallel_shader_compile")&&html.includes("long-animation-frame")&&
   html.includes("frameDiagnostics:window.__ELSN_FRAME_DIAGNOSTICS__"),
   'Coast diagnostics must measure the three stages, enforce 8 seconds, warm reflection shaders asynchronously and export Long Animation Frame evidence.');
-assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__={")&&
-  html.includes("syncActiveBeachIsland();")&&
-  html.includes("syncActiveTidalFoamIsland();")&&
-  html.includes("syncNordicWaterReflectionIsland();"),
-  'The full initial coastal systems must be built before the player enters the world.');
+assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__=coastReport")&&
+  html.includes("runCoastStage('syncActiveBeachIsland',()=>syncActiveBeachIsland())")&&
+  html.includes("runCoastStage('syncActiveTidalFoamIsland',()=>syncActiveTidalFoamIsland())")&&
+  html.includes("runCoastStage('syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland())"),
+  'All three initial coastal preparation routines must run and be measured before world entry, with the coast-specific fallback handled separately.');
 
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
@@ -81,4 +81,4 @@ assert.ok(html.indexOf("Preparando fauna de la isla inicial") < html.indexOf("Pr
 assert.ok(sw.includes('const WILDLIFE_MODEL_CACHE = "el-sin-nombre-models-wildlife-0128ca51-v1";'));
 assert.ok(sw.includes('WILDLIFE_MODEL_CACHE].includes(key)'),
   'Service Worker activation must preserve the persistent wildlife model cache.');
-console.log('STARTUP RESOURCE GATE OK: same-origin fauna, persistent cache, HTMLAudio streaming and complete pre-entry readiness.');
+console.log('STARTUP RESOURCE GATE OK: same-origin fauna, persistent cache, HTMLAudio streaming and bounded coastal readiness fallback.');
