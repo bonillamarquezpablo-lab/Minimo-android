@@ -38,8 +38,14 @@ assert.ok(html.includes("startupResourceSnapshot.world.islands!==13"));
 
 assert.ok(html.includes("coast:window.__ELSN_INITIAL_COAST_WARMUP__||null"),
   'The startup report must include measured initial beach, seabed, foam and reflection readiness.');
-assert.ok(html.includes("startupResourceSnapshot.coast.status!=='ready'"),
-  'Gameplay must remain blocked until the complete initial coast is ready.');
+assert.ok(html.includes("!['ready','degraded','degraded-timeout'].includes(startupResourceSnapshot.coast.status)"),
+  'The final gate must accept a diagnosed degraded coast after its fixed deadline.');
+assert.ok(html.includes("budgetMs:coastBudgetMs")&&html.includes("degraded-timeout")&&
+  html.includes("syncActiveBeachIsland")&&html.includes("syncActiveTidalFoamIsland")&&
+  html.includes("syncNordicWaterReflectionIsland")&&html.includes("forceCompilationAsync(mesh)")&&
+  html.includes("KHR_parallel_shader_compile")&&html.includes("long-animation-frame")&&
+  html.includes("frameDiagnostics:window.__ELSN_FRAME_DIAGNOSTICS__"),
+  'Coast diagnostics must measure the three stages, enforce 8 seconds, warm reflection shaders asynchronously and export Long Animation Frame evidence.');
 assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__={")&&
   html.includes("syncActiveBeachIsland();")&&
   html.includes("syncActiveTidalFoamIsland();")&&
