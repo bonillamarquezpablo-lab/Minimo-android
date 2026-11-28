@@ -4546,6 +4546,14 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  }"""
     mineable_rock_replacement = """// Reuse shared materials and reject placements that intersect a tree trunk or another deposit.
   const mineableGraniteMaterial=M.stoneLight;
+  // One pair of immutable source geometries serves every mineable boulder.
+  // Per-rock CreateIcoSphere previously allocated duplicate vertex/index buffers.
+  const mineableRockGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockGeometryTemplate',{radius:1,subdivisions:2,flat:true},scene);
+  const mineableRockCapGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockCapGeometryTemplate',{radius:1,subdivisions:1,flat:true},scene);
+  mineableRockGeometryTemplate.material=mineableGraniteMaterial;mineableRockCapGeometryTemplate.material=M.stone;
+  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=false;source.visibility=0;source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
+  const mineableRockInstancingStats={instances:0,instanceMeshes:0,sourceGeometryMeshes:2,sharedGeometry:true};
+  window.__ELSN_ROCK_INSTANCING__=()=>({...mineableRockInstancingStats});
   const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
   window.__ELSN_ROCK_PLACEMENT__=()=>{let overlaps=0,minClearance=Infinity;for(const rock of rocks){if(!rock||!rock.alive)continue;for(const tree of trees){if(!tree||!tree.alive)continue;const clearance=Math.hypot(rock.x-tree.x,rock.z-tree.z)-(Number(rock.radius)||.5)-(Number(tree.radius)||.7)-.45;minClearance=Math.min(minClearance,clearance);if(clearance<-.05)overlaps++;}}return {...mineableRockPlacementStats,overlapPairs:overlaps,minTreeClearanceMeters:Number.isFinite(minClearance)?Number(minClearance.toFixed(3)):null};};
   function createRock(x,z){
@@ -4573,12 +4581,14 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    if(Math.hypot(placement.x-x,placement.z-z)>.10)mineableRockPlacementStats.relocated++;
    x=placement.x;z=placement.z;mineableRockPlacementStats.placed++;
    const gy=renderedTerrainSurfaceAt(x,z);
-   const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
-   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
+   const serial=(mineableRockInstancingStats.instances+1);
+   const r=mineableRockGeometryTemplate.createInstance('graniteBoulder_'+serial);
+   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.isVisible=true;r.visibility=1;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
-   const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
-   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
+   const cap=mineableRockCapGeometryTemplate.createInstance('rockFacet_'+serial);
+   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.isVisible=true;cap.visibility=1;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
+   mineableRockInstancingStats.instances++;mineableRockInstancingStats.instanceMeshes+=2;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
   }"""
     mineable_rock_pattern = r"(?m)^[ \t]*function createRock\(x,z\)\{\n.*?\n[ \t]*\}"
