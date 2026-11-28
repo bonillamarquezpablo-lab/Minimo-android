@@ -26,6 +26,11 @@ assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
+assert.ok(html.includes('const gullGeneratedIndices=[];for(const mesh of meshes') &&
+  html.includes('if(vertexCount>0&&indexCount===0&&vertexCount%3===0)') &&
+  html.includes('mesh.setIndices(generatedIndices,vertexCount,false)') &&
+  html.includes('generatedIdentityIndices:gullGeneratedIndices'),
+  'Non-indexed gull triangles must receive a lossless identity index buffer before skinning and capture.');
 assert.ok(html.includes('const gullSkinningMeshes=meshes.filter(mesh=>mesh&&mesh.skeleton&&Number(mesh.numBoneInfluencers)>0)') &&
   html.includes('mesh.computeBonesUsingShaders=!useCpuSkinning') &&
   html.includes('const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer)') &&
