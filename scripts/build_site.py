@@ -3303,25 +3303,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.365; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.366; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.365\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.366\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.365.")
-    html = html.replace("0.6.274", "0.6.365")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.366.")
+    html = html.replace("0.6.274", "0.6.366")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'73',build:'0.6.365'"
+    diagnostic_build_replacement = "reportVersion:'74',build:'0.6.366'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.365 para normalizar.")
-    game_version = "0.6.365"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.366 para normalizar.")
+    game_version = "0.6.366"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3362,7 +3362,7 @@ function updateWildlife(dt){
   const physicalPixelHeight=Math.max(1,Math.round(cssHeight*physicalDpr));
   const renderPixels=renderWidth*renderHeight,physicalPixels=physicalPixelWidth*physicalPixelHeight;
   const physicalPixelCoveragePct=Number((renderPixels/Math.max(1,physicalPixels)*100).toFixed(2));
-  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,qualityDprDefault,highHeadroomQualityMobile,constrainedHardware,reportedMemory,hardwareConcurrency:Number(navigator.hardwareConcurrency)||null,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive};
+  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,qualityDprDefault,highHeadroomQualityMobile,constrainedHardware,reportedMemory,hardwareConcurrency:Number(navigator.hardwareConcurrency)||null,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight,qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),minimumRenderDpr:qualityDprAdaptiveFloor,adaptiveResolution:window.__ELSN_ADAPTIVE_RESOLUTION__?window.__ELSN_ADAPTIVE_RESOLUTION():null};
  };"""
     if html.count(render_scale_marker) != 1:
         raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
@@ -3575,7 +3575,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
 
     health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
-    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,physicalPixelCoveragePct:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalPixelCoveragePct:null,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),physicalPixelCoveragePct:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalPixelCoveragePct:null,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
     if html.count(health_memory_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
     html = html.replace(health_memory_marker, health_memory_replacement, 1)
@@ -4125,7 +4125,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Keep the regular render loop free of audit function calls until a scenario
     # is explicitly selected in the diagnostic drawer.
     perf_render_loop_marker = "const perfGpuQuery=beginPerfGpuQuery();const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);"
-    perf_render_loop_replacement = "const performanceAuditActive=perfAuditScenario!=='sin seleccionar',perfGpuQuery=performanceAuditActive?beginPerfGpuQuery():null,renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"
+    perf_render_loop_replacement = "const performanceAuditActive=perfAuditScenario!=='sin seleccionar',perfGpuQuery=performanceAuditActive?beginPerfGpuQuery():null,renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;adaptRenderQuality(dt,rawFrameMs);if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"
     if html.count(perf_render_loop_marker) != 1:
         raise SystemExit("No se encontró exactamente una llamada al perfilador GPU dentro del bucle de renderizado.")
     html = html.replace(perf_render_loop_marker, perf_render_loop_replacement, 1)
@@ -4621,19 +4621,78 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
- // Quality keeps the full native render scale selected at startup. Runtime pressure is
- // measured and reported, never hidden by reducing resolution or scene fidelity.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=120;
- let lastQualityWarningAt=0;
- function adaptRenderQuality(dt){
-  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
-  const fps=renderedFps||engine.getFps(),now=performance.now();
-  if(fps<24&&now-lastQualityWarningAt>=4000){
-   lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la escala de Calidad permanece fija salvo que el laboratorio adaptativo esté activado. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+ const targetFrameRate=60;
+ const qualityRuntimeAdaptiveActive=!isPerformanceMode;
+ const qualityDprAdaptiveFloor=isTouchDevice
+  ?(highHeadroomQualityMobile?Math.min(qualityDpr,Math.max(2.85,qualityDpr*.76)):Math.min(qualityDpr,Math.max(1.15,qualityDpr*.79)))
+  :Math.min(qualityDpr,Math.max(1.25,qualityDpr*.80));
+ const qualityFrameWindow=new Float32Array(120),qualityCpuWindow=new Float32Array(120);
+ let qualityWindowCursor=0,qualityWindowCount=0,lastQualityScaleChangeAt=0,lastQualityWarningAt=0;
+ const qualityAdaptiveState={enabled:qualityRuntimeAdaptiveActive,reason:'native-quality',gpuBoundInferred:false,frameP95Ms:null,cpuP95Ms:null,minimumRenderDpr:qualityDprAdaptiveFloor,lastChangeAt:0,scaleChanges:0,longFrameCount:0};
+ const qualityPercentile=(buffer,count,ratio)=>{
+  const values=[];
+  for(let i=0;i<count;i++){const value=buffer[i];if(Number.isFinite(value)&&value>0)values.push(value);}
+  if(!values.length)return null;
+  values.sort((a,b)=>a-b);
+  return Number(values[Math.min(values.length-1,Math.floor((values.length-1)*ratio))].toFixed(2));
+ };
+ const setAdaptiveQualityDpr=(next,reason,now)=>{
+  const bounded=Math.max(qualityDprAdaptiveFloor,Math.min(qualityDpr,Number(next)||qualityDpr));
+  if(Math.abs(bounded-qualityDprCurrent)<.015)return false;
+  engine.setHardwareScalingLevel(1/bounded);
+  qualityDprCurrent=Number(bounded.toFixed(3));
+  lastQualityScaleChangeAt=now;
+  qualityAdaptiveState.reason=reason;
+  qualityAdaptiveState.lastChangeAt=now;
+  qualityAdaptiveState.scaleChanges++;
+  return true;
+ };
+ function adaptRenderQuality(dt,rawFrameMs){
+  const frameMs=Number(rawFrameMs)||0;
+  const cpuMs=Math.max(0,lastPreWorldMaintenanceMs+lastWorldUpdateMs+lastRenderCpuMs);
+  if(document.visibilityState==='visible'&&frameMs>0){
+   if(frameMs>160)qualityAdaptiveState.longFrameCount++;
+   // Long main-thread stalls are recorded but excluded from resolution decisions:
+   // changing DPR cannot repair a blocked CPU task, timer, or asset decode.
+   if(frameMs<=160){
+    qualityFrameWindow[qualityWindowCursor]=frameMs;
+    qualityCpuWindow[qualityWindowCursor]=cpuMs;
+    qualityWindowCursor=(qualityWindowCursor+1)%qualityFrameWindow.length;
+    qualityWindowCount=Math.min(qualityFrameWindow.length,qualityWindowCount+1);
+   }
   }
- }"""
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<1.5)return;fpsSample=0;
+  if(qualityWindowCount<45)return;
+  const frameP95=qualityPercentile(qualityFrameWindow,qualityWindowCount,.95);
+  const cpuP95=qualityPercentile(qualityCpuWindow,qualityWindowCount,.95);
+  qualityAdaptiveState.frameP95Ms=frameP95;
+  qualityAdaptiveState.cpuP95Ms=cpuP95;
+  // GPU pressure is inferred conservatively from frame time vs measured JS/render cost.
+  // Real GPU timer queries remain an explicit Inspector feature, not an always-on tax.
+  const gpuBound=frameP95!==null&&cpuP95!==null&&frameP95>18.5&&cpuP95<Math.max(12,frameP95*.68);
+  qualityAdaptiveState.gpuBoundInferred=!!gpuBound;
+  const now=performance.now(),adaptiveEnabled=qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive;
+  if(adaptiveEnabled&&document.visibilityState==='visible'&&!isPerformanceMode){
+   if(gpuBound&&qualityDprCurrent>qualityDprAdaptiveFloor+.01&&now-lastQualityScaleChangeAt>=1400){
+    setAdaptiveQualityDpr(qualityDprCurrent-.12,'gpu-pressure-inferred',now);
+   }else if(frameP95>18.5&&cpuP95!==null&&cpuP95>=Math.max(12,frameP95*.68)){
+    qualityAdaptiveState.reason='cpu-bound-no-resolution-change';
+   }else if(frameP95<14.2&&qualityDprCurrent<qualityDpr-.01&&now-lastQualityScaleChangeAt>=3200){
+    setAdaptiveQualityDpr(qualityDprCurrent+.06,'headroom-recovery',now);
+   }else if(gpuBound&&qualityDprCurrent<=qualityDprAdaptiveFloor+.01){
+    qualityAdaptiveState.reason='gpu-pressure-at-quality-floor';
+   }else if(!gpuBound&&frameP95<=18.5&&qualityDprCurrent>=qualityDpr-.01){
+    qualityAdaptiveState.reason='native-quality';
+   }
+  }
+  const fps=renderedFps||engine.getFps();
+  if(fps<45&&now-lastQualityWarningAt>=5000){
+   lastQualityWarningAt=now;
+   console.warn('EL SIN NOMBRE: estabilidad por debajo del objetivo de 60 FPS.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,minimumRenderDpr:qualityDprAdaptiveFloor,reason:qualityAdaptiveState.reason,frameP95Ms:frameP95,cpuP95Ms:cpuP95,gpuBoundInferred:!!gpuBound,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+  }
+ }
+ window.__ELSN_ADAPTIVE_RESOLUTION__=()=>({...qualityAdaptiveState,currentRenderDpr:qualityDprCurrent,baseRenderDpr:qualityDpr,minimumRenderDpr:qualityDprAdaptiveFloor,enabled:qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive,targetFrameRate});"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
@@ -4685,13 +4744,13 @@ function getFrameMaintenanceTimingSnapshot(){
     html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
 
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
-    fps_colour_replacement = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=58?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
         raise SystemExit("No se encontró el esquema único de color del HUD para pantallas de alta frecuencia.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
 
     fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
-    fps_title_replacement = fps_title_marker
+    fps_title_replacement = "meter.title='Objetivo de Calidad: 60 FPS estables. Presupuesto P95: 16,7 ms; el percentil 99 debe mantenerse por debajo de 25 ms. DPR actual: '+qualityDprCurrent.toFixed(2)+'.';"
     if html.count(fps_title_marker) != 1:
         raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
     html = html.replace(fps_title_marker, fps_title_replacement, 1)
