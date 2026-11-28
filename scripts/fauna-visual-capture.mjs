@@ -676,7 +676,7 @@ async function main() {
               };
               if(!imageIntegrity.valid)window.__ELSN_FAUNA_FAILED_CAPTURE__={animalId,angleDegrees,png,imageIntegrity,camera,meshCount:meshes.length,subjectMeshes:meshes.map(mesh=>({name:mesh.name,visible:mesh.isVisible,visibility:mesh.visibility,enabled:mesh.isEnabled?.(),vertices:mesh.getTotalVertices?.(),indices:mesh.getTotalIndices?.(),computeBonesUsingShaders:mesh.computeBonesUsingShaders,material:{backFaceCulling:mesh.material?.backFaceCulling,twoSidedLighting:mesh.material?.twoSidedLighting,alpha:mesh.material?.alpha}}))};
             }
-            if(!isBird&&angleDegrees===0){
+            if(angleDegrees===0){
               const canvas=document.getElementById('renderCanvas');
               const ownGroups=(scene.animationGroups||[]).filter(group=>(group.targetedAnimations||[]).some(entry=>{
                 const targetNode=entry.target?.getTransformNode?.()||entry.target;
@@ -711,7 +711,7 @@ async function main() {
               // additional full SwiftShader frame solely for cleanup on every one of four views.
             }
           }
-          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng};
+          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,captureDiagnostics:window.__ELSN_FAUNA_FAILED_CAPTURE__?.animalId===animalId?window.__ELSN_FAUNA_FAILED_CAPTURE__:null,bindPosePng};
         },{animalId:animal.id,angleDegrees:angle.degrees,measuredBounds:animal.bounds},
         'view '+animal.id+'/'+angle.id,FAUNA_PAGE_EVALUATE_TIMEOUT_MS);
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
@@ -720,8 +720,17 @@ async function main() {
         assert.ok(buffer.length>1000,'PNG vacío o incompleto: '+animal.id+' / '+angle.id);
         const file=animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png';
         fs.writeFileSync(path.join(OUT,file),buffer);
+        if(angle.id==='front'&&view.bindPosePng){
+          const bindMatch=/^data:image\\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
+          assert.ok(bindMatch,'No se obtuvo PNG de bind pose para '+animal.id);
+          const bindBuffer=Buffer.from(bindMatch[1],'base64');
+          assert.ok(bindBuffer.length>1000,'PNG de bind pose vacío: '+animal.id);
+          const bindFile=animal.id+'-bindpose.png';
+          fs.writeFileSync(path.join(OUT,bindFile),bindBuffer);
+          manifest.captures.push({id:animal.id+'-bindpose',file:bindFile,subject:animal.id,kind:animal.kind,angle:'bindpose-no-skinning',camera:view.camera,cameraVerified:view.cameraVerified===true,bytes:bindBuffer.length});
+        }
         if(view.imageIntegrity?.valid!==true){
-          manifest.failures.push({code:'fauna-raster-silhouette-invalid',animal:animal.id,angle:angle.id,imageIntegrity:view.imageIntegrity});
+          manifest.failures.push({code:'fauna-raster-silhouette-invalid',animal:animal.id,angle:angle.id,imageIntegrity:view.imageIntegrity,camera:view.camera,captureDiagnostics:view.captureDiagnostics});
           manifest.currentCapture=null;saveManifest();
           throw new Error('La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
         }
@@ -730,15 +739,6 @@ async function main() {
           camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
           target:view.target,positionAtCapture:view.position,imageIntegrity:view.imageIntegrity,bytes:buffer.length
         });
-        if(angle.id==='front'&&view.bindPosePng){
-          const bindMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
-          assert.ok(bindMatch,'No se obtuvo PNG de diagnóstico sin skinning para '+animal.id);
-          const bindBuffer=Buffer.from(bindMatch[1],'base64');
-          assert.ok(bindBuffer.length>1000,'PNG de bind pose vacío: '+animal.id);
-          const bindFile=animal.id+'-bindpose.png';
-          fs.writeFileSync(path.join(OUT,bindFile),bindBuffer);
-          manifest.captures.push({id:animal.id+'-bindpose',file:bindFile,subject:animal.id,kind:animal.kind,angle:'bindpose-no-skinning',camera:view.camera,cameraVerified:view.cameraVerified===true,bytes:bindBuffer.length});
-        }
         manifest.currentCapture=null;
         manifest.progress={stage:'view-complete',elapsedMs:Date.now()-captureStartedAt,updatedAt:new Date().toISOString()};
         saveManifest();
