@@ -38,7 +38,7 @@ for(const marker of [
   'spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',
   "mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'",
   'mesh.alwaysSelectAsActiveMesh',
-  '!mesh.skeleton&&!mesh.morphTargetManager',
+  'mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0',
   'mesh.computeWorldMatrix()',
   'mesh.isInFrustum(scene.frustumPlanes)',
   'scene.skipFrustumClipping',
