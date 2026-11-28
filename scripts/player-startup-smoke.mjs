@@ -1185,6 +1185,32 @@ async function main() {
       'El filtro debe conservar candidatos dinámicos visibles.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterLastCulled) >= 0 && Number(manifest.spatialSelection.dynamicFilterErrors) === 0,
       'El filtro debe registrar su trabajo sin errores; los objetos dudosos deben permanecer visibles.');
+    // Verify the built scene is actually using shared GPU geometry instances,
+    // not merely passing source-code checks while retaining per-object GLB clones.
+    const instancingState = await page.evaluate(() => ({
+      forest: typeof window.__ELSN_FOREST_INSTANCING_STATS__ === 'function'
+        ? window.__ELSN_FOREST_INSTANCING_STATS__() : null,
+      forestModels: window.__ELSN_FOREST_TREES__ || null,
+      rocks: typeof window.__ELSN_ROCK_INSTANCING__ === 'function'
+        ? window.__ELSN_ROCK_INSTANCING__() : null
+    }));
+    manifest.forestInstancing = instancingState.forest;
+    manifest.forestModels = instancingState.forestModels;
+    manifest.rockInstancing = instancingState.rocks;
+    assert.equal(instancingState.forestModels?.ready, true,
+      'Los tres modelos de bosque deben estar cargados antes de validar las instancias.');
+    assert.equal(Number(instancingState.forest?.templates), 3,
+      'Cada especie forestal debe tener una única plantilla fuente compartida.');
+    assert.ok(Number(instancingState.forest?.treeInstances) > 0 &&
+      Number(instancingState.forest?.instanceMeshes) > 0 &&
+      instancingState.forest?.sharedGeometry === true &&
+      Number(instancingState.forest?.perTreeGlbClones) === 0,
+      'La escena real debe representar árboles con InstancedMesh y geometría compartida, sin clonar GLB por ejemplar.');
+    assert.equal(Number(instancingState.rocks?.sourceGeometryMeshes), 2,
+      'Las rocas deben reutilizar exactamente dos geometrías fuente (cuerpo y faceta).');
+    assert.ok(Number(instancingState.rocks?.instanceMeshes) === Number(instancingState.rocks?.instances) * 2 &&
+      instancingState.rocks?.sharedGeometry === true,
+      'Cada depósito de roca debe usar dos instancias de las geometrías compartidas.');
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {
