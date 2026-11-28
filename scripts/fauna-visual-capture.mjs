@@ -394,6 +394,46 @@ async function main() {
     }
     const landAnimals=manifest.fauna.filter(animal=>animal.role!=='ambient-bird');
     const birds=manifest.fauna.filter(animal=>animal.role==='ambient-bird');
+    // A moving wing animation is not proof of flight. Sample both the actor root and
+    // an actual rendered mesh across live render frames; reject stationary airborne gulls.
+    if(birds.length){
+      const sampleGullWorldPositions=()=>page.evaluate(()=>{
+        const B=window.BABYLON||null,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||B?.EngineStore?.LastCreatedScene||null;
+        if(!scene)return [];
+        return (scene.transformNodes||[]).filter(root=>
+          /^RealSeagullActor_\d+$/.test(String(root?.name||''))&&!root.isDisposed?.()
+        ).map(root=>{
+          const position=root.getAbsolutePosition?.()||root.position;
+          const meshes=root.getChildMeshes?.(false)||[];
+          const mesh=meshes.find(item=>item&&!item.isDisposed?.()&&item.isVisible!==false&&item.isEnabled?.()!==false)||null;
+          let visual=null;
+          if(mesh){try{mesh.computeWorldMatrix(true);const p=mesh.getAbsolutePosition?.();if(p)visual={x:p.x,y:p.y,z:p.z};}catch(_){}}
+          return {id:String(root.name),root:{x:position.x,y:position.y,z:position.z},visual};
+        });
+      });
+      const before=await sampleGullWorldPositions();
+      await delay(2200);
+      const after=await sampleGullWorldPositions();
+      const vectorDistance=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z):null;
+      const afterById=new Map(after.map(item=>[item.id,item]));
+      manifest.gullFlightMotion=before.map(start=>{
+        const end=afterById.get(start.id);
+        return {id:start.id,rootDisplacementMeters:round(vectorDistance(start.root,end?.root),3),
+          visualMeshDisplacementMeters:round(vectorDistance(start.visual,end?.visual),3)};
+      });
+      for(const motion of manifest.gullFlightMotion){
+        if(!(motion.rootDisplacementMeters>=.35)||!(motion.visualMeshDisplacementMeters>=.35)){
+          manifest.failures.push({code:'gull-flight-translation-stalled',animal:motion.id,
+            rootDisplacementMeters:motion.rootDisplacementMeters,
+            visualMeshDisplacementMeters:motion.visualMeshDisplacementMeters,
+            requiredDisplacementMeters:.35,observationWindowMs:2200});
+        }
+      }
+      if(manifest.gullFlightMotion.length!==birds.length)manifest.failures.push({
+        code:'gull-flight-motion-roster-mismatch',expected:birds.length,measured:manifest.gullFlightMotion.length
+      });
+      saveManifest();
+    }
     const expected=Number(manifest.readiness?.requested||initial.expectedWildlifeCount||landAnimals.length);
     const readinessLoaded=Number(manifest.readiness?.loaded);
     const loaded=manifest.startup.worldReady&&Number.isFinite(readinessLoaded)?readinessLoaded:landAnimals.length;
