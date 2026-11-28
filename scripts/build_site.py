@@ -4697,7 +4697,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=60;
+ const targetFrameRate=isPerformanceMode?30:60;
  const qualityRuntimeAdaptiveActive=!isPerformanceMode;
  const qualityDprAdaptiveFloor=isTouchDevice
   ?(highHeadroomQualityMobile?Math.min(qualityDpr,Math.max(2.85,qualityDpr*.76)):Math.min(qualityDpr,Math.max(1.15,qualityDpr*.79)))
@@ -4819,7 +4819,7 @@ function getFrameMaintenanceTimingSnapshot(){
     html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
 
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
-    fps_colour_replacement = "meter.style.color=measured>=58?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=58?'#94d8a0':measured>=45?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
         raise SystemExit("No se encontró el esquema único de color del HUD para pantallas de alta frecuencia.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
