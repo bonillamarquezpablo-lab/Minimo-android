@@ -2116,11 +2116,12 @@ function updateWildlife(dt){
   let coastDeadlineExceeded=false;
   let coastAborted=false;
   let coastCompilePromise=null;
+  let coastCompileGeneration=0;
   let coastOriginalRenderList=null;
   const coastReport={
    schema:2,status:'pending',budgetMs:coastBudgetMs,islandIndex:null,
    stages:[],waits:[],checks:null,errors:[],deadlineExceeded:false,
-   shaderCompile:{status:'not-started',parallelExtensionSupported:false,materialCount:0,compiledCount:0,failedMaterials:[],durationMs:null},
+   shaderCompile:{status:'not-started',parallelExtensionSupported:false,materialCount:0,compiledCount:0,failedMaterials:[],durationMs:null,attempts:0,maxAttempts:2,timeoutMs:4000},
    startedAt:startupCoastWarmupStartedAt,updatedAt:startupCoastWarmupStartedAt
   };
   window.__ELSN_INITIAL_COAST_WARMUP__=coastReport;
@@ -2181,50 +2182,104 @@ function updateWildlife(dt){
    coastReport.reflectionTemporarilyDisabled=!enabled;
   };
   const startReflectionShaderWarmup=()=>{
-   if(coastReport.shaderCompile.status==='pending'&&coastCompilePromise)return coastCompilePromise;
-   if(isPerformanceMode||!nordicWaterMirror){coastReport.shaderCompile.status='not-required';return Promise.resolve();}
+   const compileState=coastReport.shaderCompile;
+   if(compileState.status==='ready'||compileState.status==='not-required')return Promise.resolve(true);
+   if(compileState.status==='pending'&&coastCompilePromise)return coastCompilePromise;
+   if(isPerformanceMode||!nordicWaterMirror){compileState.status='not-required';return Promise.resolve(true);}
    const list=Array.isArray(nordicWaterMirror.renderList)?nordicWaterMirror.renderList:[];
    const targets=new Map();
    for(const mesh of list){const material=mesh&&mesh.material;if(material&&typeof material.forceCompilationAsync==='function'&&!targets.has(material))targets.set(material,mesh);}
    let parallelExtension=null;
    try{parallelExtension=graphicsContext&&graphicsContext.getExtension?graphicsContext.getExtension('KHR_parallel_shader_compile'):null;}catch(_){}
-   coastReport.shaderCompile.parallelExtensionSupported=!!parallelExtension;
-   coastReport.shaderCompile.materialCount=targets.size;
-   if(!targets.size){coastReport.shaderCompile.status='not-required';coastReport.shaderCompile.durationMs=0;return Promise.resolve();}
+   compileState.parallelExtensionSupported=!!parallelExtension;
+   compileState.materialCount=targets.size;
+   if(!targets.size){compileState.status='not-required';compileState.durationMs=0;return Promise.resolve(true);}
+   const maxAttempts=Math.max(1,Number(compileState.maxAttempts)||2);
+   if((Number(compileState.attempts)||0)>=maxAttempts){
+    compileState.status='deferred';
+    compileState.exhausted=true;
+    setCoastReflectionEnabled(true);
+    updateCoastChecks();
+    return Promise.resolve(false);
+   }
+   const attempt=++coastCompileGeneration;
+   compileState.attempts=attempt;
    setCoastReflectionEnabled(false);
-   coastReport.shaderCompile.status='pending';
+   compileState.status='pending';
    const startedAt=performance.now();
    const entries=Array.from(targets.entries());
-   const compilePromise=(async()=>{
+   const compileWork=(async()=>{
+    let compiledCount=0;
+    const failedMaterials=[];
     try{
      for(let offset=0;offset<entries.length;offset+=4){
       const batch=entries.slice(offset,offset+4);
       const outcomes=await Promise.all(batch.map(async([material,mesh])=>{
-       try{await material.forceCompilationAsync(mesh);coastReport.shaderCompile.compiledCount++;return {ok:true};}
-       catch(error){const name=String(material.name||material.id||'material-'+(offset+1)).slice(0,100);coastReport.shaderCompile.failedMaterials.push({name,error:String(error&&error.message||error).slice(0,180)});return {ok:false};}
+       try{await material.forceCompilationAsync(mesh);return {ok:true};}
+       catch(error){
+        const name=String(material.name||material.id||'material-'+(offset+1)).slice(0,100);
+        return {ok:false,name,error:String(error&&error.message||error).slice(0,180)};
+       }
       }));
+      compiledCount+=outcomes.filter(result=>result.ok).length;
+      failedMaterials.push(...outcomes.filter(result=>!result.ok).map(result=>({name:result.name,error:result.error})));
       if(outcomes.some(result=>!result.ok))throw new Error('Uno o más materiales no completaron forceCompilationAsync.');
      }
-     coastReport.shaderCompile.status='ready';
-     coastReport.shaderCompile.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     if(attempt!==coastCompileGeneration)return false;
+     compileState.compiledCount=compiledCount;
+     compileState.failedMaterials=failedMaterials;
+     compileState.status='ready';
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
      setCoastReflectionEnabled(true);
      updateCoastChecks();
      if(coastReport.checks&&coastReport.checks.allReady)coastReport.status='ready';
      coastReport.updatedAt=performance.now();
      return true;
     }catch(error){
-     coastReport.shaderCompile.status='failed';
-     coastReport.shaderCompile.error=String(error&&error.message||error).slice(0,240);
-     coastReport.shaderCompile.durationMs=Number((performance.now()-startedAt).toFixed(2));
-     coastReport.errors.push({stage:'forceCompilationAsync',message:coastReport.shaderCompile.error});
-     setCoastReflectionEnabled(false);
+     if(attempt!==coastCompileGeneration)return false;
+     compileState.compiledCount=compiledCount;
+     compileState.failedMaterials=failedMaterials;
+     const message=String(error&&error.message||error).slice(0,240);
+     compileState.error=message;
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     coastReport.errors.push({stage:'forceCompilationAsync',message});
+     if(attempt>=maxAttempts){
+      compileState.status='deferred';
+      compileState.exhausted=true;
+      setCoastReflectionEnabled(true);
+     }else{
+      compileState.status='failed';
+      setCoastReflectionEnabled(false);
+     }
      updateCoastChecks();
      coastReport.updatedAt=performance.now();
      return false;
     }
    })();
-   coastCompilePromise=compilePromise;
-   return compilePromise;
+   let timeoutId=null;
+   let attemptPromise=null;
+   const timeoutWork=new Promise(resolve=>{
+    timeoutId=setTimeout(()=>resolve('timeout'),Math.max(1000,Number(compileState.timeoutMs)||4000));
+   });
+   attemptPromise=Promise.race([compileWork,timeoutWork]).then(result=>{
+    if(result==='timeout'&&attempt===coastCompileGeneration){
+     compileState.status='deferred';
+     compileState.timeoutCount=(Number(compileState.timeoutCount)||0)+1;
+     compileState.durationMs=Number((performance.now()-startedAt).toFixed(2));
+     compileState.warning='La compilación asíncrona superó su plazo; se reactiva el espejo y se permite la compilación normal en segundo plano.';
+     if(attempt>=maxAttempts)compileState.exhausted=true;
+     setCoastReflectionEnabled(true);
+     updateCoastChecks();
+     coastReport.updatedAt=performance.now();
+     return false;
+    }
+    return result===true;
+   }).finally(()=>{
+    if(timeoutId!==null)clearTimeout(timeoutId);
+    if(coastCompilePromise===attemptPromise)coastCompilePromise=null;
+   });
+   coastCompilePromise=attemptPromise;
+   return attemptPromise;
   };
   if(coastDiagnosticsEnabled&&!window.__ELSN_FRAME_DIAGNOSTICS__){
    const frameState={enabled:true,supportedTypes:[],unsupportedTypes:[],entries:[],maxDurationMs:0,observers:[]};
@@ -2275,7 +2330,7 @@ function updateWildlife(dt){
   const coastChecks=updateCoastChecks();
   coastReport.status=coastChecks.allReady?'ready':(coastDeadlineExceeded?'degraded-timeout':'degraded');
   coastReport.timeoutReason=coastDeadlineExceeded?'La fase de costa superó el límite de 8000 ms; el arranque continúa sin esperar a la costa completa.':null;
-  if(!coastChecks.reflection.ready)setCoastReflectionEnabled(false);
+  if(!coastChecks.reflection.ready&&coastReport.shaderCompile.status!=='deferred')setCoastReflectionEnabled(false);
   coastReport.diagnosticSummary=Object.values(coastChecks).filter(item=>item&&typeof item==='object'&&'ready'in item&&!item.ready).map(item=>item.label+': '+item.reason);
   recordStartupTask('Costa, rompiente y reflejos de la isla inicial',startupCoastWarmupStartedAt,performance.now(),coastReport.status,coastReport);
   if(coastReport.status!=='ready')console.warn('EL SIN NOMBRE: costa inicial degradada, se continúa el arranque:',coastReport.diagnosticSummary,coastReport);
@@ -2285,7 +2340,6 @@ function updateWildlife(dt){
     if(!scene||scene.isDisposed&&scene.isDisposed())return;
     coastReport.recovery.attempts++;
     runCoastStage('recovery.syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland());
-    if(coastReport.shaderCompile.status==='pending')setCoastReflectionEnabled(false);
     const recoveryCompile=startReflectionShaderWarmup();
     if(recoveryCompile)recoveryCompile.then(()=>{updateCoastChecks();coastReport.updatedAt=performance.now();}).catch(()=>{});
    },1800);
@@ -3193,25 +3247,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.364; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.365; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.364\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.365\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.364.")
-    html = html.replace("0.6.274", "0.6.364")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.365.")
+    html = html.replace("0.6.274", "0.6.365")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'72',build:'0.6.364'"
+    diagnostic_build_replacement = "reportVersion:'73',build:'0.6.365'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.364 para normalizar.")
-    game_version = "0.6.364"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.365 para normalizar.")
+    game_version = "0.6.365"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.

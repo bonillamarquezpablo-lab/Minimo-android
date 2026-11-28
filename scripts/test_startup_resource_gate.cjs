@@ -52,6 +52,18 @@ assert.ok(html.includes("window.__ELSN_INITIAL_COAST_WARMUP__=coastReport")&&
   html.includes("runCoastStage('syncNordicWaterReflectionIsland',()=>syncNordicWaterReflectionIsland())"),
   'All three initial coastal preparation routines must run and be measured before world entry, with the coast-specific fallback handled separately.');
 
+assert.ok(html.includes("coastCompileGeneration=0")&&
+  html.includes("attempts:0,maxAttempts:2,timeoutMs:4000")&&
+  html.includes("Promise.race([compileWork,timeoutWork])")&&
+  html.includes("coastCompilePromise=null")&&
+  html.includes("compileState.status='deferred'")&&
+  html.includes("setCoastReflectionEnabled(true)"),
+  'A stalled shader warm-up must time out, permit one fresh recovery attempt, and restore the mirror instead of retaining a pending promise forever.');
+assert.ok(html.includes("coastCompilePromise===attemptPromise")&&
+  html.includes("attempt!==coastCompileGeneration")&&
+  html.includes("coastReport.shaderCompile.status!=='deferred'"),
+  'Late shader attempts must not overwrite a newer recovery and a deferred mirror must not be disabled again by the startup gate.');
+
 assert.ok(html.includes("startupResourceSnapshot.fauna.loaded!==3"));
 assert.ok(html.includes("startupResourceSnapshot.fauna.loadedGulls!==5"));
 assert.ok(html.includes("startupResourceSnapshot.world.grassClumps<=0"));
