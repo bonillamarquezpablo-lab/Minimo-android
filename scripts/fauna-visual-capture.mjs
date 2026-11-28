@@ -314,7 +314,7 @@ async function main() {
           }:null;
           return {
             name:String(mesh.name||mesh.id||''),vertices,indices,skinned,
-            skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,enabled:mesh.isEnabled?.()!==false,
+            skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,computeBonesUsingShaders:mesh.computeBonesUsingShaders===true,materialState:mesh.material?{type:mesh.material.getClassName?.()||null,backFaceCulling:mesh.material.backFaceCulling,twoSidedLighting:mesh.material.twoSidedLighting,alpha:number(mesh.material.alpha),transparencyMode:number(mesh.material.transparencyMode)}:null,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
             worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)},basis:boundsBasis}:null,
@@ -464,6 +464,10 @@ async function main() {
       if(animal.role!=='ambient-bird'&&d&&horizontalMin<d.height*.30)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d,minimumBodyDepth});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
       if(animal.role==='ambient-bird'){
+        const expectedCpuSkinning=SKINNING_MODE==='cpu';
+        const wrongSkinningMeshes=(animal.meshes||[]).filter(mesh=>mesh.skinned&&(mesh.computeBonesUsingShaders===expectedCpuSkinning));
+        if(wrongSkinningMeshes.length)manifest.warnings.push({code:'gull-skinning-mode-mismatch',animal:animal.id,expected:SKINNING_MODE,meshes:wrongSkinningMeshes.map(mesh=>({name:mesh.name,computeBonesUsingShaders:mesh.computeBonesUsingShaders,materialState:mesh.materialState}))});
+        if(animal.flightRig?.skinningMode&&animal.flightRig.skinningMode!==SKINNING_MODE)manifest.warnings.push({code:'gull-rig-skinning-mode-mismatch',animal:animal.id,expected:SKINNING_MODE,actual:animal.flightRig.skinningMode});
         if(!animal.flightRig?.complete)manifest.warnings.push({code:'gull-flight-rig-incomplete',animal:animal.id,flightRig:animal.flightRig});
         if(animal.flightRig?.complete&&!animal.flightRig.animationPlaying)manifest.warnings.push({code:'gull-flight-animation-stopped',animal:animal.id,flightRig:animal.flightRig});
         if(!/fly/i.test(String(animal.flightRig?.animationGroupName||'')))manifest.warnings.push({code:'gull-native-flight-clip-missing',animal:animal.id,flightRig:animal.flightRig});
@@ -670,7 +674,7 @@ async function main() {
                 source:'same-frame-projected-animal-bounds-raster-diff',
                 valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&rasterFillRatio>=.015
               };
-              if(!imageIntegrity.valid)throw new Error('La captura contiene muy poca silueta real del animal; no se acepta como PNG válido: '+animalId+' · '+JSON.stringify(imageIntegrity));
+              if(!imageIntegrity.valid)window.__ELSN_FAUNA_FAILED_CAPTURE__={animalId,angleDegrees,png,imageIntegrity,camera,meshCount:meshes.length,subjectMeshes:meshes.map(mesh=>({name:mesh.name,visible:mesh.isVisible,visibility:mesh.visibility,enabled:mesh.isEnabled?.(),vertices:mesh.getTotalVertices?.(),indices:mesh.getTotalIndices?.(),computeBonesUsingShaders:mesh.computeBonesUsingShaders,material:{backFaceCulling:mesh.material?.backFaceCulling,twoSidedLighting:mesh.material?.twoSidedLighting,alpha:mesh.material?.alpha}}))};
             }
             if(!isBird&&angleDegrees===0){
               const canvas=document.getElementById('renderCanvas');
@@ -714,9 +718,13 @@ async function main() {
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
         const buffer=Buffer.from(match[1],'base64');
         assert.ok(buffer.length>1000,'PNG vacío o incompleto: '+animal.id+' / '+angle.id);
-        assert.ok(view.imageIntegrity?.valid===true,'La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
-        const file=animal.id+'-'+angle.id+'.png';
+        const file=animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png';
         fs.writeFileSync(path.join(OUT,file),buffer);
+        if(view.imageIntegrity?.valid!==true){
+          manifest.failures.push({code:'fauna-raster-silhouette-invalid',animal:animal.id,angle:angle.id,imageIntegrity:view.imageIntegrity});
+          manifest.currentCapture=null;saveManifest();
+          throw new Error('La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
+        }
         manifest.captures.push({
           id:animal.id+'-'+angle.id,file,subject:animal.id,kind:animal.kind,angle:angle.id,
           camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
