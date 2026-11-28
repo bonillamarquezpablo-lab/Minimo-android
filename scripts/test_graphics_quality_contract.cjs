@@ -12,12 +12,12 @@ for(const marker of [
   'highTierGpuMatch=',
   'highHeadroomQualityMobile=',
   'qualityDprCurrent=qualityDpr',
-  'qualityScaleAdaptive:qualityLabAdaptiveActive',
-  'const targetFrameRate=120;',
+  'qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)',
+  'const targetFrameRate=60;',
   'fpsHudTime+=rawFrameMs/1000;fpsHudFrames++',
   'renderedFps=measured',
   'renderedFps||engine.getFps()',
-  'qualityScaleFixed:!qualityLabAdaptiveActive',
+  'qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)',
   'window.__ELSN_RENDER_RESOLUTION=()=>{',
   'const gpuTimerQueryExtensionName=profileDiagnosticsEnabled?',
   'const gpuTimerQueryAutoEnabled=profileDiagnosticsEnabled&&!!gpuTimerQueryExtensionName;',
@@ -51,11 +51,12 @@ for(const marker of [
   'highHeadroomQualityMobile,reportedMemory',
 ]) assert.ok(builder.includes(marker),'Missing graphics-quality guardrail: '+marker);
 
-assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive') && builder.includes('qualityScaleAdaptive:qualityLabAdaptiveActive') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve the native render scale for the whole session.');
+assert.ok(builder.includes('qualityDprCurrent=qualityDpr') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)') && builder.includes('physicalPixelCoveragePct'), 'Quality must preserve the native render scale for the whole session.');
 const adaptiveCode=builder.split('quality_adaptive_code = r"""')[1]?.split('"""')[0]||'';
-assert.ok(!adaptiveCode.includes('engine.setHardwareScalingLevel') && !adaptiveCode.includes('qualityDprSlowSamples') && !adaptiveCode.includes('qualityDprStableSamples'), 'Runtime pressure must never reduce native Quality resolution; manual debug controls are separate.');
+assert.ok(adaptiveCode.includes('qualityRuntimeAdaptiveActive=!isPerformanceMode') && adaptiveCode.includes('qualityDprAdaptiveFloor') && adaptiveCode.includes('engine.setHardwareScalingLevel(1/bounded)') && adaptiveCode.includes('gpu-pressure-inferred') && adaptiveCode.includes('cpu-bound-no-resolution-change') && adaptiveCode.includes('headroom-recovery'), 'Quality must adapt resolution only under sustained inferred GPU pressure, preserve pixels when CPU-bound, and recover gradually.');
+assert.ok(!adaptiveCode.includes('qualityDprSlowSamples') && !adaptiveCode.includes('qualityDprStableSamples'), 'The adaptive controller must use its bounded rolling frame/CPU windows instead of stale counters.');
 assert.ok(builder.includes('let lastWorldUpdateMs=0,lastRenderCpuMs=0;'), 'Shared frame-loop timing bindings must remain available after the Quality-scale change.');
-assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!qualityLabAdaptiveActive'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
+assert.ok(builder.includes('targetFrameRate=120') && builder.includes('renderDpr:qualityDprCurrent') && builder.includes('qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)'), 'Performance diagnostics must retain the 120 Hz device target and native render scale.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') && !builder.includes('frameIntervalMs=1000/targetFrameRate') && !builder.includes('if(now+.5<nextRenderAt)return'), 'Quality must not throttle Babylon rendering below the display refresh rate.');
 assert.ok(builder.includes('window.__ELSN_RENDER_RESOLUTION=()=>') && builder.includes('engine.getRenderWidth()') && builder.includes('engine.getRenderHeight()') && builder.includes('physicalPixelWidth') && builder.includes('physicalPixelHeight') && builder.includes('physicalPixelCoveragePct'), 'The runtime must report actual framebuffer dimensions and physical-panel pixel coverage.');
 assert.ok(builder.includes('qualityLabFsr1Requested') && builder.includes('const fsr1InputScale=.87;') && builder.includes('if(fsr1Candidate){'), 'FSR1 must remain available behind the explicit debug opt-in.');
@@ -94,4 +95,4 @@ assert.ok(qualityLab.includes("panel.querySelectorAll('button,select,input,a').f
 
 assert.ok(validator.includes('this.highHeadroomQualityMobile = !!o.highHeadroomQualityMobile;'), 'The atmosphere hardware tier must be checked by release validation.');
 
-console.log('OK graphics quality: native WebGL rendering, fixed native-DPR flagship Quality, native 2x MSAA, dedicated mobile-high atmosphere, desktop-only SSAO/god-rays/CSM.');
+console.log('OK graphics quality: Babylon native rendering cadence, GPU-aware reversible resolution, native 2x MSAA, preserved mobile-high atmosphere, water and shadow pipelines.');
