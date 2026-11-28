@@ -1820,24 +1820,23 @@ function setLoadingProgress(value,label){
    }
   }
   const started=performance.now();
-  const pendingNow=()=>{
-   const pendingTextures=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
-   const pendingMeshes=list.filter(mesh=>typeof mesh.isReady==='function'&&!mesh.isReady(true));
-   return {pendingTextures,pendingMeshes};
-  };
+  // Do not force mesh.isReady(true) here: on CPU/SwiftShader it may repeatedly compile every
+  // animal material before the first scene render. Geometry/rig validity is checked above;
+  // actual material readiness belongs to Babylon's active-view warm-up and visual acceptance.
+  const pendingTextures=()=>Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
   await new Promise((resolve,reject)=>{
    let settled=false,timer=null;
    const finish=error=>{if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);if(error)reject(error);else resolve();};
    const check=()=>{
-    const pending=pendingNow();
-    if(!pending.pendingTextures.length&&!pending.pendingMeshes.length)return finish(null);
-    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': preparación visual incompleta; '+pending.pendingMeshes.length+'/'+list.length+' mallas y '+pending.pendingTextures.length+'/'+textures.size+' texturas pendientes.'));
-    setTimeout(check,50);
+    const pending=pendingTextures();
+    if(!pending.length)return finish(null);
+    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': texturas pendientes '+pending.length+'/'+textures.size+'; la compilación de materiales se delega al primer render de la escena.'));
+    setTimeout(check,100);
    };
-   timer=setTimeout(()=>{const pending=pendingNow();finish(new Error(kind+': espera visual agotada; '+pending.pendingMeshes.length+' mallas y '+pending.pendingTextures.length+' texturas pendientes.'));},timeoutMs+250);
+   timer=setTimeout(()=>{const pending=pendingTextures();finish(new Error(kind+': espera de texturas agotada; '+pending.length+'/'+textures.size+' pendientes.'));},timeoutMs+250);
    check();
   });
-  return {count:textures.size,readyMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1))};
+  return {count:textures.size,geometryValidatedMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1)),shaderReadiness:'deferred-to-initial-view-warmup'};
  }"""
     if html.count(glb_validator_marker) != 1:
         raise SystemExit("No se encontró el validador GLB único.")
