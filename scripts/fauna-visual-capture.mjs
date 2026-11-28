@@ -412,7 +412,7 @@ async function main() {
         });
       });
       const before=await sampleGullWorldPositions();
-      await delay(2200);
+      await new Promise(resolve=>setTimeout(resolve,2200));
       const after=await sampleGullWorldPositions();
       const vectorDistance=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z):null;
       const afterById=new Map(after.map(item=>[item.id,item]));
