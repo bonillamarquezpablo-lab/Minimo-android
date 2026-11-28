@@ -3684,7 +3684,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,actorBoundsGroupCount:0,actorBoundsGroupedMeshCount:0,actorBoundsGroupBuildMs:0,actorBoundsGroupBuildErrors:0,actorBoundsGroupsChecked:0,actorBoundsGroupsCulled:0,actorBoundsGroupCheckErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
  const publishSpatialSelectionStats=()=>{
   try{
@@ -3712,6 +3712,59 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    if(Number(node.billboardMode)>0)return 'billboard';
   }
   return null;
+ };
+ const buildSpatialActorBoundsGroups=async()=>{
+  const startedAt=performance.now(),groups=new Map();
+  let groupedMeshes=0,groupCount=0,groupErrors=0,sliceStartedAt=startedAt;
+  // Group only rigid meshes directly parented to a recognised moving root.
+  // Skinned/morph/animated/billboard and nested independently moving parts stay on the safe path.
+  for(const mesh of spatialDynamicMeshSet){
+   if(!mesh||mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0)continue;
+   const actorRoot=mesh.parent;
+   if(!actorRoot||actorRoot===scene||!spatialActorRootPattern.test(String(actorRoot.name||''))||
+      typeof actorRoot.computeWorldMatrix!=='function'||typeof actorRoot.getWorldMatrix!=='function')continue;
+   if(Array.isArray(mesh.animations)&&mesh.animations.length)continue;
+   let group=groups.get(actorRoot);
+   if(!group){group={root:actorRoot,members:[],minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity,valid:true};groups.set(actorRoot,group);}
+   group.members.push(mesh);
+   if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();sliceStartedAt=performance.now();}
+  }
+  for(const group of groups.values()){
+   if(!group.valid||group.members.length<2)continue;
+   try{
+    group.root.computeWorldMatrix(true);
+    const inverseRoot=group.root.getWorldMatrix().clone();inverseRoot.invert();
+    for(const mesh of group.members){
+     if(!mesh||typeof mesh.computeWorldMatrix!=='function'||typeof mesh.getWorldMatrix!=='function'||typeof mesh.getBoundingInfo!=='function'){group.valid=false;break;}
+     mesh.computeWorldMatrix(true);
+     const info=mesh.getBoundingInfo(),box=info&&info.boundingBox;
+     if(!box||!box.minimum||!box.maximum){group.valid=false;break;}
+     const min=box.minimum,max=box.maximum,world=mesh.getWorldMatrix();
+     for(let corner=0;corner<8;corner++){
+      const point=new B.Vector3((corner&1)?max.x:min.x,(corner&2)?max.y:min.y,(corner&4)?max.z:min.z);
+      const worldPoint=B.Vector3.TransformCoordinates(point,world);
+      const rootPoint=B.Vector3.TransformCoordinates(worldPoint,inverseRoot);
+      if(!Number.isFinite(rootPoint.x)||!Number.isFinite(rootPoint.y)||!Number.isFinite(rootPoint.z)){group.valid=false;break;}
+      group.minX=Math.min(group.minX,rootPoint.x);group.minY=Math.min(group.minY,rootPoint.y);group.minZ=Math.min(group.minZ,rootPoint.z);
+      group.maxX=Math.max(group.maxX,rootPoint.x);group.maxY=Math.max(group.maxY,rootPoint.y);group.maxZ=Math.max(group.maxZ,rootPoint.z);
+     }
+     if(!group.valid)break;
+     if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();sliceStartedAt=performance.now();}
+    }
+    if(!group.valid||!Number.isFinite(group.minX)||!Number.isFinite(group.maxX)){groupErrors++;continue;}
+    group.center=new B.Vector3((group.minX+group.maxX)*.5,(group.minY+group.maxY)*.5,(group.minZ+group.maxZ)*.5);
+    group.radius=Math.max(.2,Math.sqrt((group.maxX-group.center.x)**2+(group.maxY-group.center.y)**2+(group.maxZ-group.center.z)**2)*1.18+.18);
+    group.lastRenderId=-1;group.lastCamera=null;group.visible=true;group.meshCount=group.members.length;
+    for(const mesh of group.members){mesh.__elsnSpatialActorBoundsGroup=group;groupedMeshes++;}
+    group.members=null;groupCount++;
+   }catch(_){groupErrors++;}
+  }
+  groups.clear();
+  spatialSelectionStats.actorBoundsGroupCount=groupCount;
+  spatialSelectionStats.actorBoundsGroupedMeshCount=groupedMeshes;
+  spatialSelectionStats.actorBoundsGroupBuildMs=Number((performance.now()-startedAt).toFixed(2));
+  spatialSelectionStats.actorBoundsGroupBuildErrors=groupErrors;
+  return groupedMeshes;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
  const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__={
@@ -3827,7 +3880,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   spatialDynamicMeshSet.delete(mesh);
   const reason=String(mesh.__elsnSpatialDynamicReason||'unknown');
   if(spatialSelectionStats.dynamicReasons[reason]>0)spatialSelectionStats.dynamicReasons[reason]--;
-  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;delete mesh.__elsnSpatialActorBoundsGroup;}catch(_){mesh.__elsnSpatialDynamic=false;}
   updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
@@ -3892,6 +3945,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
+   const actorBoundsGroupedMeshes=await buildSpatialActorBoundsGroups();
    spatialBuildProgress.phase='freezing-static-matrices';
    spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
@@ -3910,7 +3964,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      // The Babylon render id is constant for this candidate pass; cache it once
      // rather than calling Scene.getRenderId for every actor mesh.
      const currentRenderId=scene.getRenderId();
-     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0;
+     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0,actorGroupsChecked=0,actorGroupsCulled=0,actorGroupErrors=0;
      // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
      // Compact that frame-local result in place: no extra list, no scene mutation,
      // and no allocation on the render path.
@@ -3926,11 +3980,29 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
           !(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
           !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
           typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
-        try{
-         mesh.computeWorldMatrix();
-         if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;
-        }catch(_){
-         errors++;
+        const group=mesh.__elsnSpatialActorBoundsGroup;
+        if(group){
+         if(group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera){
+          group.lastRenderId=currentRenderId;group.lastCamera=scene.activeCamera;actorGroupsChecked++;
+          try{
+           group.root.computeWorldMatrix();
+           const matrix=group.root.getWorldMatrix(),m=matrix.m;
+           const center=B.Vector3.TransformCoordinates(group.center,matrix);
+           const scale=Math.max(Math.hypot(m[0],m[1],m[2]),Math.hypot(m[4],m[5],m[6]),Math.hypot(m[8],m[9],m[10]));
+           const radius=group.radius*Math.max(.001,scale);
+           let visible=true;
+           for(let planeIndex=0;planeIndex<6;planeIndex++){
+            const plane=scene.frustumPlanes[planeIndex],distance=plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d;
+            if(distance < -radius){visible=false;break;}
+           }
+           group.visible=visible;
+           if(!visible)actorGroupsCulled++;
+          }catch(_){group.visible=true;actorGroupErrors++;errors++;}
+         }
+         if(group.visible===false)keep=false;
+        }else{
+         try{mesh.computeWorldMatrix();if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;}
+         catch(_){errors++;}
         }
        }
       }
@@ -3956,6 +4028,9 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      spatialSelectionStats.dynamicFilterLastMs=Number(duration.toFixed(3));
      spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,duration);
      spatialSelectionStats.dynamicFilterErrors+=errors;
+     spatialSelectionStats.actorBoundsGroupsChecked=actorGroupsChecked;
+     spatialSelectionStats.actorBoundsGroupsCulled=actorGroupsCulled;
+     spatialSelectionStats.actorBoundsGroupCheckErrors+=actorGroupErrors;
      return base;
     };
     spatialSelectionStats.dynamicFilterEnabled=true;
@@ -4131,7 +4206,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(perf_render_loop_marker, perf_render_loop_replacement, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs,meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs,meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount,meshSelectionActorBoundsGroupedMeshCount:spatialSelectionStats.actorBoundsGroupedMeshCount,meshSelectionActorBoundsGroupBuildMs:spatialSelectionStats.actorBoundsGroupBuildMs,meshSelectionActorBoundsGroupBuildErrors:spatialSelectionStats.actorBoundsGroupBuildErrors,meshSelectionActorBoundsGroupsChecked:spatialSelectionStats.actorBoundsGroupsChecked,meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled,meshSelectionActorBoundsGroupCheckErrors:spatialSelectionStats.actorBoundsGroupCheckErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
