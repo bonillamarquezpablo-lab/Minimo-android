@@ -128,7 +128,7 @@ const dynamicFilterStart=builder.indexOf('const installSpatialDynamicCandidateFi
 const dynamicFilterEnd=builder.indexOf('spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();',dynamicFilterStart);
 assert.ok(dynamicFilterStart>=0&&dynamicFilterEnd>dynamicFilterStart,'The live dynamic candidate filter must remain inspectable.');
 const dynamicFilterSource=builder.slice(dynamicFilterStart,dynamicFilterEnd);
-assert.ok(dynamicFilterSource.includes('const currentRenderId=scene.getRenderId();')&&dynamicFilterSource.includes('mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId'),'The render id must be read once per filter pass and reused for freshness checks.');
+assert.ok(dynamicFilterSource.includes('currentRenderId=scene.getRenderId();')&&dynamicFilterSource.includes('mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId'),'The render id must be read once per filter pass and reused for freshness checks.');
 assert.ok(dynamicFilterSource.includes('octree.dynamicContent=spatialEmptyDynamicContent') &&
   dynamicFilterSource.includes('for(const group of spatialActorBoundsGroups)') &&
   dynamicFilterSource.includes('for(const mesh of spatialDynamicUngroupedMeshSet)') &&
