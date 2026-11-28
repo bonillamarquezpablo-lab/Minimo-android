@@ -123,6 +123,7 @@ assert.ok(!builder.includes('scene.freezeActiveMeshes('),'The optimization must 
 assert.ok(!builder.includes('scene.skipFrustumClipping=true'),'The optimization must not disable frustum culling.');
 
 assert.ok(recorder.includes('meshSelectionStaticWorldMatrixFreezeMs: number(runtime.meshSelectionStaticWorldMatrixFreezeMs)'), 'Session reports must preserve static-matrix freeze cost.');
+assert.ok(recorder.includes('forestInstancing: typeof window.__ELSN_FOREST_INSTANCING_STATS__') && recorder.includes('rockInstancing: typeof window.__ELSN_ROCK_INSTANCING__'), 'Session reports must persist actual shared forest and rock geometry instance counters.');
 for (const field of ['meshSelectionDynamicFilterMode','meshSelectionDynamicProviderSuppressed','meshSelectionDynamicFilterStaticCandidates','meshSelectionDynamicFilterStaticDynamicDuplicates','meshSelectionDynamicFilterGroupChecks','meshSelectionDynamicFilterUngroupedChecks','meshSelectionDynamicUngroupedMeshCount']) {
   assert.ok(recorder.includes(field + ':'), 'Session reports must preserve structural selection evidence: ' + field);
 }
