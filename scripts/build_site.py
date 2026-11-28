@@ -1386,8 +1386,7 @@ def main() -> None:
    return instance;
   });
   if(!meshes.length)throw new Error('El modelo forestal no produjo instancias renderizables: '+spec.spec.label);
-  window.__ELSN_FOREST_INSTANCING_STATS__.treeInstances++;
-  window.__ELSN_FOREST_INSTANCING_STATS__.instanceMeshes+=meshes.length;
+
   visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
   canopy.position.y=pivotY;
   root.scaling.setAll(placedScale);
@@ -1400,6 +1399,8 @@ def main() -> None:
   if(!placement){forestTreeSpacingStats.skipped++;root.dispose(false,false);return null;}
   if(Math.hypot(placement.x-x,placement.z-z)>.10)forestTreeSpacingStats.relocated++;
   forestTreeSpacingStats.placed++;x=placement.x;z=placement.z;
+  forestInstancingStats.treeInstances++;
+  forestInstancingStats.instanceMeshes+=meshes.length;
   root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.computeWorldMatrix(true);
   return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),canopyRadius,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length,height:spec.spec.targetHeight*scale};
  }
