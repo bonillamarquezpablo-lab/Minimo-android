@@ -202,6 +202,22 @@ async function startGame(page) {
       try { wildlife = window.__ELSN_WILDLIFE_DIAGNOSTICS__?.getSnapshot?.() || null; } catch (_) {}
       let frameDiagnostics = null;
       try { frameDiagnostics = window.__ELSN_FRAME_DIAGNOSTICS__?.snapshot?.() || null; } catch (_) {}
+      const coastWarmup = window.__ELSN_INITIAL_COAST_WARMUP__ || null;
+      const sceneWarmup = window.__elSinNombreStartupSceneWarmup || null;
+      const resourceGate = window.__ELSN_STARTUP_RESOURCE_GATE__ || null;
+      const startupHandoff = window.__ELSN_STARTUP_HANDOFF__ || null;
+      const backgroundModels = window.__elSinNombreBackgroundModelTasks || null;
+      const scene = window.BABYLON?.EngineStore?.LastCreatedScene || null;
+      const sceneSnapshot = scene ? {
+        meshCount: scene.meshes?.length || 0,
+        transformNodeCount: scene.transformNodes?.length || 0,
+        textureCount: scene.textures?.length || 0,
+        pendingTextures: (scene.textures || []).filter(texture => {
+          try { return typeof texture.isReady === 'function' && !texture.isReady(); } catch (_) { return true; }
+        }).length,
+        animationGroupCount: scene.animationGroups?.length || 0,
+        waitingItems: (() => { try { return scene.getWaitingItemsCount?.() ?? null; } catch (_) { return null; } })()
+      } : null;
       return {
         worldReady: smoke?.worldReady === true,
         bootFailed: document.body.classList.contains('boot-failed'),
@@ -217,7 +233,18 @@ async function startGame(page) {
           runtimeErrors:(smoke.runtimeErrors||[]).slice(-12),
           unhandledRejections:(smoke.unhandledRejections||[]).slice(-12)
         } : null,
-        frameDiagnostics
+        frameDiagnostics,
+        coastWarmup: coastWarmup ? {
+          status:coastWarmup.status, budgetMs:coastWarmup.budgetMs,
+          deadlineExceeded:coastWarmup.deadlineExceeded, islandIndex:coastWarmup.islandIndex,
+          stages:Array.isArray(coastWarmup.stages)?coastWarmup.stages.slice(-12):[],
+          waits:Array.isArray(coastWarmup.waits)?coastWarmup.waits.slice(-12):[],
+          checks:coastWarmup.checks||null, errors:Array.isArray(coastWarmup.errors)?coastWarmup.errors.slice(-12):[],
+          shaderCompile:coastWarmup.shaderCompile||null,
+          reflectionTemporarilyDisabled:coastWarmup.reflectionTemporarilyDisabled??null
+        } : null,
+        sceneWarmup, resourceGate, startupHandoff, backgroundModels, sceneSnapshot,
+        captureTimeMs:Number(performance.now().toFixed(1))
       };
     });
     throw new Error('El arranque no alcanzó worldReady: ' + JSON.stringify(report.startup) + ' · ' + String(error?.message || error));
