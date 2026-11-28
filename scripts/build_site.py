@@ -2241,6 +2241,7 @@ function updateWildlife(dt){
    if(isPerformanceMode){reflection={ready:true,reason:'no aplica: perfil Rendimiento no crea espejo de agua'};}
    else if(!nordicWaterMirror){reflection={ready:false,reason:'nordicWaterMirror no está creado'};}
    else if(activeWaterReflectionIslandIndex!==index){reflection={ready:false,reason:'isla del reflejo '+activeWaterReflectionIslandIndex+' distinta de la isla activa '+index};}
+   else if(coastReport.shaderCompile.status==='deferred'&&!coastReport.reflectionTemporarilyDisabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length){reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:'deferred',shaderWarmupComplete:false,runtimeFallback:'Babylon native compilation'};}
    else if(!['ready','not-required'].includes(coastReport.shaderCompile.status)){reflection={ready:false,reason:'compilación de materiales del reflejo '+coastReport.shaderCompile.status};}
    else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
    else{reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:coastReport.shaderCompile.status};}
