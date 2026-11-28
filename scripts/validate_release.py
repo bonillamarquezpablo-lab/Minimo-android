@@ -616,8 +616,8 @@ def main() -> None:
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
-        "qualityScaleAdaptive:qualityLabAdaptiveActive",
-        "const targetFrameRate=60;",
+        "qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)",
+        "const targetFrameRate=isPerformanceMode?30:60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
@@ -704,7 +704,7 @@ def main() -> None:
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
     fps_pacing_markers = (
-        "const targetFrameRate=60;",
+        "const targetFrameRate=isPerformanceMode?30:60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
