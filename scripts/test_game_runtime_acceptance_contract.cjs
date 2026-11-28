@@ -49,6 +49,12 @@ assert.match(release, /offline: \$\{\{ steps\.scope\.outputs\.offline \}\}/,
   'The release classifier must expose the deep offline acceptance scope.');
 assert.match(release, /PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART: \$\{\{ needs\.changes\.outputs\.offline != 'true' \}\}/,
   'Routine gameplay updates should use the fast offline cache smoke; SW/boot changes keep the full offline restart.');
+assert.ok(smoke.includes('manifest.instancingDiagnostics=instancingDiagnostics') &&
+  smoke.includes('visibleTreeInstances===instancingDiagnostics.forest.instanceMeshes') &&
+  smoke.includes('hiddenForestTemplateSources===instancingDiagnostics.forest.templateMeshes') &&
+  smoke.includes('visibleRockInstances===instancingDiagnostics.rocks.instanceMeshes') &&
+  smoke.includes('perTreeGlbClones===0'),
+  'Real gameplay acceptance must verify visible shared tree/rock instances and hidden immutable source templates.');
 assert.ok(smoke.includes("process.env.PLAYER_TEST_SKIP_OFFLINE_FULL_RESTART === 'true'") &&
   smoke.includes("mode: 'offline-service-worker-cache-smoke'") &&
   smoke.includes('const assetProbe = assetKeys.find') &&
