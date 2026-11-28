@@ -1,0 +1,1668 @@
+{
+  "schema": 1,
+  "project": "EL SIN NOMBRE",
+  "level": 1,
+  "mode": "test-only-read-only-observer-patrol",
+  "startedAt": "2026-11-28T05:38:49.469Z",
+  "finishedAt": "2026-11-28T05:41:58.775Z",
+  "build": null,
+  "renderer": "Chromium headless + ANGLE SwiftShader",
+  "query": "?test=1",
+  "run": {
+    "id": "46112995975",
+    "url": "https://github.com/bonillamarquezpablo-lab/Minimo-android/actions/runs/46112995975",
+    "branch": "268/merge",
+    "sha": "2e70ae9408469f6bdd4afb9ce0b685cfd3477c89"
+  },
+  "world": {
+    "expectedIslands": 13,
+    "visitedIslands": 0,
+    "islands": []
+  },
+  "startup": {
+    "worldReady": false,
+    "bootFailed": false,
+    "bodyClass": "booting",
+    "loadingText": "Preparando la costa y los reflejos de la isla inicial…",
+    "loadingHelp": null,
+    "wildlifeStartupTrace": {
+      "kind": "stag",
+      "stage": "rig-validation",
+      "startedAt": 159280.1,
+      "updatedAt": 165105.19999999998,
+      "lastError": null,
+      "history": [
+        {
+          "kind": "wolf",
+          "stage": "cache-write-open-ready",
+          "atMs": 146186.9,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "cache-write-start",
+          "atMs": 146186.9,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "cache-write-open-ready",
+          "atMs": 146191.5,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "cache-write-start",
+          "atMs": 146191.5,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "cache-write-open-ready",
+          "atMs": 146194.8,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "cache-write-start",
+          "atMs": 146194.8,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "cache-write-ready",
+          "atMs": 146195.8,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "blob-ready",
+          "atMs": 146195.8,
+          "detail": {
+            "bytes": 652324
+          }
+        },
+        {
+          "kind": "deer",
+          "stage": "cache-write-ready",
+          "atMs": 146198,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "blob-ready",
+          "atMs": 146198,
+          "detail": {
+            "bytes": 709100
+          }
+        },
+        {
+          "kind": "stag",
+          "stage": "cache-write-ready",
+          "atMs": 146200.9,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "blob-ready",
+          "atMs": 146200.9,
+          "detail": {
+            "bytes": 737492
+          }
+        },
+        {
+          "kind": "deer",
+          "stage": "glb-container-inspection",
+          "atMs": 146202.5,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "babylon-import-ready",
+          "atMs": 146256.7,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "texture-readiness",
+          "atMs": 146256.9,
+          "detail": null
+        },
+        {
+          "kind": "deer",
+          "stage": "rig-validation",
+          "atMs": 158374.4,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "glb-container-inspection",
+          "atMs": 158835.4,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "babylon-import-ready",
+          "atMs": 159024.1,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "texture-readiness",
+          "atMs": 159024.1,
+          "detail": null
+        },
+        {
+          "kind": "wolf",
+          "stage": "rig-validation",
+          "atMs": 159109.5,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "glb-container-inspection",
+          "atMs": 159280.1,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "babylon-import-ready",
+          "atMs": 159393.3,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "texture-readiness",
+          "atMs": 159396.5,
+          "detail": null
+        },
+        {
+          "kind": "stag",
+          "stage": "rig-validation",
+          "atMs": 165105.2,
+          "detail": null
+        }
+      ]
+    },
+    "wildlifeReadiness": [
+      {
+        "kind": "deer",
+        "state": "ready",
+        "island": 0,
+        "meshes": 7,
+        "skinnedVertices": 4276,
+        "skinningMode": "cpu",
+        "bones": 47,
+        "textures": 0,
+        "textureWaitMs": 12117.3
+      },
+      {
+        "kind": "wolf",
+        "state": "ready",
+        "island": 0,
+        "meshes": 4,
+        "skinnedVertices": 3994,
+        "skinningMode": "cpu",
+        "bones": 52,
+        "textures": 0,
+        "textureWaitMs": 85.1
+      },
+      {
+        "kind": "stag",
+        "state": "ready",
+        "island": 0,
+        "meshes": 6,
+        "skinnedVertices": 7435,
+        "skinningMode": "cpu",
+        "bones": 39,
+        "textures": 0,
+        "textureWaitMs": 5708.7
+      }
+    ],
+    "glbStageTimings": [
+      {
+        "model": "Árbol 3D · Pino silvestre",
+        "stage": "importación Babylon",
+        "durationMs": 518,
+        "bytes": 2105648,
+        "ok": true,
+        "at": "2026-11-28T05:39:04.649Z"
+      },
+      {
+        "model": "Árbol 3D · Pícea de Noruega",
+        "stage": "importación Babylon",
+        "durationMs": 540,
+        "bytes": 2073360,
+        "ok": true,
+        "at": "2026-11-28T05:39:04.678Z"
+      },
+      {
+        "model": "Árbol 3D · Roble PBR 2K",
+        "stage": "importación Babylon",
+        "durationMs": 767,
+        "bytes": 1811640,
+        "ok": true,
+        "at": "2026-11-28T05:39:04.907Z"
+      },
+      {
+        "model": "Vikingo",
+        "stage": "importación Babylon",
+        "durationMs": 6796,
+        "bytes": 14068192,
+        "ok": true,
+        "at": "2026-11-28T05:39:26.152Z"
+      },
+      {
+        "model": "Vikingo",
+        "stage": "montaje y rig",
+        "durationMs": 42,
+        "bytes": 14068192,
+        "ok": true,
+        "at": "2026-11-28T05:39:26.195Z"
+      },
+      {
+        "model": "El caballero acorazado",
+        "stage": "importación Babylon",
+        "durationMs": 88444,
+        "bytes": 14617576,
+        "ok": true,
+        "at": "2026-11-28T05:40:47.841Z"
+      },
+      {
+        "model": "Caballero VillageGuard0_0",
+        "stage": "instanciación y montaje",
+        "durationMs": 443,
+        "bytes": 14617576,
+        "ok": true,
+        "at": "2026-11-28T05:40:48.287Z"
+      },
+      {
+        "model": "Caballero VillageGuard0_1",
+        "stage": "instanciación y montaje",
+        "durationMs": 251,
+        "bytes": 14617576,
+        "ok": true,
+        "at": "2026-11-28T05:40:48.610Z"
+      },
+      {
+        "model": "Caballero VillageGuard0_2",
+        "stage": "instanciación y montaje",
+        "durationMs": 167,
+        "bytes": 14617576,
+        "ok": true,
+        "at": "2026-11-28T05:40:49.964Z"
+      },
+      {
+        "model": "El modelo independiente de los aldeanos",
+        "stage": "importación Babylon",
+        "durationMs": 24825,
+        "bytes": 11354468,
+        "ok": true,
+        "at": "2026-11-28T05:41:14.870Z"
+      },
+      {
+        "model": "Aldeano Villager_0_0",
+        "stage": "instanciación y montaje",
+        "durationMs": 224,
+        "bytes": 11354468,
+        "ok": true,
+        "at": "2026-11-28T05:41:15.096Z"
+      },
+      {
+        "model": "Aldeano Villager_0_1",
+        "stage": "instanciación y montaje",
+        "durationMs": 226,
+        "bytes": 11354468,
+        "ok": true,
+        "at": "2026-11-28T05:41:15.426Z"
+      },
+      {
+        "model": "Vikingo",
+        "stage": "espera total de protagonista",
+        "durationMs": 121757,
+        "bytes": 14068192,
+        "ok": true,
+        "at": "2026-11-28T05:41:15.445Z"
+      },
+      {
+        "model": "Gaviotas",
+        "stage": "importación Babylon",
+        "durationMs": 212,
+        "bytes": 3547104,
+        "ok": true,
+        "at": "2026-11-28T05:41:15.739Z"
+      },
+      {
+        "model": "Fauna deer",
+        "stage": "importación Babylon",
+        "durationMs": 48,
+        "bytes": 709100,
+        "ok": true,
+        "at": "2026-11-28T05:41:16.082Z"
+      },
+      {
+        "model": "Fauna wolf",
+        "stage": "importación Babylon",
+        "durationMs": 59,
+        "bytes": 652324,
+        "ok": true,
+        "at": "2026-11-28T05:41:28.851Z"
+      },
+      {
+        "model": "Fauna stag",
+        "stage": "importación Babylon",
+        "durationMs": 51,
+        "bytes": 737492,
+        "ok": true,
+        "at": "2026-11-28T05:41:29.220Z"
+      }
+    ],
+    "glbResources": [
+      {
+        "name": "http://127.0.0.1:4175/assets/models/wildlife/Deer.glb",
+        "durationMs": 37.6,
+        "transferSize": 709400,
+        "encodedBodySize": 709100,
+        "responseStart": 145651.1,
+        "responseEnd": 145668.80000000002
+      },
+      {
+        "name": "http://127.0.0.1:4175/assets/models/wildlife/Wolf.glb",
+        "durationMs": 35.2,
+        "transferSize": 652624,
+        "encodedBodySize": 652324,
+        "responseStart": 145650.69999999998,
+        "responseEnd": 145666.99999999997
+      },
+      {
+        "name": "http://127.0.0.1:4175/assets/models/wildlife/Stag.glb",
+        "durationMs": 35.8,
+        "transferSize": 737792,
+        "encodedBodySize": 737492,
+        "responseStart": 145650.9,
+        "responseEnd": 145668.4
+      }
+    ],
+    "startupErrors": {
+      "consoleErrors": [],
+      "runtimeErrors": [],
+      "unhandledRejections": []
+    },
+    "frameDiagnostics": {
+      "enabled": true,
+      "supportedTypes": [
+        "long-animation-frame",
+        "longtask"
+      ],
+      "unsupportedTypes": [],
+      "maxDurationMs": 54440.5,
+      "entries": [
+        {
+          "type": "longtask",
+          "startTimeMs": 29571.5,
+          "durationMs": 99,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 29679.2,
+          "durationMs": 6059,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 35738.8,
+          "durationMs": 55,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 35794.6,
+          "durationMs": 107,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 35901.6,
+          "durationMs": 100,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 36002.1,
+          "durationMs": 365,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 36368,
+          "durationMs": 1336,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 37707.5,
+          "durationMs": 59,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 37768.6,
+          "durationMs": 78,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 37896.6,
+          "durationMs": 56,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 37965,
+          "durationMs": 77,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 38046.9,
+          "durationMs": 25295,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 63342.7,
+          "durationMs": 73,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 63415.8,
+          "durationMs": 54353,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 117769.5,
+          "durationMs": 87,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 117857.3,
+          "durationMs": 607,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 118464.4,
+          "durationMs": 59,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 118531.4,
+          "durationMs": 251,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 118782.5,
+          "durationMs": 1143,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 119969.8,
+          "durationMs": 166,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 120485.5,
+          "durationMs": 56,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 120543.4,
+          "durationMs": 11789,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 132332.9,
+          "durationMs": 55,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 132388.7,
+          "durationMs": 12478,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 144867,
+          "durationMs": 58,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 144925.2,
+          "durationMs": 344,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 145269.4,
+          "durationMs": 57,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 145373.3,
+          "durationMs": 226,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 145725,
+          "durationMs": 459,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 146211.5,
+          "durationMs": 12182,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 158394.4,
+          "durationMs": 442,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 158837.5,
+          "durationMs": 122,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 158966.7,
+          "durationMs": 160,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 159126.7,
+          "durationMs": 154,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 159282.6,
+          "durationMs": 53,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 159345,
+          "durationMs": 5771,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 165116.5,
+          "durationMs": 83,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "longtask",
+          "startTimeMs": 165201.7,
+          "durationMs": 19285,
+          "blockingDurationMs": 0,
+          "renderStartMs": 0,
+          "styleAndLayoutStartMs": 0,
+          "scripts": [],
+          "attribution": [
+            {
+              "name": "unknown",
+              "containerType": "window",
+              "containerName": "",
+              "containerId": "",
+              "containerSrc": ""
+            }
+          ]
+        },
+        {
+          "type": "long-animation-frame",
+          "startTimeMs": 158959.8,
+          "durationMs": 321.4,
+          "blockingDurationMs": 261.7,
+          "renderStartMs": 159129.5,
+          "styleAndLayoutStartMs": 159280.7,
+          "scripts": [
+            {
+              "sourceURL": "http://127.0.0.1:4175/assets/vendor/babylon.js",
+              "sourceFunctionName": "e",
+              "invoker": "XMLHttpRequest.onreadystatechange",
+              "invokerType": "event-listener",
+              "durationMs": 156.2,
+              "forcedStyleAndLayoutDurationMs": 0
+            },
+            {
+              "sourceURL": "http://127.0.0.1:4175/?test=1",
+              "sourceFunctionName": "",
+              "invoker": "FrameRequestCallback",
+              "invokerType": "user-callback",
+              "durationMs": 149.6,
+              "forcedStyleAndLayoutDurationMs": 0
+            }
+          ],
+          "attribution": []
+        },
+        {
+          "type": "long-animation-frame",
+          "startTimeMs": 159281.5,
+          "durationMs": 54.7,
+          "blockingDurationMs": 3.8,
+          "renderStartMs": 159282.6,
+          "styleAndLayoutStartMs": 159335.9,
+          "scripts": [
+            {
+              "sourceURL": "http://127.0.0.1:4175/?test=1",
+              "sourceFunctionName": "",
+              "invoker": "FrameRequestCallback",
+              "invokerType": "user-callback",
+              "durationMs": 53.2,
+              "forcedStyleAndLayoutDurationMs": 0
+            }
+          ],
+          "attribution": []
+        }
+      ]
+    },
+    "coastWarmup": {
+      "status": "ready",
+      "budgetMs": 8000,
+      "deadlineExceeded": true,
+      "islandIndex": 0,
+      "stages": [
+        {
+          "name": "syncActiveBeachIsland",
+          "status": "complete",
+          "durationMs": 0.1,
+          "error": null
+        },
+        {
+          "name": "syncActiveTidalFoamIsland",
+          "status": "complete",
+          "durationMs": 0,
+          "error": null
+        },
+        {
+          "name": "syncNordicWaterReflectionIsland",
+          "status": "complete",
+          "durationMs": 101.6,
+          "error": null
+        }
+      ],
+      "waits": [
+        {
+          "label": "después de syncActiveBeachIsland",
+          "durationMs": 84,
+          "reason": "animation-frame"
+        },
+        {
+          "label": "después de syncActiveTidalFoamIsland",
+          "durationMs": 58.5,
+          "reason": "animation-frame"
+        },
+        {
+          "label": "después de syncNordicWaterReflectionIsland",
+          "durationMs": 6170.1,
+          "reason": "90ms-fallback"
+        }
+      ],
+      "checks": {
+        "seabed": {
+          "label": "Fondo marino",
+          "ready": true,
+          "reason": null,
+          "type": "cf",
+          "enabled": true
+        },
+        "beach": {
+          "label": "Playa",
+          "ready": true,
+          "reason": null,
+          "type": "Object",
+          "enabled": null
+        },
+        "foam": {
+          "label": "Espuma",
+          "ready": true,
+          "reason": null,
+          "type": "cf",
+          "enabled": true
+        },
+        "reflection": {
+          "label": "Reflejo",
+          "ready": true,
+          "reason": null,
+          "meshCount": 180,
+          "shaderCompile": "ready"
+        },
+        "allReady": true
+      },
+      "errors": [],
+      "shaderCompile": {
+        "status": "ready",
+        "parallelExtensionSupported": false,
+        "materialCount": 32,
+        "compiledCount": 32,
+        "failedMaterials": [],
+        "durationMs": 19126.6,
+        "attempts": 1,
+        "maxAttempts": 2,
+        "timeoutMs": 4000
+      },
+      "reflectionTemporarilyDisabled": false
+    },
+    "sceneWarmup": null,
+    "resourceGate": null,
+    "startupHandoff": null,
+    "backgroundModels": {
+      "startedAt": "2026-11-28T05:41:15.449Z",
+      "npc": "blocking-required",
+      "fauna": "ready-before-entry",
+      "order": "NPC obligatorios y fauna opcional antes de liberar la campaña"
+    },
+    "sceneSnapshot": {
+      "meshCount": 5011,
+      "transformNodeCount": 1997,
+      "textureCount": 93,
+      "pendingTextures": 0,
+      "animationGroupCount": 70,
+      "waitingItems": 0
+    },
+    "captureTimeMs": 188907.3
+  },
+  "audioNetwork": {
+    "requests": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/menu/winter_s_final_toll.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "method": "GET",
+        "resourceType": "media"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "method": "GET",
+        "resourceType": "media"
+      }
+    ],
+    "responses": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/menu/winter_s_final_toll.mp3",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/mud02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/leaves02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/gravel.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood02.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/stone01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood01.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-footsteps/wood03.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_2.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_3.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/oga-battle/battle_sound_effects/swish_4.wav",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_000.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/kenney-rpg-audio/chop.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 200,
+        "statusText": "OK"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_medium_003.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      },
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/cc0-game-sfx/impact-sounds/impactMetal_heavy_001.ogg",
+        "status": 206,
+        "statusText": "Partial Content"
+      }
+    ],
+    "failures": [
+      {
+        "url": "http://127.0.0.1:4175/assets/audio/gameplay/the_weight_of_empire.mp3",
+        "error": "net::ERR_ABORTED"
+      }
+    ]
+  },
+  "agents": [],
+  "limitations": [
+    "La patrulla mueve únicamente la cámara de observación de la API de prueba; no mueve NPCs ni controla la partida normal.",
+    "El motor de juego no expone actualmente una orden de locomoción de NPC para recorrer rutas físicas.",
+    "Los contadores de pisadas y salpicaduras solo se consideran observados cuando el juego los publica; esta patrulla no inventa pasos.",
+    "La cobertura de hierba por isla solo se declara si el motor publica un contador por isla; un contador global no demuestra cobertura individual.",
+    "El catálogo de actividades por isla no está expuesto como contrato estructurado; no se inventan actividades ausentes.",
+    "Chromium/SwiftShader no representa la GPU Adreno física del dispositivo."
+  ],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "failures": [
+    {
+      "phase": "runner",
+      "error": "Error: El arranque no alcanzó worldReady: {\"worldReady\":false,\"bootFailed\":false,\"bodyClass\":\"booting\",\"loadingText\":\"Preparando la costa y los reflejos de la isla inicial…\",\"loadingHelp\":null,\"wildlifeStartupTrace\":{\"kind\":\"stag\",\"stage\":\"rig-validation\",\"startedAt\":159280.1,\"updatedAt\":165105.19999999998,\"lastError\":null,\"history\":[{\"kind\":\"wolf\",\"stage\":\"cache-write-open-ready\",\"atMs\":146186.9,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"cache-write-start\",\"atMs\":146186.9,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"cache-write-open-ready\",\"atMs\":146191.5,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"cache-write-start\",\"atMs\":146191.5,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"cache-write-open-ready\",\"atMs\":146194.8,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"cache-write-start\",\"atMs\":146194.8,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"cache-write-ready\",\"atMs\":146195.8,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"blob-ready\",\"atMs\":146195.8,\"detail\":{\"bytes\":652324}},{\"kind\":\"deer\",\"stage\":\"cache-write-ready\",\"atMs\":146198,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"blob-ready\",\"atMs\":146198,\"detail\":{\"bytes\":709100}},{\"kind\":\"stag\",\"stage\":\"cache-write-ready\",\"atMs\":146200.9,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"blob-ready\",\"atMs\":146200.9,\"detail\":{\"bytes\":737492}},{\"kind\":\"deer\",\"stage\":\"glb-container-inspection\",\"atMs\":146202.5,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"babylon-import-ready\",\"atMs\":146256.7,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"texture-readiness\",\"atMs\":146256.9,\"detail\":null},{\"kind\":\"deer\",\"stage\":\"rig-validation\",\"atMs\":158374.4,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"glb-container-inspection\",\"atMs\":158835.4,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"babylon-import-ready\",\"atMs\":159024.1,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"texture-readiness\",\"atMs\":159024.1,\"detail\":null},{\"kind\":\"wolf\",\"stage\":\"rig-validation\",\"atMs\":159109.5,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"glb-container-inspection\",\"atMs\":159280.1,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"babylon-import-ready\",\"atMs\":159393.3,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"texture-readiness\",\"atMs\":159396.5,\"detail\":null},{\"kind\":\"stag\",\"stage\":\"rig-validation\",\"atMs\":165105.2,\"detail\":null}]},\"wildlifeReadiness\":[{\"kind\":\"deer\",\"state\":\"ready\",\"island\":0,\"meshes\":7,\"skinnedVertices\":4276,\"skinningMode\":\"cpu\",\"bones\":47,\"textures\":0,\"textureWaitMs\":12117.3},{\"kind\":\"wolf\",\"state\":\"ready\",\"island\":0,\"meshes\":4,\"skinnedVertices\":3994,\"skinningMode\":\"cpu\",\"bones\":52,\"textures\":0,\"textureWaitMs\":85.1},{\"kind\":\"stag\",\"state\":\"ready\",\"island\":0,\"meshes\":6,\"skinnedVertices\":7435,\"skinningMode\":\"cpu\",\"bones\":39,\"textures\":0,\"textureWaitMs\":5708.7}],\"glbStageTimings\":[{\"model\":\"Árbol 3D · Pino silvestre\",\"stage\":\"importación Babylon\",\"durationMs\":518,\"bytes\":2105648,\"ok\":true,\"at\":\"2026-11-28T05:39:04.649Z\"},{\"model\":\"Árbol 3D · Pícea de Noruega\",\"stage\":\"importación Babylon\",\"durationMs\":540,\"bytes\":2073360,\"ok\":true,\"at\":\"2026-11-28T05:39:04.678Z\"},{\"model\":\"Árbol 3D · Roble PBR 2K\",\"stage\":\"importación Babylon\",\"durationMs\":767,\"bytes\":1811640,\"ok\":true,\"at\":\"2026-11-28T05:39:04.907Z\"},{\"model\":\"Vikingo\",\"stage\":\"importación Babylon\",\"durationMs\":6796,\"bytes\":14068192,\"ok\":true,\"at\":\"2026-11-28T05:39:26.152Z\"},{\"model\":\"Vikingo\",\"stage\":\"montaje y rig\",\"durationMs\":42,\"bytes\":14068192,\"ok\":true,\"at\":\"2026-11-28T05:39:26.195Z\"},{\"model\":\"El caballero acorazado\",\"stage\":\"importación Babylon\",\"durationMs\":88444,\"bytes\":14617576,\"ok\":true,\"at\":\"2026-11-28T05:40:47.841Z\"},{\"model\":\"Caballero VillageGuard0_0\",\"stage\":\"instanciación y montaje\",\"durationMs\":443,\"bytes\":14617576,\"ok\":true,\"at\":\"2026-11-28T05:40:48.287Z\"},{\"model\":\"Caballero VillageGuard0_1\",\"stage\":\"instanciación y montaje\",\"durationMs\":251,\"bytes\":14617576,\"ok\":true,\"at\":\"2026-11-28T05:40:48.610Z\"},{\"model\":\"Caballero VillageGuard0_2\",\"stage\":\"instanciación y montaje\",\"durationMs\":167,\"bytes\":14617576,\"ok\":true,\"at\":\"2026-11-28T05:40:49.964Z\"},{\"model\":\"El modelo independiente de los aldeanos\",\"stage\":\"importación Babylon\",\"durationMs\":24825,\"bytes\":11354468,\"ok\":true,\"at\":\"2026-11-28T05:41:14.870Z\"},{\"model\":\"Aldeano Villager_0_0\",\"stage\":\"instanciación y montaje\",\"durationMs\":224,\"bytes\":11354468,\"ok\":true,\"at\":\"2026-11-28T05:41:15.096Z\"},{\"model\":\"Aldeano Villager_0_1\",\"stage\":\"instanciación y montaje\",\"durationMs\":226,\"bytes\":11354468,\"ok\":true,\"at\":\"2026-11-28T05:41:15.426Z\"},{\"model\":\"Vikingo\",\"stage\":\"espera total de protagonista\",\"durationMs\":121757,\"bytes\":14068192,\"ok\":true,\"at\":\"2026-11-28T05:41:15.445Z\"},{\"model\":\"Gaviotas\",\"stage\":\"importación Babylon\",\"durationMs\":212,\"bytes\":3547104,\"ok\":true,\"at\":\"2026-11-28T05:41:15.739Z\"},{\"model\":\"Fauna deer\",\"stage\":\"importación Babylon\",\"durationMs\":48,\"bytes\":709100,\"ok\":true,\"at\":\"2026-11-28T05:41:16.082Z\"},{\"model\":\"Fauna wolf\",\"stage\":\"importación Babylon\",\"durationMs\":59,\"bytes\":652324,\"ok\":true,\"at\":\"2026-11-28T05:41:28.851Z\"},{\"model\":\"Fauna stag\",\"stage\":\"importación Babylon\",\"durationMs\":51,\"bytes\":737492,\"ok\":true,\"at\":\"2026-11-28T05:41:29.220Z\"}],\"glbResources\":[{\"name\":\"http://127.0.0.1:4175/assets/models/wildlife/Deer.glb\",\"durationMs\":37.6,\"transferSize\":709400,\"encodedBodySize\":709100,\"responseStart\":145651.1,\"responseEnd\":145668.80000000002},{\"name\":\"http://127.0.0.1:4175/assets/models/wildlife/Wolf.glb\",\"durationMs\":35.2,\"transferSize\":652624,\"encodedBodySize\":652324,\"responseStart\":145650.69999999998,\"responseEnd\":145666.99999999997},{\"name\":\"http://127.0.0.1:4175/assets/models/wildlife/Stag.glb\",\"durationMs\":35.8,\"transferSize\":737792,\"encodedBodySize\":737492,\"responseStart\":145650.9,\"responseEnd\":145668.4}],\"startupErrors\":{\"consoleErrors\":[],\"runtimeErrors\":[],\"unhandledRejections\":[]},\"frameDiagnostics\":{\"enabled\":true,\"supportedTypes\":[\"long-animation-frame\",\"longtask\"],\"unsupportedTypes\":[],\"maxDurationMs\":54440.5,\"entries\":[{\"type\":\"longtask\",\"startTimeMs\":29571.5,\"durationMs\":99,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":29679.2,\"durationMs\":6059,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":35738.8,\"durationMs\":55,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":35794.6,\"durationMs\":107,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":35901.6,\"durationMs\":100,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":36002.1,\"durationMs\":365,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":36368,\"durationMs\":1336,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":37707.5,\"durationMs\":59,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":37768.6,\"durationMs\":78,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":37896.6,\"durationMs\":56,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":37965,\"durationMs\":77,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":38046.9,\"durationMs\":25295,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":63342.7,\"durationMs\":73,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":63415.8,\"durationMs\":54353,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":117769.5,\"durationMs\":87,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":117857.3,\"durationMs\":607,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":118464.4,\"durationMs\":59,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":118531.4,\"durationMs\":251,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":118782.5,\"durationMs\":1143,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":119969.8,\"durationMs\":166,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":120485.5,\"durationMs\":56,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":120543.4,\"durationMs\":11789,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":132332.9,\"durationMs\":55,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":132388.7,\"durationMs\":12478,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":144867,\"durationMs\":58,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":144925.2,\"durationMs\":344,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":145269.4,\"durationMs\":57,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":145373.3,\"durationMs\":226,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":145725,\"durationMs\":459,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":146211.5,\"durationMs\":12182,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":158394.4,\"durationMs\":442,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":158837.5,\"durationMs\":122,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":158966.7,\"durationMs\":160,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":159126.7,\"durationMs\":154,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":159282.6,\"durationMs\":53,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":159345,\"durationMs\":5771,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":165116.5,\"durationMs\":83,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"longtask\",\"startTimeMs\":165201.7,\"durationMs\":19285,\"blockingDurationMs\":0,\"renderStartMs\":0,\"styleAndLayoutStartMs\":0,\"scripts\":[],\"attribution\":[{\"name\":\"unknown\",\"containerType\":\"window\",\"containerName\":\"\",\"containerId\":\"\",\"containerSrc\":\"\"}]},{\"type\":\"long-animation-frame\",\"startTimeMs\":158959.8,\"durationMs\":321.4,\"blockingDurationMs\":261.7,\"renderStartMs\":159129.5,\"styleAndLayoutStartMs\":159280.7,\"scripts\":[{\"sourceURL\":\"http://127.0.0.1:4175/assets/vendor/babylon.js\",\"sourceFunctionName\":\"e\",\"invoker\":\"XMLHttpRequest.onreadystatechange\",\"invokerType\":\"event-listener\",\"durationMs\":156.2,\"forcedStyleAndLayoutDurationMs\":0},{\"sourceURL\":\"http://127.0.0.1:4175/?test=1\",\"sourceFunctionName\":\"\",\"invoker\":\"FrameRequestCallback\",\"invokerType\":\"user-callback\",\"durationMs\":149.6,\"forcedStyleAndLayoutDurationMs\":0}],\"attribution\":[]},{\"type\":\"long-animation-frame\",\"startTimeMs\":159281.5,\"durationMs\":54.7,\"blockingDurationMs\":3.8,\"renderStartMs\":159282.6,\"styleAndLayoutStartMs\":159335.9,\"scripts\":[{\"sourceURL\":\"http://127.0.0.1:4175/?test=1\",\"sourceFunctionName\":\"\",\"invoker\":\"FrameRequestCallback\",\"invokerType\":\"user-callback\",\"durationMs\":53.2,\"forcedStyleAndLayoutDurationMs\":0}],\"attribution\":[]}]},\"coastWarmup\":{\"status\":\"ready\",\"budgetMs\":8000,\"deadlineExceeded\":true,\"islandIndex\":0,\"stages\":[{\"name\":\"syncActiveBeachIsland\",\"status\":\"complete\",\"durationMs\":0.1,\"error\":null},{\"name\":\"syncActiveTidalFoamIsland\",\"status\":\"complete\",\"durationMs\":0,\"error\":null},{\"name\":\"syncNordicWaterReflectionIsland\",\"status\":\"complete\",\"durationMs\":101.6,\"error\":null}],\"waits\":[{\"label\":\"después de syncActiveBeachIsland\",\"durationMs\":84,\"reason\":\"animation-frame\"},{\"label\":\"después de syncActiveTidalFoamIsland\",\"durationMs\":58.5,\"reason\":\"animation-frame\"},{\"label\":\"después de syncNordicWaterReflectionIsland\",\"durationMs\":6170.1,\"reason\":\"90ms-fallback\"}],\"checks\":{\"seabed\":{\"label\":\"Fondo marino\",\"ready\":true,\"reason\":null,\"type\":\"cf\",\"enabled\":true},\"beach\":{\"label\":\"Playa\",\"ready\":true,\"reason\":null,\"type\":\"Object\",\"enabled\":null},\"foam\":{\"label\":\"Espuma\",\"ready\":true,\"reason\":null,\"type\":\"cf\",\"enabled\":true},\"reflection\":{\"label\":\"Reflejo\",\"ready\":true,\"reason\":null,\"meshCount\":180,\"shaderCompile\":\"ready\"},\"allReady\":true},\"errors\":[],\"shaderCompile\":{\"status\":\"ready\",\"parallelExtensionSupported\":false,\"materialCount\":32,\"compiledCount\":32,\"failedMaterials\":[],\"durationMs\":19126.6,\"attempts\":1,\"maxAttempts\":2,\"timeoutMs\":4000},\"reflectionTemporarilyDisabled\":false},\"sceneWarmup\":null,\"resourceGate\":null,\"startupHandoff\":null,\"backgroundModels\":{\"startedAt\":\"2026-11-28T05:41:15.449Z\",\"npc\":\"blocking-required\",\"fauna\":\"ready-before-entry\",\"order\":\"NPC obligatorios y fauna opcional antes de liberar la campaña\"},\"sceneSnapshot\":{\"meshCount\":5011,\"transformNodeCount\":1997,\"textureCount\":93,\"pendingTextures\":0,\"animationGroupCount\":70,\"waitingItems\":0},\"captureTimeMs\":188907.3} · page.waitForFunction: Timeout 180000ms exceeded.\n    at startGame (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:250:11)\n    at async main (file:///home/runner/work/Minimo-android/Minimo-android/scripts/explorer-patrol.mjs:443:5)"
+    }
+  ],
+  "verdict": "failed"
+}
