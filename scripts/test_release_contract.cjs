@@ -43,10 +43,14 @@ const startupCoastStages=[
 assert.ok(startupCoastWarmup.includes("if(!coastalReferenceMode)")&&
   startupCoastStages.every(index=>index>=0)&&
   startupCoastStages[0]<startupCoastStages[1]&&startupCoastStages[1]<startupCoastStages[2]&&
-  startupCoastWarmup.includes("await yieldStartupCoastFrame();")&&
-  startupCoastWarmup.includes("initialCoastReady")&&
+  startupCoastWarmup.includes("budgetMs:coastBudgetMs")&&startupCoastWarmup.includes("coastBudgetMs=8000")&&
+  startupCoastWarmup.includes("runCoastStage")&&startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncActiveBeachIsland')")&&
+  startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncActiveTidalFoamIsland')")&&
+  startupCoastWarmup.includes("yieldStartupCoastFrame('después de syncNordicWaterReflectionIsland')")&&
+  startupCoastWarmup.includes("coastReport.checks={seabed:")&&startupCoastWarmup.includes("coastReport.checks={seabed:")&&
+  startupCoastWarmup.includes("degraded-timeout")&&
   startupCoastWarmup.includes("recordStartupTask('Costa, rompiente y reflejos de la isla inicial'"),
-  "Initial beach, tidal foam and reflection must be ready and measured before the first playable frame, with a yield between stages.");
+  "Initial coastal stages and waits must be individually timed and diagnosed, with a bounded 8-second deadline and a fail-open recovery path.");
 assert.ok(buildSite.includes('html = html.replace(fauna_scene_marker, startup_coast_warmup_code + "\\n" + fauna_scene_marker, 1)'),
   "Initial coastal warm-up must be inserted before the complete scene/shader readiness barrier.");
 const faunaOrderAt=buildSite.indexOf("html = html[:scene_marker_index] + ordered_fauna + html[scene_marker_index:]");
