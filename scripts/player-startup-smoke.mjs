@@ -831,6 +831,27 @@ async function main() {
     assert.equal(renderResolution.renderHeight,renderResolution.physicalPixelHeight,
       'El perfil Calidad debe dibujar al alto físico nativo: '+JSON.stringify(renderResolution));
     manifest.renderResolution=renderResolution;
+    const instancingDiagnostics=await page.evaluate(()=>{
+      const scene=window.BABYLON?.EngineStore?.LastCreatedScene||null;
+      const forest=typeof window.__ELSN_FOREST_INSTANCING_STATS__==='function'?window.__ELSN_FOREST_INSTANCING_STATS__():null;
+      const rocks=typeof window.__ELSN_ROCK_INSTANCING__==='function'?window.__ELSN_ROCK_INSTANCING__():null;
+      const meshes=scene?.meshes||[];
+      return {
+        forest,rocks,
+        visibleTreeInstances:meshes.filter(mesh=>/^NorseForestTree_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length,
+        parkedForestTemplateSources:meshes.filter(mesh=>mesh?.__elsnForestTemplateSource&&mesh.isVisible===true&&Number(mesh.visibility)>.99&&Number(mesh.getAbsolutePosition?.().y)<-1000).length,
+        forestInstanceVisibilitySamples:meshes.filter(mesh=>/^NorseForestTree_/.test(String(mesh?.name||''))).slice(0,4).map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,visibility:Number(mesh.visibility??1),enabled:mesh.isEnabled?.(),absoluteY:Number(mesh.getAbsolutePosition?.().y)})),
+        visibleRockInstances:meshes.filter(mesh=>/^(?:graniteBoulder|rockFacet)_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length,
+        rockInstanceVisibilitySamples:meshes.filter(mesh=>/^(?:graniteBoulder|rockFacet)_/.test(String(mesh?.name||''))).slice(0,4).map(mesh=>({name:mesh.name,isVisible:mesh.isVisible,visibility:Number(mesh.visibility??1),enabled:mesh.isEnabled?.(),absoluteY:Number(mesh.getAbsolutePosition?.().y)}))
+      };
+    });
+    manifest.instancingDiagnostics=instancingDiagnostics;
+    assert.ok(instancingDiagnostics.forest&&instancingDiagnostics.forest.templates===3&&instancingDiagnostics.forest.treeInstances>0&&instancingDiagnostics.forest.instanceMeshes>0&&instancingDiagnostics.forest.sourceMeshes>0&&instancingDiagnostics.forest.templateMeshes>0&&instancingDiagnostics.forest.perTreeGlbClones===0,
+      'El bosque debe usar tres plantillas compartidas y árboles instanciados, sin clonar GLB por árbol: '+JSON.stringify(instancingDiagnostics));
+    assert.ok(instancingDiagnostics.parkedForestTemplateSources===instancingDiagnostics.forest.templateMeshes&&instancingDiagnostics.visibleTreeInstances===instancingDiagnostics.forest.instanceMeshes&&instancingDiagnostics.forest.sourceVisibilityStrategy==='offscreen-template-roots',
+      'Las fuentes deben conservar el batch activo con visibilidad propia cero y todas las instancias deben estar visibles: '+JSON.stringify(instancingDiagnostics));
+    assert.ok(instancingDiagnostics.rocks&&instancingDiagnostics.rocks.instances>0&&instancingDiagnostics.rocks.instanceMeshes===instancingDiagnostics.rocks.instances*2&&instancingDiagnostics.rocks.sourceGeometryMeshes===2&&instancingDiagnostics.visibleRockInstances===instancingDiagnostics.rocks.instanceMeshes&&instancingDiagnostics.rocks.sourceVisibilityStrategy==='offscreen-source-geometry',
+      'Las rocas minables deben compartir dos geometrías fuente y conservar visibles sus dos instancias por depósito: '+JSON.stringify(instancingDiagnostics));
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsBefore,'Falta el diagnóstico visual del palo, los guerreros y las gaviotas.');
     assert.equal(visualActorsBefore.playerClub.equipped,'club','El arsenal no conserva el palo inicial equipado.');
@@ -844,7 +865,8 @@ async function main() {
     assert.ok(visualActorsBefore.gulls.every(bird=>bird.rootEnabled&&bird.hasFlightRig&&bird.flightPlaying&&/^Fly(?:_|$)/i.test(bird.flightName||'')),'Hay una gaviota sin su rig o clip nativo Fly activo: '+JSON.stringify(visualActorsBefore.gulls));
     assert.ok(visualActorsBefore.playerClub.holderParentIsModelPivot,'El palo debe anclarse al pivote del modelo y seguir la mano mediante una pose recalculada.');
     assert.ok(Number.isFinite(visualActorsBefore.playerClub.holderHandDistance)&&visualActorsBefore.playerClub.holderHandDistance<1.5,'El anclaje del palo se ha separado de la mano: '+JSON.stringify(visualActorsBefore.playerClub));
-    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.visualPosition?Math.round(bird.visualPosition.x*10)+':'+Math.round(bird.visualPosition.z*10):'missing'));
+    assert.ok(visualActorsBefore.gulls.every(bird=>bird.meshCount>0&&bird.visibleMeshCount>0&&bird.renderedMeshPosition&&bird.visualParentIsActor),'Hay una gaviota con jerarquía importada incompleta o sin malla visible: '+JSON.stringify(visualActorsBefore.gulls));
+    const gullPositions=new Set(visualActorsBefore.gulls.map(bird=>bird.renderedMeshPosition?Math.round(bird.renderedMeshPosition.x*10)+':'+Math.round(bird.renderedMeshPosition.z*10):'missing'));
     assert.equal(gullPositions.size,5,'Las cinco gaviotas arrancaron superpuestas: '+JSON.stringify(visualActorsBefore.gulls));
     const gullRenderTicksBefore=await page.evaluate(()=>Number(window.__ELSN_GULL_FLIGHT_RENDER__?.frameTicks)||0);
     const gullFlightWaitStartedAt=performance.now();
@@ -859,11 +881,12 @@ async function main() {
           return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.z-b.z);
         };
         return after.every((bird,index)=>{
-          const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
-          const displacement=a&&b?Math.hypot(b.x-a.x,b.z-a.z):0;
+          const before=birds[index],rootA=before?.actorWorldPosition,rootB=bird?.actorWorldPosition,meshA=before?.renderedMeshPosition,meshB=bird?.renderedMeshPosition;
+          const actorDisplacement=rootA&&rootB?Math.hypot(rootB.x-rootA.x,rootB.z-rootA.z):0;
+          const meshDisplacement=meshA&&meshB?Math.hypot(meshB.x-meshA.x,meshB.z-meshA.z):0;
           const leftMotion=poseDelta(before?.leftWingPose,bird?.leftWingPose);
           const rightMotion=poseDelta(before?.rightWingPose,bird?.rightWingPose);
-          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&displacement>1.0&&leftMotion>.025&&rightMotion>.025;
+          return Number(bird?.flightUpdateTicks)>Number(before?.flightUpdateTicks)&&actorDisplacement>1.0&&meshDisplacement>1.0&&Number(bird?.visibleMeshCount)>0&&bird?.visualParentIsActor===true&&leftMotion>.025&&rightMotion>.025;
         });
       },{beforeTicks:gullRenderTicksBefore,birds:visualActorsBefore.gulls},{timeout:60000,polling:250});
     }catch(error){
@@ -873,15 +896,18 @@ async function main() {
         return {
           beforeTicks,render,
           birds:after.map((bird,index)=>{
-            const before=birds[index],a=before?.visualPosition,b=bird?.visualPosition;
+            const before=birds[index],actorA=before?.actorWorldPosition,actorB=bird?.actorWorldPosition,meshA=before?.renderedMeshPosition,meshB=bird?.renderedMeshPosition;
             return {
               name:bird?.name||bird?.rootName||bird?.flightName||String(index),
-              beforePosition:a||null,afterPosition:b||null,
+              beforeActorPosition:actorA||null,afterActorPosition:actorB||null,
+              beforeRenderedMeshPosition:meshA||null,afterRenderedMeshPosition:meshB||null,
+              visibleMeshCount:Number(bird?.visibleMeshCount)||0,visualParentIsActor:bird?.visualParentIsActor===true,
               beforeFlightTicks:Number(before?.flightUpdateTicks)||0,
               afterFlightTicks:Number(bird?.flightUpdateTicks)||0,
               beforeFlightElapsed:Number(before?.flightElapsed)||0,
               afterFlightElapsed:Number(bird?.flightElapsed)||0,
-              displacement:a&&b?Math.hypot(b.x-a.x,b.z-a.z):0
+              actorDisplacement:actorA&&actorB?Math.hypot(actorB.x-actorA.x,actorB.z-actorA.z):0,
+              renderedMeshDisplacement:meshA&&meshB?Math.hypot(meshB.x-meshA.x,meshB.z-meshA.z):0
             };
           })
         };
@@ -898,10 +924,12 @@ async function main() {
     const visualActorsAfter=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
     assert.ok(visualActorsAfter&&visualActorsAfter.gulls.length===5,'Se perdió la bandada tras el primer segundo.');
     for(let index=0;index<5;index++){
-      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.position,afterPosition=after?.position;
-      const displacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const before=visualActorsBefore.gulls[index],after=visualActorsAfter.gulls[index],beforePosition=before?.actorWorldPosition,afterPosition=after?.actorWorldPosition;
+      const meshBefore=before?.renderedMeshPosition,meshAfter=after?.renderedMeshPosition;
+      const actorDisplacement=beforePosition&&afterPosition?Math.hypot(afterPosition.x-beforePosition.x,afterPosition.z-beforePosition.z):0;
+      const meshDisplacement=meshBefore&&meshAfter?Math.hypot(meshAfter.x-meshBefore.x,meshAfter.z-meshBefore.z):0;
       assert.ok(Number(after?.flightUpdateTicks)>Number(before?.flightUpdateTicks),'La actualización de vuelo no avanzó para la gaviota '+index+': '+JSON.stringify({before,after}));
-      assert.ok(displacement>.15,'La gaviota '+index+' no se desplazó durante la prueba de vuelo: '+JSON.stringify({before,after,displacement}));
+      assert.ok(actorDisplacement>.15&&meshDisplacement>.15,'La gaviota '+index+' no desplaza su malla GLB visible junto con el actor: '+JSON.stringify({before,after,actorDisplacement,meshDisplacement}));
     }
     manifest.visualActorAcceptance={before:visualActorsBefore,after:visualActorsAfter,gullRenderState:gullRenderStateAfter,gullRenderTicksBefore,allThreeSystemsVisible:true,gullsMoved:true};
     await page.waitForFunction(() => {
@@ -1151,12 +1179,47 @@ async function main() {
       JSON.stringify(manifest.spatialSelection));
     assert.equal(manifest.spatialSelection.dynamicFilterEnabled, true,
       'La integración con getActiveMeshCandidates debe estar activa en la escena real.');
+    assert.equal(manifest.spatialSelection.dynamicProviderSuppressed, true,
+      'Babylon debe consultar el octree estático sin concatenar automáticamente toda la lista dinámica.');
+    assert.ok(Number(manifest.spatialSelection.actorBoundsGroupCount) > 0 &&
+      Number(manifest.spatialSelection.actorBoundsGroupedMeshCount) >= 2,
+      'La escena real debe agrupar al menos un actor rígido y sus mallas bajo una sola prueba de límites.');
+    assert.ok(Number(manifest.spatialSelection.actorBoundsGroupsChecked) > 0,
+      'La selección real debe evaluar grupos de actores mediante sus límites conservadores.');
+    assert.ok(Number(manifest.spatialSelection.dynamicFilterLastUngroupedChecks) >= 0,
+      'La ruta de fallback debe contabilizar rigs, partículas y objetos dinámicos no agrupables.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterPasses) > 0 && Number(manifest.spatialSelection.dynamicFilterLastCandidates) > 0,
       'El filtro de candidatos dinámicos debe haberse ejecutado en el juego real.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterLastSelected) > 0,
       'El filtro debe conservar candidatos dinámicos visibles.');
     assert.ok(Number(manifest.spatialSelection.dynamicFilterLastCulled) >= 0 && Number(manifest.spatialSelection.dynamicFilterErrors) === 0,
       'El filtro debe registrar su trabajo sin errores; los objetos dudosos deben permanecer visibles.');
+    // Verify the built scene is actually using shared GPU geometry instances,
+    // not merely passing source-code checks while retaining per-object GLB clones.
+    const instancingState = await page.evaluate(() => ({
+      forest: typeof window.__ELSN_FOREST_INSTANCING_STATS__ === 'function'
+        ? window.__ELSN_FOREST_INSTANCING_STATS__() : null,
+      forestModels: window.__ELSN_FOREST_TREES__ || null,
+      rocks: typeof window.__ELSN_ROCK_INSTANCING__ === 'function'
+        ? window.__ELSN_ROCK_INSTANCING__() : null
+    }));
+    manifest.forestInstancing = instancingState.forest;
+    manifest.forestModels = instancingState.forestModels;
+    manifest.rockInstancing = instancingState.rocks;
+    assert.equal(instancingState.forestModels?.ready, true,
+      'Los tres modelos de bosque deben estar cargados antes de validar las instancias.');
+    assert.equal(Number(instancingState.forest?.templates), 3,
+      'Cada especie forestal debe tener una única plantilla fuente compartida.');
+    assert.ok(Number(instancingState.forest?.treeInstances) > 0 &&
+      Number(instancingState.forest?.instanceMeshes) > 0 &&
+      instancingState.forest?.sharedGeometry === true &&
+      Number(instancingState.forest?.perTreeGlbClones) === 0,
+      'La escena real debe representar árboles con InstancedMesh y geometría compartida, sin clonar GLB por ejemplar.');
+    assert.equal(Number(instancingState.rocks?.sourceGeometryMeshes), 2,
+      'Las rocas deben reutilizar exactamente dos geometrías fuente (cuerpo y faceta).');
+    assert.ok(Number(instancingState.rocks?.instanceMeshes) === Number(instancingState.rocks?.instances) * 2 &&
+      instancingState.rocks?.sharedGeometry === true,
+      'Cada depósito de roca debe usar dos instancias de las geometrías compartidas.');
     // Verify the inspector is connected to the real Babylon scene, not a mocked snapshot.
     manifest.worldInspection = await page.evaluate(() => {
       if (typeof window.getGameWorldInspectionSnapshot !== 'function') {

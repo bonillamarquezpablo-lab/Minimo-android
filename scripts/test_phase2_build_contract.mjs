@@ -69,6 +69,9 @@ assert.match(smoke, /worldInspection\.worldUpdateCount > 0/,
 assert.ok(smoke.includes("{timeout:60000,polling:250}") &&
   smoke.includes('gullFlightWaitDiagnostic') &&
   smoke.includes('beforeFlightTicks') && smoke.includes('afterFlightTicks') &&
-  smoke.includes("displacement>1.0") && smoke.includes("leftWingPose") && smoke.includes("rightWingPose") && smoke.includes("gull-flight-stall.png"),
-  'The gull acceptance must allow slow software-rendered CI cadence, keep the real-motion threshold, and preserve detailed before/after diagnostics on timeout.');
+  smoke.includes('beforeRenderedMeshPosition:meshA||null') &&
+  smoke.includes('afterRenderedMeshPosition:meshB||null') &&
+  smoke.includes('actorDisplacement>1.0&&meshDisplacement>1.0') &&
+  smoke.includes("leftWingPose") && smoke.includes("rightWingPose") && smoke.includes("gull-flight-stall.png"),
+  'The gull acceptance must allow slow software-rendered CI cadence, require real rendered-mesh motion above 1 m, and preserve detailed actor/mesh diagnostics on timeout.');
 console.log('Phase 2 world inspection build and offline contracts: OK');

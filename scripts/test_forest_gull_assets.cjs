@@ -7,20 +7,45 @@ const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
-assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
+const animalTextureGateStart=html.indexOf('async function waitForAnimalTextures(meshes,kind,timeoutMs=30000){');
+const animalTextureGateEnd=html.indexOf('\n }',animalTextureGateStart);
+assert.ok(animalTextureGateStart>=0&&animalTextureGateEnd>animalTextureGateStart,'La validación de texturas/rig de fauna debe existir en el build final.');
+const animalTextureGate=html.slice(animalTextureGateStart,animalTextureGateEnd);
+assert.match(animalTextureGate,/texture\.isReady\(\)/,'La carga previa debe esperar las texturas reales.');
+const animalTextureGateCode=animalTextureGate;
+assert.doesNotMatch(animalTextureGateCode,/mesh\.isReady\(true\)/,'La carga previa no debe forzar una compilación repetida de cada material animal.');
+assert.match(animalTextureGate,/shaderReadiness:'deferred-to-initial-view-warmup'/,'La preparación de shaders debe quedar registrada para la barrera de render de la vista inicial.');
+assert.ok(html.includes("typeof window.__ELSN_ADAPTIVE_RESOLUTION__==='function'?window.__ELSN_ADAPTIVE_RESOLUTION__():null"),'The adaptive-resolution diagnostics getter must be called using its exact published name.');
+assert.ok(!html.includes("window.__ELSN_ADAPTIVE_RESOLUTION__?window.__ELSN_ADAPTIVE_RESOLUTION():null"),'A mismatched adaptive-resolution getter must never ship.');
+assert.match(html,/container\.addAllToScene\(\)/,'Each forest species must be loaded once as a shared template.');
+assert.match(html,/sourceMesh\.createInstance\(/,'Placed trees must share template geometry through Babylon InstancedMesh.');
+assert.match(html,/window\.__ELSN_FOREST_INSTANCING_STATS__/,'Forest instancing must expose template/instance counts.');
+assert.doesNotMatch(html,/spec\.container\.instantiateModelsToScene\(name=>name\+'_Forest_'+serial/,'Tree placement must not clone and re-merge the complete GLB per tree.');
 assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
 assert.doesNotMatch(html,/scale=1\.65\/height/);
 assert.ok(html.includes('const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]'), 'The replacement gull must require all named anatomical flight pivots.');
+assert.ok(html.includes('const gullGeneratedIndices=[];for(const mesh of meshes') &&
+  html.includes('if(vertexCount>0&&indexCount===0&&vertexCount%3===0)') &&
+  html.includes('mesh.setIndices(generatedIndices,vertexCount,false)') &&
+  html.includes('generatedIdentityIndices:gullGeneratedIndices'),
+  'Non-indexed gull triangles must receive a lossless identity index buffer before skinning and capture.');
+assert.ok(html.includes('const gullSkinningMeshes=meshes.filter(mesh=>mesh&&mesh.skeleton&&Number(mesh.numBoneInfluencers)>0)') &&
+  html.includes('mesh.computeBonesUsingShaders=!useCpuSkinning') &&
+  html.includes('const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer)') &&
+  html.includes("gullSkeletons.forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}"),
+  'Rigged gulls must use the same explicit CPU/GPU skinning policy as land fauna and prepare their skeletons before rendering.');
+assert.ok(html.includes('mesh.material.backFaceCulling=false') && html.includes('mesh.material.twoSidedLighting=true'),
+  'The GLB double-sided feather/body material must remain renderable when imported roots contain a mirrored transform.');
 assert.ok(html.includes("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;") &&
   html.includes("El GLB de gaviota no contiene un clip Fly válido.") &&
   html.includes("if(group!==nativeFlightClip)group.stop();") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
+  html.includes("flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};") &&
   html.includes("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);"),
   'Every gull must retain all nine anatomical pivots and start its complete native Fly clip.');
 const nativeClipIndex=html.indexOf("const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;");
-const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'");
+const flightRigIndex=html.indexOf("const flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:");
 const nativeClipStartIndex=html.indexOf("nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);");
 const nativeFlightPoseIndex=html.indexOf("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);");
 assert.ok(nativeClipIndex>=0&&nativeClipIndex<nativeClipStartIndex&&nativeClipStartIndex<nativeFlightPoseIndex&&nativeFlightPoseIndex<flightRigIndex,
@@ -47,11 +72,11 @@ assert.ok(html.includes('minGapMeters:6.5') && html.includes('ring<=16') && html
 assert.ok(!html.includes('b.leftWing.rotation[b.wingFlapAxis]') && !html.includes('b.rightWing.rotation[b.wingFlapAxis]'),
   'The imported skeleton animation must not be overridden by legacy synthetic wing rotations.');
 assert.ok(html.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add') && html.includes('nativeTarget&&now-state.lastMotionAt<.85') && html.includes('const flap=Math.sin(now*7.1+(Number(bird.phase)||0))*.42*item.sign'), 'When native Fly stops moving a wing pivot, an articulated fallback must flap both wings.');
-assert.ok(html.includes('Math.max(.18,Number(b.speed))') && html.includes('speed:.18+i*.014'), 'Gull motion must stay perceptible rather than almost static.');
-assert.ok(html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
-  html.includes("flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
+assert.ok(html.includes('clampGullFlight(Number(b.speed)||.18,.12,.28)') && html.includes('speed:.18+i*.014') && html.includes("b.flightMode=gliding?'glide':'flap';"), 'Gull cruise speed must remain bounded and include natural flap/glide phases.');
+assert.ok(html.includes("flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:'native-Fly-midpoint'") &&
+  html.includes("alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot}") &&
   html.includes("rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip}"),
-  'The live gull diagnostic rig must expose the two wings, tail, head, neck and both articulated legs.');
+  'The live gull diagnostic rig must expose its imported hierarchy, rendered meshes, two wings, tail, head, neck and both articulated legs.');
 assert.ok(html.includes("nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5)") &&
   html.includes("alignment:{source:'native-Fly-midpoint'") && html.includes("alignmentDot<.995"),
   'The measured body alignment must come from the actual native Fly pose and reject residual tilt.');
@@ -84,7 +109,7 @@ const models=[
  inspectGlb('assets/models/forest/oak-textured.glb',1500000,true)
 ];
 assert.ok(models[2].meshes<=8,'Oak source mesh count is not compact enough for a mobile forest');
-assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be merged by PBR material before rendering');
+assert.match(html,/mergeStaticDecorByMaterial\(templateRoot,'NorseForestTemplate_'/,'Each species template must be merged once by PBR material before instances are created');
 const gull=path.join(dist,'assets/models/Seagull.glb');
 assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
 const gullData=fs.readFileSync(gull);
@@ -113,13 +138,13 @@ const gullTriangles=(gullJson.meshes||[]).reduce((total,mesh)=>total+(mesh.primi
 },0),0);
 assert.ok(gullTriangles>0&&gullTriangles<=7000,'La nueva gaviota debe conservar una malla ligera y anatómica (triángulos medidos: '+gullTriangles+').');
 assert.ok((gullJson.materials||[]).length>0&&(gullJson.materials||[]).length<=2,'La gaviota debe conservar el material nativo de su plumaje.');
-assert.ok(html.includes("b.root.computeWorldMatrix(true)") && html.includes("b.root.unfreezeWorldMatrix()") && html.includes("flightLastStepMeters"), 'Gull flight must refresh its world transform, recover frozen matrices and expose a per-frame movement watchdog.');
+assert.ok(html.includes("b.root.computeWorldMatrix(true)") && html.includes("node.unfreezeWorldMatrix()") && html.includes("flightLastStepMeters") && html.includes("flightLastVisualStepMeters") && html.includes("hierarchyNodes:rigNodes,meshes") && html.includes("mesh.computeWorldMatrix(true)") && html.includes("mesh.isVisible=true;mesh.visibility=1"), 'Gull flight must recover and refresh the imported rig and verify the rendered mesh moves.');
 assert.ok(html.includes("scene.onBeforeRenderObservable.add") && html.includes("updateAmbientGullFlight(now)") && !html.includes("updateAmbientGullFlight(now*.001);"), 'Gull root movement must be applied after Babylon animation evaluation, immediately before rendering.');
 assert.ok(html.includes("holderParentIsModelPivot") && html.includes("holderHandDistance") && html.includes("equippedWeapon==='club'?realPlayerModelPivot"), 'The starting club must use a model-root anchor recalculated from the animated hand.');
-assert.ok(html.includes("visualPosition:visual?{x:visual.x,y:visual.y,z:visual.z}:null"), 'Gull acceptance must inspect the rendered visual hierarchy world position, not only the actor local position.');
+assert.ok(html.includes("renderedMeshPosition:renderedMeshWorld") && html.includes("visualPosition:visual"), 'Gull acceptance must inspect the rendered visual hierarchy world position, not only the actor local position.');
 console.log('OK: bosque y mapas PBR intactos; gaviota anatómica con pivotes de alas/cola y escala física máxima 0,55 m.');
 console.log(JSON.stringify({models,gullBytes:gullData.length,gullTriangles,gullMaterials:gullJson.materials.length},null,2));
 
 assert.ok(html.includes("actor.position=v(Math.cos(i*1.25)*(18+i*2.5)-36,10+i%3*1.45,Math.sin(i*1.25)*(18+i*2.5)-18)"), 'Each gull must start at its own orbital phase instead of stacking all five roots at the same X/Z coordinate.');
-assert.ok(html.includes('function updateAmbientGullFlight(nowSeconds){') && html.includes('window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};') && html.includes('updateAmbientGullFlight(now);') && html.includes("gullFlightRenderState") && html.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && html.includes('flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin)') && html.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);") && html.includes('if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);'), 'All live gulls must advance inside the actual engine render loop, recover disabled roots and restart their native Fly clip.');
+assert.ok(html.includes('function updateAmbientGullFlight(nowSeconds){') && html.includes('window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};') && html.includes('updateAmbientGullFlight(now);') && html.includes("gullFlightRenderState") && html.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && html.includes('if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;') && html.includes('flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin)') && html.includes('flightDistanceMeters') && html.includes('flightStallSeconds') && html.includes('flightVisualStallSeconds') && html.includes('centerX=homeCenterX+8*Math.sin(flightElapsed*.035+phase*.8)') && html.includes("if(typeof node.setEnabled==='function'&&!node.isEnabled())node.setEnabled(true);") && html.includes('if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);'), 'All live gulls must advance inside the actual engine render loop, recover disabled roots and restart their native Fly clip.');
 assert.ok(!html.includes('ambientBirds.forEach(b=>{if(!worldEntityVisualDue(b,b.root.position.x,b.root.position.z))return;'), 'The five-bird flock must not freeze behind the generic world-entity visual cadence.');

@@ -65,21 +65,26 @@ assert.ok(saveSessionStart>=0&&saveSessionEnd>saveSessionStart,"Session persiste
 const saveSessionSource=source.slice(saveSessionStart,saveSessionEnd);
 assert.match(saveSessionSource,/transaction\.objectStore\(STORE\)\.put\(current\)/);
 assert.doesNotMatch(saveSessionSource,/structuredClone/,"Periodic persistence must not perform an extra full-report clone on the gameplay thread.");
-assert.match(source,/function queueIdlePersistence\(\)/);
+assert.match(source,/function queueIdlePersist\(\)/);
 const beginSessionSource=source.slice(source.indexOf("async function beginSession"),source.indexOf("function recordPerformanceAnomaly"));
 assert.doesNotMatch(beginSessionSource,/await openDatabase\(\)|await pruneOldSessions\(\)|await saveSession\(\)/,
   "Starting a gameplay report must not wait for IndexedDB opening, history pruning or persistence.");
 assert.match(beginSessionSource,/appendSample\(initial\)/);
 assert.match(beginSessionSource,/window\.setInterval\(queueIdleSample, SAMPLE_INTERVAL_MS\)/);
-assert.match(beginSessionSource,/queueIdlePersistence\(\)/);
-const idlePersistenceSource=source.slice(source.indexOf("function queueIdlePersistence"),source.indexOf("function persistSession"));
+assert.match(beginSessionSource,/queueIdlePersist\(\)/);
+assert.ok(beginSessionSource.indexOf("state.sampleTimer = window.setInterval") < beginSessionSource.indexOf("queueIdlePersist();"),"Sampling must begin before the first idle persistence task.");
+assert.match(beginSessionSource,/persistenceMode: "idle"/);
+const idlePersistenceSource=source.slice(source.indexOf("function queueIdlePersist"),source.indexOf("function persistSession"));
 assert.match(idlePersistenceSource,/await openDatabase\(\)/);
 assert.match(idlePersistenceSource,/await pruneOldSessions\(\)/);
+assert.match(idlePersistenceSource,/timeRemaining\(\) < 2/);
+assert.doesNotMatch(idlePersistenceSource,/document\.visibilityState !== "visible"/);
+assert.match(idlePersistenceSource,/state\.prunedForSession/);
 assert.match(idlePersistenceSource,/requestIdleCallback\(run, \{ timeout: 4000 \}\)/);
 assert.match(idlePersistenceSource,/setTimeout\(\(\) => run\(null\), 2000\)/);
 
 assert.match(source,/window\.requestIdleCallback\(run, \{ timeout: 4000 \}\)/);
-assert.match(source,/function cancelQueuedPersistence\(\)/);
+assert.match(source,/function cancelQueuedIdlePersist\(\)/);
 assert.match(source,/sceneInventory = \{ capturedAt: sample\.capturedAt, dynamicMeshSamplesByReason: inventorySnapshot \}/);
 assert.match(source,/window\.structuredClone\(inventory\)/,"The one-time scene inventory must be detached from the live renderer object.");
 assert.match(source,/delete sample\.scene\.meshSelectionDynamicSamplesByReason/);

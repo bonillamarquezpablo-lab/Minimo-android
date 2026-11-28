@@ -51,6 +51,14 @@ assert.ok(capture.includes("window.__ELSN_FORCE_CPU_SKINNING__=mode==='cpu'") &&
   'The visual inspector must force exactly one requested skinning path before game scripts execute.');
 assert.ok(capture.indexOf('window.__ELSN_FORCE_GPU_SKINNING__=mode===\'gpu\'')<capture.indexOf("await page.goto(BASE_URL+'?test=1&fauna-inspector=1'"),
   'Both skinning overrides must be set before the game loads.');
+assert.ok(capture.includes('computeBonesUsingShaders:mesh.computeBonesUsingShaders===true') &&
+  capture.includes("const expectedCpuSkinning=SKINNING_MODE==='cpu'") &&
+  capture.includes("code:'gull-skinning-mode-mismatch'") &&
+  capture.includes('materialState:mesh.materialState'),
+  'The CPU/GPU acceptance mode must be applied to real gull meshes and recorded per material/mesh, not only to land fauna.');
+assert.ok(capture.includes("animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png'") &&
+  capture.includes("code:'fauna-raster-silhouette-invalid'"),
+  'A rejected animal frame must still be preserved as raw evidence for diagnosis.');
 assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
@@ -109,7 +117,18 @@ assert.ok(capture.includes("const skinned=!!mesh.skeleton&&Number(mesh.numBoneIn
 assert.ok(capture.includes('alwaysSelectAsActiveMesh') && capture.includes("code:'skinned-mesh-frustum-culling-enabled'"), 'Fauna acceptance must inspect the final Babylon frustum-protection flag and reject any skinned animal mesh that remains cullable against stale bind-pose bounds.');
 assert.ok(capture.includes('maxExtent>.1&&maxExtent<=1.0'), 'A real gull with a measured 0.834 m span must pass the realistic 1 m size ceiling while giant outliers remain rejected.');
 assert.ok(game.includes("m.alwaysSelectAsActiveMesh=!!(m.skeleton||Number(m.numBoneInfluencers)>0)"), 'The real coastal gull loader must protect imported skinned body meshes from frustum culling against stale bounds.');
+assert.ok(capture.includes("const sampleGullWorldPositions=()=>page.evaluate") &&
+  capture.includes("await new Promise(resolve=>setTimeout(resolve,2200))") &&
+  capture.includes("visualMeshDisplacementMeters") &&
+  capture.includes("code:'gull-flight-translation-stalled'") &&
+  capture.includes("requiredDisplacementMeters:.35"),
+  'Fauna acceptance must prove real world-space translation of both the gull actor and a rendered mesh; wing animation alone is insufficient.');
 assert.ok(capture.includes('animationGroups'));
+assert.ok(capture.includes('if(angleDegrees===0){') &&
+  capture.includes("angle:'bindpose-no-skinning'") &&
+  capture.includes('captureDiagnostics:window.__ELSN_FAUNA_FAILED_CAPTURE__') &&
+  capture.includes('captureDiagnostics:view.captureDiagnostics'),
+  'A front-view failure must still export the gull bind pose and per-mesh render diagnostics before rejection.');
 assert.ok(capture.includes('captureCanvas'));
 const rasterCaptureStart=capture.indexOf('const actorWasEnabled=root.isEnabled?.()!==false;');
 const rasterCaptureEnd=capture.indexOf('if(backgroundPng){',rasterCaptureStart);

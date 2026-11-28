@@ -51,7 +51,7 @@ for (const marker of [
   'octree-initial-dynamic',
   'meshSelectionOctreeEnabled:spatialSelectionStats.enabled',
   'let qualityLabAdaptiveActive=false;',
-  'qualityScaleAdaptive:qualityLabAdaptiveActive',
+  'qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)',
   "const qualityLabEnabled=qualityLabParams.get('debug')==='1';"
 ]) {
   assert.ok(builder.includes(marker), 'Missing mobile stability guardrail: ' + marker);
@@ -91,8 +91,8 @@ assert.ok(!builder.includes('actor.computeWorldMatrix(true);const worldAxis=B.Ve
 assert.ok(builder.includes('mapDrawMaxMs') && builder.includes('window.__elSinNombreWaterTelemetrySnapshot=()=>({'), 'The release must measure minimap cost and keep water telemetry lightweight.');
 assert.ok(builder.includes('auditHabitableStructures.discoveryQueue') && builder.includes('evaluateHabitableStructureCached') && builder.includes('habitableAuditLastCacheHits'), 'The structure audit must discover new buildings incrementally and cache unchanged ground proofs.');
 assert.ok(validator.includes('enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)'), 'Release validation must check the mobile AI budget.');
-assert.ok(validator.includes('reportVersion:\'73\',build:\'{EXPECTED_VERSION}\''), 'Release must carry diagnostic report 73.');
-assert.ok(validator.includes('EXPECTED_VERSION = "0.6.365"'), 'Release validator must target version 0.6.365.');
+assert.ok(validator.includes('reportVersion:\'74\',build:\'{EXPECTED_VERSION}\''), 'Release must carry diagnostic report 74.');
+assert.ok(validator.includes('EXPECTED_VERSION = "0.6.366"'), 'Release validator must target version 0.6.366.');
 assert.ok(builder.includes("const useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer)") && builder.includes("skinningMode:useCpuSkinning?'cpu':'gpu'"),
   'Hardware mobile GPUs must use GPU skinning by default; CPU remains explicit diagnostics/software fallback, and the exact path is recorded per animal.');
 assert.ok(builder.includes("forestPlantingStartedAt") && builder.includes("Plantación inicial de bosque") && builder.includes("await new Promise(resolve=>requestAnimationFrame(resolve))"),
@@ -135,6 +135,8 @@ assert.ok(builder.includes('const centerX=island.x,centerZ=island.z;') && builde
 assert.ok(builder.includes('grass_recenter_marker = "const sameIsland=currentIsland===grassStreamActiveIslandIndex;\\n  if(!sameIsland&&!grassStreamPromise){') && !builder.includes('grass_recenter_replacement = "const moved=false;"'), 'The builder must preserve island-change-only grass streaming and never restore player-distance regeneration.');
 assert.ok(builder.includes('grass_density_marker = "const qualityGrassDensity=isTouchDevice?(islandIndex===0?8.8:5.8):(islandIndex===0?8.2:5.8);"') && builder.includes('grass_density_replacement = "const qualityGrassDensity=isTouchDevice?(isConstrainedMobile?(islandIndex===0?8.8:5.8):(islandIndex===0?10.4:7.0)):(islandIndex===0?8.8:6.2);"'), 'Flagship Quality must exceed the former grass population while constrained mobile devices retain their prior density.');
 assert.ok(builder.includes('mineableRockPlacementStats') && builder.includes('window.__ELSN_ROCK_PLACEMENT__') && builder.includes('const acceptable=(px,pz)=>') && builder.includes('const placedRock=createRock(x,z);if(placedRock)rocks.push(placedRock);'), 'Mineable rocks must be placed only where trunk and rock clearance tests pass.');
+assert.ok(builder.includes('MineableRockGeometryTemplate') && builder.includes('MineableRockCapGeometryTemplate') && builder.includes('mineableRockGeometryTemplate.createInstance(') && builder.includes('mineableRockCapGeometryTemplate.createInstance(') && builder.includes('window.__ELSN_ROCK_INSTANCING__'), 'Mineable rocks must share two immutable geometry templates and use per-rock instances rather than duplicate vertex buffers.');
+assert.ok(!builder.includes("CreateIcoSphere('graniteBoulder'") && !builder.includes("CreateIcoSphere('rockFacet'"), 'No mineable rock may allocate a duplicate sphere geometry at runtime.');
 assert.ok(builder.includes('for(const rock of rocks){') && builder.includes('const required=(Number(rock.radius)||.7)+.9+.45;') && builder.includes('rockOverlapPairs') && builder.includes('minRockTreeClearanceMeters'), 'Tree placement must also reject rocks that were spawned earlier in the incremental forest/resource loop, and expose a symmetric overlap audit.');
 assert.ok(builder.includes("leaf_count_marker = \"const leavesPerClump=isPerformanceMode?8:10;\"") && builder.includes("leavesPerClump=isPerformanceMode?8:12;") && builder.includes("leaf_geometry_marker") && builder.includes("tipTint=tip.tint*1.06"), 'Grass tufts must have 12 tapered blades on Quality with a more efficient 5-vertex profile.');
 assert.ok(builder.includes("class NordicGrassWindPlugin extends B.MaterialPluginBase") && builder.includes("CUSTOM_VERTEX_UPDATE_POSITION") && builder.includes("hardBindForSubMesh(uniformBuffer)") && builder.includes("gpu-vertex-displacement"), 'Grass wind must be animated in the shared GPU vertex shader, not by CPU vertex uploads.');
@@ -175,9 +177,11 @@ assert.ok(builder.includes('tree_rebuild_start =') &&
   builder.includes('mature-scots-pine-tree.glb') &&
   builder.includes('mature-norway-spruce-tree.glb') &&
   builder.includes('oak-textured.glb') &&
-  builder.includes('mergeStaticDecorByMaterial') &&
+  builder.includes("mergeStaticDecorByMaterial(templateRoot,'NorseForestTemplate_'") &&
   builder.includes('await loadForestTreeTemplates()') &&
-  builder.includes("instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
+  builder.includes('container.addAllToScene()') &&
+  builder.includes('sourceMesh.createInstance(') &&
+  !builder.includes("spec.container.instantiateModelsToScene(name=>name+'_Forest_'+serial,false)") &&
   builder.includes('requiresTexture:true'),
   'The procedural triangle foliage must be replaced by three required, locally packaged CC0 tree models with texture maps.');
 assert.ok(builder.includes('gull_material_registry_replacement = "    const realBirds=[];"') &&
@@ -200,7 +204,7 @@ assert.ok(validator.includes('"bootstrapAttempts++<80" in dialogue_runtime_sourc
   validator.includes('Math.min(1000,125+bootstrapAttempts*25)'),
   'Dialogue startup must retry with a low-frequency bounded poll until the game bridge is ready.');
 
-assert.ok(builder.includes('const targetFrameRate=120;'), 'The Quality diagnostics must target high-refresh 120 Hz devices.');
+assert.ok(builder.includes('const targetFrameRate=isPerformanceMode?30:60;'), 'The Quality diagnostics must target 60 FPS stability target.');
 assert.ok(builder.includes('frame_loop_replacement = frame_loop_marker') && builder.includes('frame_clock_replacement = frame_clock_marker') &&
   dialogueRuntime.includes('renderingGroupId=2') && dialogueRuntime.includes('function positionBubbleAtLiveAnchor(slot,npc,scene)') &&
   dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('liveAttachmentFrames') &&
@@ -236,11 +240,11 @@ assert.ok(builder.includes('club_shaft_replacement') && builder.includes('RealCa
 assert.ok(builder.includes('const forwardCarryAxis=modelForward.clone().scale(.62).add(worldUp.scale(.78)).normalize();') && builder.includes('gripWorld.addInPlace(modelRight.scale(.055));') && builder.includes('club.position.y=0;') && builder.includes("RealCastawayStickShaft',club,[0,.68,0]"), 'The staff master pose is gripped in the palm and raised forward/up.');
 assert.ok(builder.includes('function ensureNpcOverlayAnchor(parts,force=false){') && builder.includes('badge.parent=overlayAnchor') && builder.includes('back.parent=overlayAnchor') && builder.includes('maintainNpcOverlayAnchors(now);'), 'NPC badges and health bars share a measured/repaired head anchor.');
 assert.ok(dialogueRuntime.includes('slot.mesh.parent=null') && dialogueRuntime.includes('positionBubbleAtLiveAnchor(slot,npc,s.scene)') && dialogueRuntime.includes('scene.onBeforeRenderObservable.add') && dialogueRuntime.includes('restoreNearbyNpcVisibility'), 'Dialogue cards follow live world coordinates each frame and restore nearby LOD-hidden NPCs.');
-assert.ok(builder.includes('function updateAmbientGullFlight(nowSeconds){') && builder.includes('updateAmbientGullFlight(now);') && builder.includes('scene.onBeforeRenderObservable.add') && !builder.includes('updateAmbientGullFlight(now*.001);') && builder.includes('b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);') && builder.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && builder.includes("if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);"), 'The five gulls must update after Babylon animation evaluation, retain independent orbit positions and restart their native flight clip.');
+assert.ok(builder.includes('function updateAmbientGullFlight(nowSeconds){') && builder.includes('updateAmbientGullFlight(now);') && builder.includes('scene.onBeforeRenderObservable.add') && !builder.includes('updateAmbientGullFlight(now*.001);') && builder.includes('function evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ){') && builder.includes('b.root.position.set(currentPoint.x,currentPoint.y,currentPoint.z);') && builder.includes('b.root.rotation.set(pitch,heading,bank);') && builder.includes('recoverGullWorldHierarchy(b)') && builder.includes('flightLastVisualStepMeters') && builder.includes('b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;') && builder.includes('if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;') && builder.includes('flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin)') && builder.includes('flightDistanceMeters') && builder.includes('flightVisualStallSeconds'), 'The five gulls must fly a smooth coastal route, steer from its tangent, repair the imported hierarchy and measure visible-mesh displacement.');
 assert.ok(builder.includes('window.getGameVisualActorDiagnostics') && builder.includes('visibleMeshCount') && builder.includes('flightPlaying') && builder.includes('leftWingPose') && builder.includes('hostiles'), 'The release must expose read-only visual proof for the club, home warriors, hostile bodies and gull wing motion.');
 assert.ok(builder.includes('function maintainActiveEnemyVisuals(nowMs){')&&builder.includes('maintainActiveEnemyVisuals(now);')&&builder.includes('proceduralFallbackBody')&&builder.includes('nearbyHostiles'), 'Every active hostile near the player must recover its visible 3D body independently of health bars, emblems and AI.');
 assert.ok(builder.includes('gullWingFlapObserver=scene.onBeforeRenderObservable.add')&&builder.includes('lastMotionAt')&&builder.includes('state.fallback=true'), 'A stalled native gull wing track must trigger articulated fallback flap motion without replacing the native clip.');
-assert.ok(builder.includes("b.root.unfreezeWorldMatrix()") && builder.includes("b.root.computeWorldMatrix(true)") && builder.includes("flightLastStepMeters"), 'Gull root transforms must be actively refreshed and stalled motion measured on every render frame.');
+assert.ok(builder.includes("node.unfreezeWorldMatrix()") && builder.includes("mesh.computeWorldMatrix(true)") && builder.includes("b.root.computeWorldMatrix(true)") && builder.includes("flightLastVisualStepMeters"), 'The complete gull rig hierarchy and rendered mesh transforms must be actively refreshed and measured.');
 assert.ok(smoke.includes("/^Fly(?:_|$)/i.test(bird.flightName||'')"), 'The startup acceptance must accept the native Fly clip even when the GLB adds a per-bird suffix such as Fly_Gull_0.');
 
 assert.ok(builder.includes("calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor'"), 'Visual diagnostics must report club calibration using the existing live weapon-anchor state.');

@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-EXPECTED_VERSION = "0.6.365"
+EXPECTED_VERSION = "0.6.366"
 
 VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_RENDER_RESOLUTION=()=>{",
@@ -54,9 +54,21 @@ VISUAL_ACCEPTANCE_MARKERS = (
     "window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};",
     "updateAmbientGullFlight(now);",
     "gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__",
-    "b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);",
-    "if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}",
-    "const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);",
+    "if(node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function')",
+    "node.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;",
+    "mesh.computeWorldMatrix(true)",
+    "if(importedRoot.parent!==visualRoot)",
+    "function evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ){",
+    "const angularRate=baseAngularSpeed+.08*.47*Math.cos(flightElapsed*.47+phase*.37)+.025*.19*Math.cos(gustPhase);",
+    "if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;",
+    "flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin)",
+    "flightDistanceMeters",
+    "flightVisualStallSeconds",
+    "b.root.position.set(currentPoint.x,currentPoint.y,currentPoint.z);",
+    "b.root.rotation.set(pitch,heading,bank);",
+    "recoverGullWorldHierarchy(b)",
+    "flightLastVisualStepMeters",
+    "renderedMeshPosition",
     "b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;",
     "if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);",
 )
@@ -208,7 +220,7 @@ def main() -> None:
     for marker in ("elsn-game-session-reports", "SAMPLE_INTERVAL_MS = 2500", "PERSIST_INTERVAL_MS = 10000", "MAX_SAMPLES_PER_SESSION = 1440", "MAX_ANOMALIES_PER_SESSION = 120", "MAX_STORED_SESSIONS = 20", 'classList.contains("game-running")', "window.top !== window.self"):
         if marker not in session_recorder_source:
             fail("El registrador de sesiones no conserva su contrato de almacenamiento acotado y modo juego: " + marker)
-    for marker in ("function queueIdleSample()", "function queueIdlePersistence()", "sceneInventory", "state.sessionStartedPerformanceAt", "transaction.objectStore(STORE).put(current)", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs", "recordPerformanceAnomaly", "runtimeErrors", "persistSession", "sampleCoverage", "relatedLongTasks", "relatedRuntimeErrors", "usedJSHeapSizeBytes"):
+    for marker in ("function queueIdleSample()", "function queueIdlePersist()", "function cancelQueuedIdlePersist()", 'persistenceMode: "idle"', "state.prunedForSession", "sceneInventory", "state.sessionStartedPerformanceAt", "transaction.objectStore(STORE).put(current)", "requestIdleCallback", "new window.PerformanceObserver", '"longtask"', "drawCallsObservedDelta", "semantics-unverified", "longTaskObserverSupported", "diagnosticsReadMs", "recordPerformanceAnomaly", "runtimeErrors", "persistSession", "sampleCoverage", "relatedLongTasks", "relatedRuntimeErrors", "usedJSHeapSizeBytes"):
         if marker not in session_recorder_source:
             fail("El registrador debe medir y diferir las tareas de telemetría: " + marker)
     npc_agent_core_source = read_text("scripts/npc-agent-core.js")
@@ -411,16 +423,33 @@ def main() -> None:
         "mature-scots-pine-tree.glb",
         "mature-norway-spruce-tree.glb",
         "oak-textured.glb",
-        "mergeStaticDecorByMaterial(visualRoot,'NorseForestGLB_'",
+        "mergeStaticDecorByMaterial(templateRoot,'NorseForestTemplate_'",
+        "container.addAllToScene()",
+        "sourceMesh.createInstance(",
         "await loadForestTreeTemplates()",
-        "instantiateModelsToScene(name=>name+'_Forest_'+serial,false)",
         "requiresTexture:true",
         "targetGullMaxExtentMeters=.55",
+        "templateMeshes.forEach(mesh=>{mesh.isVisible=true;mesh.visibility=1;",
+        "templateRoot.position.y=-100000;templateRoot.computeWorldMatrix(true);templateMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));",
+        "sourceVisibilityStrategy:'offscreen-template-roots'",
+        "sourceVisibilityStrategy:'offscreen-source-geometry'",
+        "source.position.y=-100000;source.computeWorldMatrix(true)",
+        "instance.parent=visualRoot;instance.setEnabled(true);instance.isVisible=true;",
         "sourceMaxExtent=Math.max(sourceWidth,sourceHeight,sourceDepth)",
         "fittedMaxExtent>.57",
         "visualRoot.position.copyFrom(sourceCenter.scale(-1))",
         "const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg]",
-        "flightRig={actor,visualRoot,bodyAxis",
+        "const gullGeneratedIndices=[];for(const mesh of meshes",
+        "if(vertexCount>0&&indexCount===0&&vertexCount%3===0)",
+        "mesh.setIndices(generatedIndices,vertexCount,false)",
+        "generatedIdentityIndices:gullGeneratedIndices",
+        "const gullSkinningMeshes=meshes.filter(mesh=>mesh&&mesh.skeleton&&Number(mesh.numBoneInfluencers)>0)",
+        "mesh.computeBonesUsingShaders=!useCpuSkinning",
+        "const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer)",
+        "gullSkeletons.forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}",
+        "mesh.material.backFaceCulling=false",
+        "mesh.material.twoSidedLighting=true",
+        "flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh",
         "alignAxis=(from,to)",
         "visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1))",
         "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;",
@@ -467,6 +496,9 @@ def main() -> None:
         fail("Los puntos de aparición de fauna deben estar despejados de arbustos voluminosos y rocas.")
     if "window.__ELSN_ROCK_PLACEMENT__" not in index_html or "mineableRockPlacementStats" not in index_html:
         fail("La colocación de rocas debe rechazar intersecciones con troncos y exponer su auditoría.")
+    rock_instancing_markers = ("MineableRockGeometryTemplate", "MineableRockCapGeometryTemplate", "mineableRockGeometryTemplate.createInstance(", "mineableRockCapGeometryTemplate.createInstance(", "window.__ELSN_ROCK_INSTANCING__")
+    if any(marker not in index_html for marker in rock_instancing_markers) or "CreateIcoSphere('graniteBoulder'" in index_html or "CreateIcoSphere('rockFacet'" in index_html:
+        fail("Las rocas minables deben compartir geometría fuente e instanciar cada depósito sin duplicar buffers.")
     if "for(const rock of rocks)" not in index_html or "rockOverlapPairs" not in index_html or "minRockTreeClearanceMeters" not in index_html:
         fail("La colocación incremental debe comprobar rocas previas al plantar árboles y auditar ambos sentidos de solapamiento.")
     subsystem_diagnostic_markers = (
@@ -616,12 +648,12 @@ def main() -> None:
         "highTierGpuMatch=",
         "highHeadroomQualityMobile=",
         "qualityDprCurrent=qualityDpr",
-        "qualityScaleAdaptive:qualityLabAdaptiveActive",
-        "const targetFrameRate=120;",
+        "qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)",
+        "const targetFrameRate=isPerformanceMode?30:60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
-        "FPS bajo; la escala de Calidad permanece fija",
+        "EL SIN NOMBRE: estabilidad por debajo del objetivo de 60 FPS.",
         "renderPipeline.samples=Math.max(1,Math.min(qualityLabEnabled?qualityLabRequestedMsaa:(isTouchDevice?(highHeadroomQualityMobile?2:1):4),maxSamples))",
         "renderPipeline.sharpen.edgeAmount=.34",
         "style='grain',size=highHeadroomQualityMobile?1024:512",
@@ -632,11 +664,12 @@ def main() -> None:
     missing_graphics_quality = [marker for marker in graphics_quality_markers if marker not in index_html]
     if missing_graphics_quality:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
-    if "qualityScaleFixed:!qualityLabAdaptiveActive" not in index_html or "physicalPixelCoveragePct" not in index_html:
-        fail("El perfil Calidad debe informar la escala fija y el porcentaje real de píxeles físicos.")
-    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt\)\{([\s\S]*?)\n  \}", index_html)
-    if not quality_adaptive_match or "engine.setHardwareScalingLevel" in quality_adaptive_match.group(1) or "qualityDprSlowSamples" in quality_adaptive_match.group(1):
-        fail("El runtime no puede reducir automáticamente la escala de Calidad; los cambios manuales quedan limitados al laboratorio debug.")
+    if "qualityRuntimeAdaptiveActive=false" not in index_html or "const qualityDprAdaptiveFloor=qualityDpr;" not in index_html or "qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)" not in index_html or "physicalPixelCoveragePct" not in index_html:
+        fail("El perfil Calidad debe informar la escala adaptativa y el porcentaje real de píxeles físicos.")
+    adaptive_markers = ("function adaptRenderQuality(dt,rawFrameMs){", "qualityRuntimeAdaptiveActive=false", "const qualityDprAdaptiveFloor=qualityDpr;", "frameP95>18.5", "cpuP95<Math.max(12,frameP95*.68)", "cpu-bound-native-resolution-preserved", "gpu-pressure-native-resolution-preserved", "headroom-recovery")
+    missing_adaptive_markers = [marker for marker in adaptive_markers if marker not in index_html]
+    if missing_adaptive_markers:
+        fail("Calidad debe mantener la resolución nativa en juego y conservar la telemetría de presión CPU/GPU: " + ", ".join(missing_adaptive_markers))
     mobile_gpu_budget_markers = (
         "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
@@ -659,6 +692,8 @@ def main() -> None:
             fail("La actualización de DynamicTexture debe recuperar el motor vivo o descartar de forma segura una textura huérfana: " + dynamic_texture_guard)
     spatial_selection_markers = (
         "scene.createOrUpdateSelectionOctree(64,3)",
+        "scene.selectionOctree!==octree",
+        "typeof octree.select!=='function'",
         "await yieldSpatialWorkFrame()",
         "babylonOctreeBuildMs",
         "dynamicClassificationMs",
@@ -683,6 +718,21 @@ def main() -> None:
         "spatialSelectionStats.dynamicFilterEnabled=installSpatialDynamicCandidateFilter();",
         "mesh.isInFrustum(scene.frustumPlanes)",
         "mesh.alwaysSelectAsActiveMesh",
+        "const buildSpatialActorBoundsGroups=async()=>{",
+        "for(let node=mesh;node&&node!==scene;node=node.parent)",
+        "animatedTransformTargets.has(node)",
+        "actorBoundsNestedGroupedMeshes",
+        "const spatialDynamicUngroupedMeshSet=new Set()",
+        "const spatialActorBoundsGroups=[]",
+        "octree.dynamicContent=spatialEmptyDynamicContent",
+        "for(const group of spatialActorBoundsGroups)",
+        "for(const mesh of spatialDynamicUngroupedMeshSet)",
+        "dynamicFilterMode=dynamicProviderSuppressed?'static-octree-plus-actor-groups'",
+        "meshSelectionDynamicProviderSuppressed:!!spatialSelectionStats.dynamicProviderSuppressed",
+        "mesh.__elsnSpatialActorBoundsGroup=group;",
+        "group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera",
+        "plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d",
+        "delete mesh.__elsnSpatialActorBoundsGroup",
         "meshSelectionOctreeEnabled:spatialSelectionStats.enabled",
         "meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount",
         "meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs",
@@ -696,8 +746,17 @@ def main() -> None:
     missing_spatial_selection = [marker for marker in spatial_selection_markers if marker not in index_html]
     if missing_spatial_selection:
         fail("La selección espacial segura de Babylon está incompleta: " + ", ".join(missing_spatial_selection))
+    coast_reflection_fallback_markers = (
+        "coastReport.shaderCompile.status==='deferred'",
+        "!coastReport.reflectionTemporarilyDisabled",
+        "shaderWarmupComplete:false",
+        "runtimeFallback:'Babylon native compilation'",
+    )
+    missing_coast_reflection_fallback = [marker for marker in coast_reflection_fallback_markers if marker not in index_html]
+    if missing_coast_reflection_fallback:
+        fail("El espejo de agua debe seguir operativo cuando el calentamiento de shaders se difiere a Babylon: " + ", ".join(missing_coast_reflection_fallback))
     fps_pacing_markers = (
-        "const targetFrameRate=120;",
+        "const targetFrameRate=isPerformanceMode?30:60;",
         "fpsHudTime+=rawFrameMs/1000;fpsHudFrames++",
         "renderedFps=measured",
         "renderedFps||engine.getFps()",
@@ -707,9 +766,9 @@ def main() -> None:
         fail("La medición de fotogramas renderizados y la referencia de pantallas de alta frecuencia están incompletas: " + ", ".join(missing_fps_pacing))
     if "nextRenderAt" in index_html or "frameIntervalMs" in index_html:
         fail("El perfil Calidad no puede limitar el bucle de renderizado a 60 Hz; debe seguir la frecuencia real de la pantalla.")
-    if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html:
+    if "meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs" not in index_html or "meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors" not in index_html or "meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount" not in index_html or "meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled" not in index_html:
         fail("La telemetría de congelación de matrices estáticas debe registrar coste y errores.")
-    if "reportVersion:'73',build:'0.6.365'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
+    if "reportVersion:'74',build:'0.6.366'" not in index_html or "enemyAiRateCapHz:isConstrainedMobile?20:(isTouchDevice?30:60)" not in index_html or "performanceAssessment:{targetFps:targetFrameRate" not in index_html or "preWorldMaintenanceMs:Number(lastPreWorldMaintenanceMs.toFixed(3))" not in index_html or "preWorldMaintenanceTimings:getFrameMaintenanceTimingSnapshot()" not in index_html or "worldPhaseTimings:getWorldPhaseTimingSnapshot()" not in index_html or "finishWorldPhaseTiming();" not in index_html or "mapDrawMaxMs" not in index_html or "window.__elSinNombreWaterTelemetrySnapshot=()=>({" not in index_html or "auditHabitableStructures.discoveryQueue" not in index_html or "evaluateHabitableStructureCached" not in index_html or "habitableAuditLastMs" not in index_html or "habitableAuditLastCacheHits" not in index_html or "gpuTimerQuery:'not measured; scene.render duration is CPU wall-clock only'" not in index_html:
         fail("El diagnóstico de rendimiento debe exponer el nuevo build, caché y límites de frecuencia.")
     beach_diagnostic_markers = (
         "cpuUpdateLastMs:Number(beachUpdateCpuMs.toFixed(3))",
@@ -1113,7 +1172,7 @@ def main() -> None:
         fail("El alpha del agua debe usar profundidad vertical sobre el lecho y no producir óvalos por distancia radial.")
     if "foamActiveSegments" not in index_html or "foamValidIntersections" not in index_html or "foamMaxOffshoreDistanceMeters" not in index_html or "foamVerticesOutsideBand" not in index_html or "foamUpdateLastMs" not in index_html or "foamBackwashPeakVelocityMetersPerSecond" not in index_html:
         fail("El diagnóstico de resaca debe medir segmentos, cruces, distancia mar adentro, vértices fuera de banda y CPU.")
-    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'73',build:'{EXPECTED_VERSION}'" not in index_html:
+    if "SAGA DEL NORTE · CAPÍTULO I" not in index_html or f"reportVersion:'74',build:'{EXPECTED_VERSION}'" not in index_html:
         fail("El HUD y los mensajes de runtime deben identificar la versión real del juego.")
     if "const segments=coastColumns" not in index_html or "rows=isPerformanceMode?13:(isTouchDevice?32:48)" not in index_html:
         fail("La malla costera debe compartir la resolución proporcional del estado intermareal.")

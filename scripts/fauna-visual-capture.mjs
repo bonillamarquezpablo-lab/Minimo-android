@@ -314,7 +314,7 @@ async function main() {
           }:null;
           return {
             name:String(mesh.name||mesh.id||''),vertices,indices,skinned,
-            skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,enabled:mesh.isEnabled?.()!==false,
+            skeleton:mesh.skeleton?.name||null,alwaysSelectAsActiveMesh:mesh.alwaysSelectAsActiveMesh===true,computeBonesUsingShaders:mesh.computeBonesUsingShaders===true,materialState:mesh.material?{type:mesh.material.getClassName?.()||null,backFaceCulling:mesh.material.backFaceCulling,twoSidedLighting:mesh.material.twoSidedLighting,alpha:number(mesh.material.alpha),transparencyMode:number(mesh.material.transparencyMode)}:null,enabled:mesh.isEnabled?.()!==false,
             visible:mesh.isVisible!==false,visibility:number(mesh.visibility??1),
             material:mesh.material?.name||null,localBounds:local,
             worldBounds:lo&&hi?{min:{x:number(lo.x),y:number(lo.y),z:number(lo.z)},max:{x:number(hi.x),y:number(hi.y),z:number(hi.z)},basis:boundsBasis}:null,
@@ -394,6 +394,46 @@ async function main() {
     }
     const landAnimals=manifest.fauna.filter(animal=>animal.role!=='ambient-bird');
     const birds=manifest.fauna.filter(animal=>animal.role==='ambient-bird');
+    // A moving wing animation is not proof of flight. Sample both the actor root and
+    // an actual rendered mesh across live render frames; reject stationary airborne gulls.
+    if(birds.length){
+      const sampleGullWorldPositions=()=>page.evaluate(()=>{
+        const B=window.BABYLON||null,scene=window.__ELSN_FAUNA_CAPTURE_SCENE__||B?.EngineStore?.LastCreatedScene||null;
+        if(!scene)return [];
+        return (scene.transformNodes||[]).filter(root=>
+          /^RealSeagullActor_\d+$/.test(String(root?.name||''))&&!root.isDisposed?.()
+        ).map(root=>{
+          const position=root.getAbsolutePosition?.()||root.position;
+          const meshes=root.getChildMeshes?.(false)||[];
+          const mesh=meshes.find(item=>item&&!item.isDisposed?.()&&item.isVisible!==false&&item.isEnabled?.()!==false)||null;
+          let visual=null;
+          if(mesh){try{mesh.computeWorldMatrix(true);const p=mesh.getAbsolutePosition?.();if(p)visual={x:p.x,y:p.y,z:p.z};}catch(_){}}
+          return {id:String(root.name),root:{x:position.x,y:position.y,z:position.z},visual};
+        });
+      });
+      const before=await sampleGullWorldPositions();
+      await new Promise(resolve=>setTimeout(resolve,2200));
+      const after=await sampleGullWorldPositions();
+      const vectorDistance=(a,b)=>a&&b?Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z):null;
+      const afterById=new Map(after.map(item=>[item.id,item]));
+      manifest.gullFlightMotion=before.map(start=>{
+        const end=afterById.get(start.id);
+        return {id:start.id,rootDisplacementMeters:round(vectorDistance(start.root,end?.root),3),
+          visualMeshDisplacementMeters:round(vectorDistance(start.visual,end?.visual),3)};
+      });
+      for(const motion of manifest.gullFlightMotion){
+        if(!(motion.rootDisplacementMeters>=.35)||!(motion.visualMeshDisplacementMeters>=.35)){
+          manifest.failures.push({code:'gull-flight-translation-stalled',animal:motion.id,
+            rootDisplacementMeters:motion.rootDisplacementMeters,
+            visualMeshDisplacementMeters:motion.visualMeshDisplacementMeters,
+            requiredDisplacementMeters:.35,observationWindowMs:2200});
+        }
+      }
+      if(manifest.gullFlightMotion.length!==birds.length)manifest.failures.push({
+        code:'gull-flight-motion-roster-mismatch',expected:birds.length,measured:manifest.gullFlightMotion.length
+      });
+      saveManifest();
+    }
     const expected=Number(manifest.readiness?.requested||initial.expectedWildlifeCount||landAnimals.length);
     const readinessLoaded=Number(manifest.readiness?.loaded);
     const loaded=manifest.startup.worldReady&&Number.isFinite(readinessLoaded)?readinessLoaded:landAnimals.length;
@@ -424,6 +464,10 @@ async function main() {
       if(animal.role!=='ambient-bird'&&d&&horizontalMin<d.height*.30)manifest.warnings.push({code:'extremely-narrow-world-silhouette',animal:animal.id,dimensions:d,minimumBodyDepth});
       if(animal.visibleMeshCount<1)manifest.warnings.push({code:'no-visible-meshes',animal:animal.id});
       if(animal.role==='ambient-bird'){
+        const expectedCpuSkinning=SKINNING_MODE==='cpu';
+        const wrongSkinningMeshes=(animal.meshes||[]).filter(mesh=>mesh.skinned&&(mesh.computeBonesUsingShaders===expectedCpuSkinning));
+        if(wrongSkinningMeshes.length)manifest.warnings.push({code:'gull-skinning-mode-mismatch',animal:animal.id,expected:SKINNING_MODE,meshes:wrongSkinningMeshes.map(mesh=>({name:mesh.name,computeBonesUsingShaders:mesh.computeBonesUsingShaders,materialState:mesh.materialState}))});
+        if(animal.flightRig?.skinningMode&&animal.flightRig.skinningMode!==SKINNING_MODE)manifest.warnings.push({code:'gull-rig-skinning-mode-mismatch',animal:animal.id,expected:SKINNING_MODE,actual:animal.flightRig.skinningMode});
         if(!animal.flightRig?.complete)manifest.warnings.push({code:'gull-flight-rig-incomplete',animal:animal.id,flightRig:animal.flightRig});
         if(animal.flightRig?.complete&&!animal.flightRig.animationPlaying)manifest.warnings.push({code:'gull-flight-animation-stopped',animal:animal.id,flightRig:animal.flightRig});
         if(!/fly/i.test(String(animal.flightRig?.animationGroupName||'')))manifest.warnings.push({code:'gull-native-flight-clip-missing',animal:animal.id,flightRig:animal.flightRig});
@@ -630,9 +674,9 @@ async function main() {
                 source:'same-frame-projected-animal-bounds-raster-diff',
                 valid:changedPixels>=140&&widthPx>=12&&heightPx>=10&&rasterFillRatio>=.015
               };
-              if(!imageIntegrity.valid)throw new Error('La captura contiene muy poca silueta real del animal; no se acepta como PNG válido: '+animalId+' · '+JSON.stringify(imageIntegrity));
+              if(!imageIntegrity.valid)window.__ELSN_FAUNA_FAILED_CAPTURE__={animalId,angleDegrees,png,imageIntegrity,camera,meshCount:meshes.length,subjectMeshes:meshes.map(mesh=>({name:mesh.name,visible:mesh.isVisible,visibility:mesh.visibility,enabled:mesh.isEnabled?.(),vertices:mesh.getTotalVertices?.(),indices:mesh.getTotalIndices?.(),computeBonesUsingShaders:mesh.computeBonesUsingShaders,material:{backFaceCulling:mesh.material?.backFaceCulling,twoSidedLighting:mesh.material?.twoSidedLighting,alpha:mesh.material?.alpha}}))};
             }
-            if(!isBird&&angleDegrees===0){
+            if(angleDegrees===0){
               const canvas=document.getElementById('renderCanvas');
               const ownGroups=(scene.animationGroups||[]).filter(group=>(group.targetedAnimations||[]).some(entry=>{
                 const targetNode=entry.target?.getTransformNode?.()||entry.target;
@@ -667,30 +711,34 @@ async function main() {
               // additional full SwiftShader frame solely for cleanup on every one of four views.
             }
           }
-          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,bindPosePng};
+          return {camera,readback,cameraVerified,target,position:(()=>{const p=root.getAbsolutePosition?.()||root.position;return p?{x:Number(p.x),y:Number(p.y),z:Number(p.z)}:null;})(),png,imageIntegrity,captureDiagnostics:window.__ELSN_FAUNA_FAILED_CAPTURE__?.animalId===animalId?window.__ELSN_FAUNA_FAILED_CAPTURE__:null,bindPosePng};
         },{animalId:animal.id,angleDegrees:angle.degrees,measuredBounds:animal.bounds},
         'view '+animal.id+'/'+angle.id,FAUNA_PAGE_EVALUATE_TIMEOUT_MS);
         const match=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.png||'');
         assert.ok(match,'No se obtuvo PNG válido para '+animal.id+' / '+angle.id);
         const buffer=Buffer.from(match[1],'base64');
         assert.ok(buffer.length>1000,'PNG vacío o incompleto: '+animal.id+' / '+angle.id);
-        assert.ok(view.imageIntegrity?.valid===true,'La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
-        const file=animal.id+'-'+angle.id+'.png';
+        const file=animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png';
         fs.writeFileSync(path.join(OUT,file),buffer);
-        manifest.captures.push({
-          id:animal.id+'-'+angle.id,file,subject:animal.id,kind:animal.kind,angle:angle.id,
-          camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
-          target:view.target,positionAtCapture:view.position,imageIntegrity:view.imageIntegrity,bytes:buffer.length
-        });
         if(angle.id==='front'&&view.bindPosePng){
           const bindMatch=/^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(view.bindPosePng);
-          assert.ok(bindMatch,'No se obtuvo PNG de diagnóstico sin skinning para '+animal.id);
+          assert.ok(bindMatch,'No se obtuvo PNG de bind pose para '+animal.id);
           const bindBuffer=Buffer.from(bindMatch[1],'base64');
           assert.ok(bindBuffer.length>1000,'PNG de bind pose vacío: '+animal.id);
           const bindFile=animal.id+'-bindpose.png';
           fs.writeFileSync(path.join(OUT,bindFile),bindBuffer);
           manifest.captures.push({id:animal.id+'-bindpose',file:bindFile,subject:animal.id,kind:animal.kind,angle:'bindpose-no-skinning',camera:view.camera,cameraVerified:view.cameraVerified===true,bytes:bindBuffer.length});
         }
+        if(view.imageIntegrity?.valid!==true){
+          manifest.failures.push({code:'fauna-raster-silhouette-invalid',animal:animal.id,angle:angle.id,imageIntegrity:view.imageIntegrity,camera:view.camera,captureDiagnostics:view.captureDiagnostics});
+          manifest.currentCapture=null;saveManifest();
+          throw new Error('La captura no demuestra la presencia raster visible del animal: '+animal.id+' / '+angle.id+' · '+JSON.stringify(view.imageIntegrity));
+        }
+        manifest.captures.push({
+          id:animal.id+'-'+angle.id,file,subject:animal.id,kind:animal.kind,angle:angle.id,
+          camera:view.camera,cameraVerified:view.cameraVerified===true,cameraReadback:view.readback,
+          target:view.target,positionAtCapture:view.position,imageIntegrity:view.imageIntegrity,bytes:buffer.length
+        });
         manifest.currentCapture=null;
         manifest.progress={stage:'view-complete',elapsedMs:Date.now()-captureStartedAt,updatedAt:new Date().toISOString()};
         saveManifest();

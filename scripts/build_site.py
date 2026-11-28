@@ -1274,6 +1274,8 @@ def main() -> None:
   {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
+ const forestInstancingStats={templates:0,treeInstances:0,instanceMeshes:0,sourceMeshes:0,templateMeshes:0,templateBuildMs:0,perTreeGlbClones:0,sharedGeometry:true,sourceVisibilityStrategy:'offscreen-template-roots'};
+ window.__ELSN_FOREST_INSTANCING_STATS__=()=>({...forestInstancingStats});
   const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:6.5};
   function findForestTreePlacement(x,z,canopyRadius){
    const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
@@ -1331,14 +1333,40 @@ def main() -> None:
    const sourceMeshes=container&&(container.meshes||[]).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||[];
    const textureCount=container&&(container.textures||[]).filter(Boolean).length||0;
    const materialCount=container&&(container.materials||[]).filter(Boolean).length||0;
-   if(!container||typeof container.instantiateModelsToScene!=='function'||!sourceMeshes.length||!materialCount){
+   if(!container||typeof container.addAllToScene!=='function'||!sourceMeshes.length||!materialCount){
     throw new Error('El GLB forestal no contiene mallas y materiales instanciables: '+spec.label);
    }
    if(spec.requiresTexture&&textureCount<1)throw new Error('El modelo forestal '+spec.label+' llegó sin mapas de textura.');
-   recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,source:'Innerscene CC0'});
-   return {spec,container,textureCount,materialCount};
+   // Build one immutable, material-merged source per species. Every placed tree
+   // becomes an InstancedMesh sharing the same vertex/index buffers and PBR materials.
+   // The old path cloned the complete GLB and re-merged all geometry for every tree.
+   container.addAllToScene();
+   const templateRoot=new B.TransformNode('NorseForestTemplate_'+spec.kind,scene);
+   const importedRoots=container.rootNodes||[];
+   if(!importedRoots.length)throw new Error('El GLB forestal no produjo raíces: '+spec.label);
+   importedRoots.forEach(node=>{node.parent=templateRoot;node.setEnabled(true);});
+   const templateSourceMeshes=getRootMeshes(importedRoots);
+   const bounds=boundsForMeshes(templateSourceMeshes),sourceHeight=Math.max(.001,bounds.height);
+   mergeStaticDecorByMaterial(templateRoot,'NorseForestTemplate_'+spec.kind);
+   const templateMeshes=templateRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
+   if(!templateMeshes.length||templateMeshes.length>Math.max(4,templateSourceMeshes.length)){
+    throw new Error('La plantilla forestal no pudo compactarse por material: '+spec.label);
+   }
+   // InstancedMesh.visibility is source-owned in Babylon; instance writes are ignored.
+   // Keep shared source visibility at 1 and park only the template root outside world bounds.
+   // Each instance is detached to its own visualRoot, so its local transform and geometry stay unchanged.
+   templateMeshes.forEach(mesh=>{mesh.isVisible=true;mesh.visibility=1;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
+   templateRoot.position.y=-100000;templateRoot.computeWorldMatrix(true);templateMeshes.forEach(mesh=>mesh.computeWorldMatrix(true));
+   recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,sourceMeshes:templateSourceMeshes.length,templateMeshes:templateMeshes.length,source:'Innerscene CC0 shared-instancing'});
+   return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,sourceMeshCount:templateSourceMeshes.length,textureCount,materialCount};
   }));
-  loaded.forEach(item=>forestTreeTemplates.set(item.spec.kind,item));
+  loaded.forEach(item=>{
+   forestTreeTemplates.set(item.spec.kind,item);
+   forestInstancingStats.templates++;
+   forestInstancingStats.sourceMeshes+=Number(item.sourceMeshCount)||0;
+   forestInstancingStats.templateMeshes+=item.templateMeshes.length;
+  });
+  forestInstancingStats.templateBuildMs=Number((performance.now()-started).toFixed(2));
   window.__ELSN_FOREST_TREES__={ready:forestTreeTemplates.size===3,species:Array.from(forestTreeTemplates.keys()),loaded:forestTreeTemplates.size,assets:loaded.map(item=>({kind:item.spec.kind,materials:item.materialCount,textures:item.textureCount}))};
   recordStartupTask('Modelos completos del bosque',started,performance.now(),'ready',{species:Array.from(forestTreeTemplates.keys()),loaded:forestTreeTemplates.size,source:'Innerscene CC0'});
   if(forestTreeTemplates.size!==3)throw new Error('No se cargaron los tres modelos forestales obligatorios.');
@@ -1351,19 +1379,18 @@ def main() -> None:
   const canopy=new B.TransformNode('TreeCanopyWindPivot_'+kind,scene);canopy.parent=root;
   const visualRoot=new B.TransformNode('TreeGLBVisual_'+kind,scene);visualRoot.parent=canopy;
   const serial=(window.__ELSN_FOREST_INSTANCE_ID=(window.__ELSN_FOREST_INSTANCE_ID||0)+1);
-  const inst=spec.container.instantiateModelsToScene(name=>name+'_Forest_'+serial,false);
-  const importedRoots=inst.rootNodes||[];
-  if(!importedRoots.length)throw new Error('El modelo forestal no produjo nodos raíz: '+spec.spec.label);
-  importedRoots.forEach(node=>{node.parent=visualRoot;node.setEnabled(true);});
-  const sourceMeshes=getRootMeshes(importedRoots);
-  if(!sourceMeshes.length)throw new Error('El modelo forestal no produjo geometría: '+spec.spec.label);
-  const bounds=boundsForMeshes(sourceMeshes),sourceHeight=Math.max(.001,bounds.height);
+  const bounds=spec.bounds,sourceHeight=spec.sourceHeight;
+  if(!Array.isArray(spec.templateMeshes)||!spec.templateMeshes.length)throw new Error('La plantilla forestal compartida no tiene geometría: '+spec.spec.label);
   const placedScale=(spec.spec.targetHeight/sourceHeight)*scale,pivotY=sourceHeight*.58;
-  // Merge while the visual root is still at identity so the imported world transforms are baked only once.
-  mergeStaticDecorByMaterial(visualRoot,'NorseForestGLB_'+kind+'_'+serial);
-  const meshes=visualRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
-  if(!meshes.length)throw new Error('El modelo forestal no pudo fusionarse en mallas renderizables: '+spec.spec.label);
-  if(meshes.length>Math.max(4,sourceMeshes.length))throw new Error('La optimización del árbol aumentó el número de mallas: '+spec.spec.label);
+  const meshes=spec.templateMeshes.map((sourceMesh,index)=>{
+   if(!sourceMesh||sourceMesh.isDisposed?.()||typeof sourceMesh.createInstance!=='function')throw new Error('No se pudo crear la instancia forestal '+spec.spec.label+' #'+index);
+   const instance=sourceMesh.createInstance('NorseForestTree_'+kind+'_'+serial+'_'+index);
+   instance.parent=visualRoot;instance.setEnabled(true);instance.isVisible=true;
+   instance.isPickable=false;instance.receiveShadows=true;instance.alwaysSelectAsActiveMesh=false;
+   return instance;
+  });
+  if(!meshes.length)throw new Error('El modelo forestal no produjo instancias renderizables: '+spec.spec.label);
+
   visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
   canopy.position.y=pivotY;
   root.scaling.setAll(placedScale);
@@ -1376,6 +1403,8 @@ def main() -> None:
   if(!placement){forestTreeSpacingStats.skipped++;root.dispose(false,false);return null;}
   if(Math.hypot(placement.x-x,placement.z-z)>.10)forestTreeSpacingStats.relocated++;
   forestTreeSpacingStats.placed++;x=placement.x;z=placement.z;
+  forestInstancingStats.treeInstances++;
+  forestInstancingStats.instanceMeshes+=meshes.length;
   root.position=v(x,renderedTerrainSurfaceAt(x,z),z);root.computeWorldMatrix(true);
   return {root,canopy,x,z,radius:Math.max(.62,Math.min(1.45,horizontalSpan*.24)),canopyRadius,hp:3,alive:true,hitFlash:0,falling:null,fallX:0,fallZ:0,species:kind,baseYaw,baseYOffset:0,windPhase:rand(0,Math.PI*2),modelLabel:spec.spec.label,modelMeshCount:meshes.length,height:spec.spec.targetHeight*scale};
  }
@@ -1794,24 +1823,23 @@ function setLoadingProgress(value,label){
    }
   }
   const started=performance.now();
-  const pendingNow=()=>{
-   const pendingTextures=Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
-   const pendingMeshes=list.filter(mesh=>typeof mesh.isReady==='function'&&!mesh.isReady(true));
-   return {pendingTextures,pendingMeshes};
-  };
+  // Avoid synchronous per-mesh material readiness probes here: on CPU/SwiftShader they can repeat shader work for every
+  // animal material before the first scene render. Geometry/rig validity is checked above;
+  // actual material readiness belongs to Babylon's active-view warm-up and visual acceptance.
+  const pendingTextures=()=>Array.from(textures).filter(texture=>typeof texture.isReady==='function'&&!texture.isReady());
   await new Promise((resolve,reject)=>{
    let settled=false,timer=null;
    const finish=error=>{if(settled)return;settled=true;if(timer!==null)clearTimeout(timer);if(error)reject(error);else resolve();};
    const check=()=>{
-    const pending=pendingNow();
-    if(!pending.pendingTextures.length&&!pending.pendingMeshes.length)return finish(null);
-    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': preparación visual incompleta; '+pending.pendingMeshes.length+'/'+list.length+' mallas y '+pending.pendingTextures.length+'/'+textures.size+' texturas pendientes.'));
-    setTimeout(check,50);
+    const pending=pendingTextures();
+    if(!pending.length)return finish(null);
+    if(performance.now()-started>=timeoutMs)return finish(new Error(kind+': texturas pendientes '+pending.length+'/'+textures.size+'; la compilación de materiales se delega al primer render de la escena.'));
+    setTimeout(check,100);
    };
-   timer=setTimeout(()=>{const pending=pendingNow();finish(new Error(kind+': espera visual agotada; '+pending.pendingMeshes.length+' mallas y '+pending.pendingTextures.length+' texturas pendientes.'));},timeoutMs+250);
+   timer=setTimeout(()=>{const pending=pendingTextures();finish(new Error(kind+': espera de texturas agotada; '+pending.length+'/'+textures.size+' pendientes.'));},timeoutMs+250);
    check();
   });
-  return {count:textures.size,readyMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1))};
+  return {count:textures.size,geometryValidatedMeshes:list.length,waitedMs:Number((performance.now()-started).toFixed(1)),shaderReadiness:'deferred-to-initial-view-warmup'};
  }"""
     if html.count(glb_validator_marker) != 1:
         raise SystemExit("No se encontró el validador GLB único.")
@@ -1939,7 +1967,8 @@ function setLoadingProgress(value,label){
     html = html.replace(gull_legacy_animation_marker,gull_legacy_animation_replacement,1)
 
     gull_rig_marker = "const meshes=getRootMeshes(roots);if(!meshes.length){actor.dispose(false,true);continue;}"
-    gull_rig_replacement = gull_rig_marker + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
+    gull_skinning_replacement = "const gullGeneratedIndices=[];for(const mesh of meshes){const vertexCount=Number(mesh?.getTotalVertices?.())||0,indexCount=Number(mesh?.getTotalIndices?.())||0;if(vertexCount>0&&indexCount===0&&vertexCount%3===0){const IndexArray=vertexCount>65535?Uint32Array:Uint16Array,generatedIndices=new IndexArray(vertexCount);for(let index=0;index<vertexCount;index++)generatedIndices[index]=index;mesh.setIndices(generatedIndices,vertexCount,false);gullGeneratedIndices.push({name:String(mesh.name||mesh.id||''),vertexCount,indexCount:Number(mesh.getTotalIndices?.())||0});}}const gullSkinningMeshes=meshes.filter(mesh=>mesh&&mesh.skeleton&&Number(mesh.numBoneInfluencers)>0);if(!gullSkinningMeshes.length){actor.dispose(false,true);throw new Error('La gaviota GLB no contiene una malla con skinning óseo activo.');}const forceCpuSkinning=window.__ELSN_FORCE_CPU_SKINNING__===true,forceGpuSkinning=window.__ELSN_FORCE_GPU_SKINNING__===true;if(forceCpuSkinning&&forceGpuSkinning){actor.dispose(false,true);throw new Error('El diagnóstico de gaviotas no puede forzar CPU y GPU skinning a la vez.');}const softwareSkinningRenderer=/SwiftShader|llvmpipe|software/i.test(graphicsRenderer),useCpuSkinning=forceCpuSkinning||(!forceGpuSkinning&&softwareSkinningRenderer);gullSkinningMeshes.forEach(mesh=>{mesh.computeBonesUsingShaders=!useCpuSkinning;mesh.alwaysSelectAsActiveMesh=true;if(mesh.material){mesh.material.backFaceCulling=false;mesh.material.twoSidedLighting=true;}});const gullSkeletons=[...new Set(gullSkinningMeshes.map(mesh=>mesh.skeleton).filter(Boolean))];"
+    gull_rig_replacement = gull_rig_marker + gull_skinning_replacement + "const groups=inst.animationGroups||[],nativeFlightClip=groups.find(group=>/fly/i.test(String(group.name||'')))||null,fly=nativeFlightClip;if(!nativeFlightClip){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene un clip Fly válido.');}groups.forEach(group=>{try{if(group!==nativeFlightClip)group.stop();}catch(_){}});const rigNodes=[...roots];for(let cursor=0;cursor<rigNodes.length;cursor++){const children=typeof rigNodes[cursor].getChildren==='function'?rigNodes[cursor].getChildren():[];for(const child of children)rigNodes.push(child);}const findPart=name=>rigNodes.find(node=>new RegExp('^'+name+'(?:_|$)','i').test(node.name||''))||null,leftWing=findPart('LeftWing'),rightWing=findPart('RightWing'),tail=findPart('Tail'),head=findPart('Head'),neck=findPart('Neck'),jaw=findPart('Jaw'),leftHindUpLeg=findPart('LeftHindUpLeg'),rightHindUpLeg=findPart('RightHindUpLeg'),leftHindLeg=findPart('LeftHindLeg'),rightHindLeg=findPart('RightHindLeg');const requiredFlightParts=[leftWing,rightWing,tail,head,neck,leftHindUpLeg,rightHindUpLeg,leftHindLeg,rightHindLeg];if(requiredFlightParts.some(node=>!node)){actor.dispose(false,true);throw new Error('El GLB de gaviota no contiene todas las articulaciones de vuelo: alas, cabeza, cuello y patas traseras.');}nativeFlightClip.start(true,1,nativeFlightClip.from,nativeFlightClip.to);gullSkeletons.forEach(skeleton=>{try{if(typeof skeleton.prepare==='function')skeleton.prepare();}catch(error){console.warn('Preparación del esqueleto de gaviota aplazada:',error);}});if(typeof nativeFlightClip.goToFrame!=='function'){actor.dispose(false,true);throw new Error('Babylon no puede evaluar la pose nativa Fly para alinear el cuerpo.');}nativeFlightClip.goToFrame(nativeFlightClip.from+(nativeFlightClip.to-nativeFlightClip.from)*.5);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const actorInverse=actor.getWorldMatrix().clone().invert(),bodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignAxis=(from,to)=>{const a=from.normalizeToNew(),b=to.normalizeToNew(),dot=B.Scalar.Clamp(B.Vector3.Dot(a,b),-1,1);if(dot<-.9999)return B.Quaternion.RotationAxis(B.Axis.X,Math.PI);const cross=B.Vector3.Cross(a,b),q=new B.Quaternion(cross.x,cross.y,cross.z,1+dot);q.normalize();return q;};visualRoot.rotationQuaternion=alignAxis(bodyAxis,new B.Vector3(0,0,1));visualRoot.computeWorldMatrix(true);rigNodes.forEach(node=>{try{node.computeWorldMatrix(true);}catch(_){}});actor.computeWorldMatrix(true);const alignedBodyAxis=B.Vector3.TransformNormal(head.getAbsolutePosition().subtract(tail.getAbsolutePosition()).normalize(),actorInverse).normalize(),alignmentPitchDegrees=Math.asin(B.Scalar.Clamp(alignedBodyAxis.y,-1,1))*180/Math.PI,alignmentDot=B.Vector3.Dot(alignedBodyAxis,new B.Vector3(0,0,1));if(!Number.isFinite(alignmentPitchDegrees)||alignmentDot<.995){actor.dispose(false,true);throw new Error('La gaviota no quedó horizontal en pose Fly: pitch residual '+alignmentPitchDegrees.toFixed(2)+' grados.');}const flightRig={actor,visualRoot,importedRoots:roots,hierarchyNodes:rigNodes,meshes,generatedIdentityIndices:gullGeneratedIndices,skinningMode:useCpuSkinning?'cpu':'gpu',skinnedMeshCount:gullSkinningMeshes.length,skeletonCount:gullSkeletons.length,firstFlightMesh:meshes.find(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||null,bodyAxis,alignment:{source:'native-Fly-midpoint',pitchResidualDegrees:alignmentPitchDegrees,forwardDot:alignmentDot},leftWing:{node:leftWing},rightWing:{node:rightWing},tail:{node:tail},head:{node:head},neck:{node:neck},leftHindUpLeg:{node:leftHindUpLeg},rightHindUpLeg:{node:rightHindUpLeg},leftHindLeg:{node:leftHindLeg},rightHindLeg:{node:rightHindLeg},animationGroup:nativeFlightClip};"
     if html.count(gull_rig_marker) != 1:
         raise SystemExit("No se encontró el punto único para validar los pivotes anatómicos de gaviota.")
     html = html.replace(gull_rig_marker, gull_rig_replacement, 1)
@@ -1977,7 +2006,7 @@ function setLoadingProgress(value,label){
     html = html[:style_start] + html[style_end:]
 
     gull_wing_push_marker = "realBirds.push({root:actor,real:true,groups,animation:fly,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014});"
-    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014});"
+    gull_wing_push_replacement = "realBirds.push({root:actor,real:true,groups,flightRig,animation:nativeFlightClip,phase:i*1.25,radius:18+i*2.5,alt:10+i%3*1.45,speed:.18+i*.014,flightClockOrigin:null,flightDistanceMeters:0,flightStallSeconds:0,flightVisualStallSeconds:0,flightCenterX:-36,flightCenterZ:-18});"
     if html.count(gull_wing_push_marker) != 1:
         raise SystemExit("No se encontró el registro único de las articulaciones de gaviota.")
     html = html.replace(gull_wing_push_marker, gull_wing_push_replacement, 1)
@@ -2217,6 +2246,7 @@ function updateWildlife(dt){
    if(isPerformanceMode){reflection={ready:true,reason:'no aplica: perfil Rendimiento no crea espejo de agua'};}
    else if(!nordicWaterMirror){reflection={ready:false,reason:'nordicWaterMirror no está creado'};}
    else if(activeWaterReflectionIslandIndex!==index){reflection={ready:false,reason:'isla del reflejo '+activeWaterReflectionIslandIndex+' distinta de la isla activa '+index};}
+   else if(coastReport.shaderCompile.status==='deferred'&&!coastReport.reflectionTemporarilyDisabled&&Array.isArray(nordicWaterMirror.renderList)&&nordicWaterMirror.renderList.length){reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:'deferred',shaderWarmupComplete:false,runtimeFallback:'Babylon native compilation'};}
    else if(!['ready','not-required'].includes(coastReport.shaderCompile.status)){reflection={ready:false,reason:'compilación de materiales del reflejo '+coastReport.shaderCompile.status};}
    else if(!nordicWaterMirror.renderList||!nordicWaterMirror.renderList.length){reflection={ready:false,reason:'lista de geometrías del espejo vacía'};}
    else{reflection={ready:true,reason:null,meshCount:nordicWaterMirror.renderList.length,shaderCompile:coastReport.shaderCompile.status};}
@@ -3303,25 +3333,25 @@ function updateWildlife(dt){
 
     # Release candidate 0.6.352: execute Babylon and its GLTF importer from native same-origin script URLs.
     if game_version != "0.6.274":
-        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.365; se encontró {game_version}.")
+        raise SystemExit(f"Se esperaba la base 0.6.274 para construir la candidata 0.6.366; se encontró {game_version}.")
     version_meta_pattern = r'(<meta\s+name=["\']el-sin-nombre-build["\']\s+content=["\'])0\.6\.274(["\'])'
-    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.365\2', html, count=1, flags=re.IGNORECASE)
+    html, version_meta_count = re.subn(version_meta_pattern, r'\g<1>0.6.366\2', html, count=1, flags=re.IGNORECASE)
     if version_meta_count != 1:
-        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.365.")
-    html = html.replace("0.6.274", "0.6.365")
+        raise SystemExit("No se pudo actualizar de forma única la versión del juego a 0.6.366.")
+    html = html.replace("0.6.274", "0.6.366")
     if "0.6.274" in html:
         raise SystemExit("Quedan referencias de versión 0.6.274 en el HTML generado.")
     # The source may already carry the new game version or a newer diagnostic
     # report version. Normalize the unique build marker instead of assuming the
     # inline diagnostics are still at reportVersion 11.
     diagnostic_build_pattern = r"reportVersion:'\d+',build:'[^']+'"
-    diagnostic_build_replacement = "reportVersion:'73',build:'0.6.365'"
+    diagnostic_build_replacement = "reportVersion:'74',build:'0.6.366'"
     html, diagnostic_build_count = re.subn(
         diagnostic_build_pattern, diagnostic_build_replacement, html, count=1
     )
     if diagnostic_build_count != 1:
-        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.365 para normalizar.")
-    game_version = "0.6.365"
+        raise SystemExit("No se encontró exactamente una identificación de compilación 0.6.366 para normalizar.")
+    game_version = "0.6.366"
     USER_AGENT = f"EL-SIN-NOMBRE-WebBuild/{game_version} (+https://github.com/bonillamarquezpablo-lab/Minimo-android)"
 
     # 0.6.300 unified graphics: native Babylon adaptive scaling, high-detail flagship assets and a stable Performance profile.
@@ -3362,7 +3392,7 @@ function updateWildlife(dt){
   const physicalPixelHeight=Math.max(1,Math.round(cssHeight*physicalDpr));
   const renderPixels=renderWidth*renderHeight,physicalPixels=physicalPixelWidth*physicalPixelHeight;
   const physicalPixelCoveragePct=Number((renderPixels/Math.max(1,physicalPixels)*100).toFixed(2));
-  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,qualityDprDefault,highHeadroomQualityMobile,constrainedHardware,reportedMemory,hardwareConcurrency:Number(navigator.hardwareConcurrency)||null,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive};
+  return {profile:activeGraphicsProfile,devicePixelRatio:physicalDpr,engineDeviceDpr:deviceDpr,renderDpr:qualityDprCurrent,qualityDprDefault,highHeadroomQualityMobile,constrainedHardware,reportedMemory,hardwareConcurrency:Number(navigator.hardwareConcurrency)||null,gpuRenderer:graphicsRenderer,gpuVendor:graphicsVendor,webglVersion:graphicsVersion,cssWidth,cssHeight,renderWidth,renderHeight,physicalPixelWidth,physicalPixelHeight,renderPixels,physicalPixels,physicalPixelCoveragePct,fullNativeResolution:renderWidth===physicalPixelWidth&&renderHeight===physicalPixelHeight,qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),minimumRenderDpr:qualityDprAdaptiveFloor,adaptiveResolution:typeof window.__ELSN_ADAPTIVE_RESOLUTION__==='function'?window.__ELSN_ADAPTIVE_RESOLUTION__():null};
  };"""
     if html.count(render_scale_marker) != 1:
         raise SystemExit("No se encontró el punto único de inicialización de resolución del motor.")
@@ -3575,7 +3605,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     html = html.replace(startup_memory_fields_marker, startup_memory_fields_replacement, 1)
 
     health_memory_marker = "runtime:{performanceAudit:window.__elSinNombrePerformanceAudit?"
-    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,physicalPixelCoveragePct:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalPixelCoveragePct:null,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
+    health_memory_replacement = "runtime:{renderResolution:(()=>{try{return window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;}catch(_){return null;}})(),qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive),physicalPixelCoveragePct:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().physicalPixelCoveragePct:null,renderDpr:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderDpr:null,renderWidth:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderWidth:null,renderHeight:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION().renderHeight:null,startupMemoryEstimate:window.__elSinNombreStartupMemoryEstimate||null,memoryPolicy:{mobilePeakMemorySensitive:isMobilePeakMemorySensitive,ios:isIOSDevice,deviceMemory:Number(navigator.deviceMemory)||null,retainedWildlifeSources:wildlifeBlobs.size,retainedPlayerSourceBlob:!!playerHumanBlob},performanceAudit:window.__elSinNombrePerformanceAudit?"
     if html.count(health_memory_marker) != 1:
         raise SystemExit("No se encontró el objeto runtime del informe para adjuntar memoria de arranque.")
     html = html.replace(health_memory_marker, health_memory_replacement, 1)
@@ -3683,9 +3713,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
  const spatialWaterMotionPattern=/^(?:ocean|water|nordicWater|coastalWater|coastalWave|waterFilm|tidalFoam|shoreBreakerWash|beachState|activeBeach|activeShore)/i;
  const spatialEffectMotionPattern=/^(?:GroundSplashParticleBatch|NorseMovingFootprints|SunHalo|SunDisc|NordicSkyDome|WindborneLeaf|HearthFlame|HearthSpark|flame|ember|smoke|particle|vesselWaterSpray|drakkarWake|spray|foam|wake|splash|wreck)/i;
  const spatialDynamicStatsPattern=/^(?:vesselWaterSpray|drakkarWake|tidalFoam|particle|projectile|arrow)/i;
+ const spatialActorIndependentMotionNodePattern=/(?:weapon|club|axe|sword|shield|bow|quiver|socket|grip|hand)/i;
  let spatialSelectionOctree=null;
- const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,buildMs:null,error:null};
+ const spatialSelectionStats={enabled:false,sceneMeshCount:0,dynamicMeshCount:0,staticIndexedMeshCount:0,dynamicContentRatio:null,babylonInitialDynamicCount:0,dynamicReasons:{},dynamicSampleNames:[],dynamicSampleNamesByReason:{},dynamicFilterEnabled:false,dynamicFilterPasses:0,dynamicFilterLastCandidates:0,dynamicFilterLastSelected:0,dynamicFilterLastCulled:0,dynamicFilterCulledPeak:0,dynamicFilterTotalCandidates:0,dynamicFilterTotalCulled:0,dynamicFilterTotalMs:0,dynamicFilterLastMs:0,dynamicFilterMaxMs:0,dynamicFilterErrors:0,babylonOctreeBuildMs:null,dynamicClassificationMs:null,staticWorldMatricesFrozen:0,staticWorldMatrixFreezeMs:0,staticWorldMatrixFreezeErrors:0,staticWorldMatrixFreezeSkipped:0,actorBoundsGroupCount:0,actorBoundsGroupedMeshCount:0,actorBoundsGroupBuildMs:0,actorBoundsGroupBuildErrors:0,actorBoundsGroupsChecked:0,actorBoundsGroupsCulled:0,actorBoundsGroupCheckErrors:0,buildMs:null,error:null};
  const spatialDynamicMeshSet=new Set();
+ const spatialDynamicUngroupedMeshSet=new Set();
+ const spatialActorBoundsGroups=[];
+ const spatialEmptyDynamicContent=[];
  const publishSpatialSelectionStats=()=>{
   try{
    // Expose an on-demand live snapshot. The getter copies only when the Inspector
@@ -3712,6 +3746,91 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    if(Number(node.billboardMode)>0)return 'billboard';
   }
   return null;
+ };
+ const buildSpatialActorBoundsGroups=async()=>{
+  const startedAt=performance.now(),groups=new Map(),animatedTransformTargets=new Set();
+  let groupedMeshes=0,groupCount=0,groupErrors=0,groupingExcludedUnsafe=0,nestedGroupedMeshes=0,directGroupedMeshes=0,sliceStartedAt=startedAt;
+  // AnimationGroup targets are not guaranteed to appear in node.animations.
+  // Snapshot transform targets once, outside the render path, so nested pivots
+  // animated independently never get hidden by a parent actor's coarse bound.
+  for(const animationGroup of scene.animationGroups||[]){
+   for(const targeted of animationGroup&&animationGroup.targetedAnimations||[]){
+    const target=targeted&&targeted.target;
+    if(target&&typeof target.getWorldMatrix==='function')animatedTransformTargets.add(target);
+   }
+  }
+  // Group rigid actor meshes by their nearest recognised moving root, even when
+  // the GLB hierarchy contains neutral TransformNode pivots between root and mesh.
+  // Exclude every independently animated/interpolated node on the path to the root.
+  for(const mesh of spatialDynamicMeshSet){
+   if(!mesh||mesh.__elsnSpatialDynamicReason!=='actor-or-vehicle'||mesh.skeleton||mesh.morphTargetManager||Number(mesh.billboardMode)>0||mesh.alwaysSelectAsActiveMesh)continue;
+   let actorRoot=null;
+   for(let node=mesh;node&&node!==scene;node=node.parent){
+    if(spatialActorRootPattern.test(String(node.name||''))){actorRoot=node;break;}
+   }
+   if(!actorRoot||actorRoot===scene||typeof actorRoot.computeWorldMatrix!=='function'||typeof actorRoot.getWorldMatrix!=='function')continue;
+   let unsafeTransform=false;
+   for(let node=mesh;node&&node!==actorRoot;node=node.parent){
+    if(node.skeleton||node.morphTargetManager||Number(node.billboardMode)>0||
+       spatialActorIndependentMotionNodePattern.test(String(node.name||''))||
+       (Array.isArray(node.animations)&&node.animations.length)||animatedTransformTargets.has(node)){
+     unsafeTransform=true;break;
+    }
+   }
+   if(unsafeTransform){groupingExcludedUnsafe++;continue;}
+   let group=groups.get(actorRoot);
+   if(!group){group={root:actorRoot,members:[],minX:Infinity,minY:Infinity,minZ:Infinity,maxX:-Infinity,maxY:-Infinity,maxZ:-Infinity,valid:true};groups.set(actorRoot,group);}
+   group.members.push(mesh);
+   if(mesh.parent===actorRoot)directGroupedMeshes++;else nestedGroupedMeshes++;
+   if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();sliceStartedAt=performance.now();}
+  }
+  for(const group of groups.values()){
+   if(!group.valid||group.members.length<2)continue;
+   try{
+    group.root.computeWorldMatrix(true);
+    const inverseRoot=group.root.getWorldMatrix().clone();inverseRoot.invert();
+    for(const mesh of group.members){
+     if(!mesh||typeof mesh.computeWorldMatrix!=='function'||typeof mesh.getWorldMatrix!=='function'||typeof mesh.getBoundingInfo!=='function'){group.valid=false;break;}
+     mesh.computeWorldMatrix(true);
+     const info=mesh.getBoundingInfo(),box=info&&info.boundingBox;
+     if(!box||!box.minimum||!box.maximum){group.valid=false;break;}
+     const min=box.minimum,max=box.maximum,world=mesh.getWorldMatrix();
+     for(let corner=0;corner<8;corner++){
+      const point=new B.Vector3((corner&1)?max.x:min.x,(corner&2)?max.y:min.y,(corner&4)?max.z:min.z);
+      const worldPoint=B.Vector3.TransformCoordinates(point,world);
+      const rootPoint=B.Vector3.TransformCoordinates(worldPoint,inverseRoot);
+      if(!Number.isFinite(rootPoint.x)||!Number.isFinite(rootPoint.y)||!Number.isFinite(rootPoint.z)){group.valid=false;break;}
+      group.minX=Math.min(group.minX,rootPoint.x);group.minY=Math.min(group.minY,rootPoint.y);group.minZ=Math.min(group.minZ,rootPoint.z);
+      group.maxX=Math.max(group.maxX,rootPoint.x);group.maxY=Math.max(group.maxY,rootPoint.y);group.maxZ=Math.max(group.maxZ,rootPoint.z);
+     }
+     if(!group.valid)break;
+     if(performance.now()-sliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();sliceStartedAt=performance.now();}
+    }
+    if(!group.valid||!Number.isFinite(group.minX)||!Number.isFinite(group.maxX)){groupErrors++;continue;}
+    group.center=new B.Vector3((group.minX+group.maxX)*.5,(group.minY+group.maxY)*.5,(group.minZ+group.maxZ)*.5);
+    group.radius=Math.max(.2,Math.sqrt((group.maxX-group.center.x)**2+(group.maxY-group.center.y)**2+(group.maxZ-group.center.z)**2)*1.18+.18);
+    group.lastRenderId=-1;group.lastCamera=null;group.visible=true;group.meshCount=group.members.length;
+    for(const mesh of group.members){
+     mesh.__elsnSpatialActorBoundsGroup=group;
+     mesh.__elsnPreviousAlwaysSelectAsActiveMesh=!!mesh.alwaysSelectAsActiveMesh;
+     mesh.alwaysSelectAsActiveMesh=true;
+     spatialDynamicUngroupedMeshSet.delete(mesh);
+     groupedMeshes++;
+    }
+    spatialActorBoundsGroups.push(group);
+    groupCount++;
+   }catch(_){groupErrors++;}
+  }
+  groups.clear();
+  spatialSelectionStats.actorBoundsGroupCount=groupCount;
+  spatialSelectionStats.actorBoundsGroupedMeshCount=groupedMeshes;
+  spatialSelectionStats.actorBoundsGroupingExcludedUnsafe=groupingExcludedUnsafe;
+  spatialSelectionStats.actorBoundsDirectGroupedMeshes=directGroupedMeshes;
+  spatialSelectionStats.actorBoundsNestedGroupedMeshes=nestedGroupedMeshes;
+  spatialSelectionStats.actorBoundsGroupBuildMs=Number((performance.now()-startedAt).toFixed(2));
+  spatialSelectionStats.actorBoundsGroupBuildErrors=groupErrors;
+  spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
+  return groupedMeshes;
  };
  const isSpatialDynamicMesh=mesh=>!!spatialDynamicReasonForMesh(mesh);
  const spatialBuildProgress=window.__ELSN_SPATIAL_BUILD_PROGRESS__={
@@ -3808,6 +3927,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   // entries are marked during octree creation before this registration path runs.
   dynamic.push(mesh);
   spatialDynamicMeshSet.add(mesh);
+  spatialDynamicUngroupedMeshSet.add(mesh);
   spatialSelectionStats.dynamicReasons[classification]=(spatialSelectionStats.dynamicReasons[classification]||0)+1;
   if(spatialSelectionStats.dynamicSampleNames.length<32)spatialSelectionStats.dynamicSampleNames.push({name:String(mesh.name||''),reason:classification});
   const reasonSamples=spatialSelectionStats.dynamicSampleNamesByReason[classification]||(spatialSelectionStats.dynamicSampleNamesByReason[classification]=[]);
@@ -3825,9 +3945,19 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    const index=dynamic.indexOf(mesh);if(index>=0)dynamic.splice(index,1);
   }
   spatialDynamicMeshSet.delete(mesh);
+  spatialDynamicUngroupedMeshSet.delete(mesh);
+  const group=mesh.__elsnSpatialActorBoundsGroup;
+  if(group&&Array.isArray(group.members)){
+   const memberIndex=group.members.indexOf(mesh);
+   if(memberIndex>=0){group.members.splice(memberIndex,1);group.meshCount=Math.max(0,group.meshCount-1);}
+  }
+  if(Object.prototype.hasOwnProperty.call(mesh,'__elsnPreviousAlwaysSelectAsActiveMesh')){
+   mesh.alwaysSelectAsActiveMesh=!!mesh.__elsnPreviousAlwaysSelectAsActiveMesh;
+  }
   const reason=String(mesh.__elsnSpatialDynamicReason||'unknown');
   if(spatialSelectionStats.dynamicReasons[reason]>0)spatialSelectionStats.dynamicReasons[reason]--;
-  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  try{delete mesh.__elsnSpatialDynamic;delete mesh.__elsnSpatialDynamicReason;delete mesh.__elsnSpatialActorBoundsGroup;delete mesh.__elsnPreviousAlwaysSelectAsActiveMesh;}catch(_){mesh.__elsnSpatialDynamic=false;}
+  spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
   updateSpatialSelectionCounts();
  };
  if(scene.onNewMeshAddedObservable&&typeof scene.onNewMeshAddedObservable.add==='function'){
@@ -3855,6 +3985,12 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    spatialBuildProgress.phase='native-octree-build';
    spatialBuildProgress.updatedAt=performance.now();
    const octree=scene.createOrUpdateSelectionOctree(64,3);
+   // Babylon 9.35's candidate provider selects Scene._selectionOctree and
+   // Octree.select appends dynamicContent. Install our grouped path only when
+   // the created octree is exactly the one used by the live scene provider.
+   if(!octree||scene.selectionOctree!==octree||typeof octree.select!=='function'){
+    throw new Error('El octree creado no coincide con el proveedor de selección activo de Babylon.');
+   }
    spatialBuildProgress.nativeOctreeBuildMs=Number((performance.now()-octreeBuildStartedAt).toFixed(2));
    spatialBuildProgress.updatedAt=performance.now();
    spatialSelectionStats.babylonOctreeBuildMs=spatialBuildProgress.nativeOctreeBuildMs;
@@ -3875,6 +4011,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     const mesh=octree.dynamicContent[index];
     if(mesh&&!mesh.__elsnSpatialDynamic){
     spatialDynamicMeshSet.add(mesh);
+    spatialDynamicUngroupedMeshSet.add(mesh);
     mesh.__elsnSpatialDynamic=true;mesh.__elsnSpatialDynamicReason=spatialDynamicReasonForMesh(mesh)||'octree-initial-dynamic';
     mesh.__elsnSpatialFreshUntilRenderId=(typeof scene.getRenderId==='function'?scene.getRenderId():0)+2;
     spatialSelectionStats.dynamicReasons['octree-initial-dynamic']=(spatialSelectionStats.dynamicReasons['octree-initial-dynamic']||0)+1;
@@ -3892,6 +4029,7 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     if(performance.now()-workSliceStartedAt>=spatialWorkSliceBudgetMs){await yieldSpatialWorkFrame();workSliceStartedAt=performance.now();}
    }
    spatialSelectionStats.dynamicClassificationMs=Number((performance.now()-classificationStartedAt).toFixed(2));
+   const actorBoundsGroupedMeshes=await buildSpatialActorBoundsGroups();
    spatialBuildProgress.phase='freezing-static-matrices';
    spatialBuildProgress.updatedAt=performance.now();
    const staticWorldMatricesFrozen=await freezeSpatialStaticWorldMatrices();
@@ -3903,52 +4041,101 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     const baseGetActiveMeshCandidates=scene.getActiveMeshCandidates;
     if(typeof baseGetActiveMeshCandidates!=='function')return false;
     scene.getActiveMeshCandidates=()=>{
-     const base=baseGetActiveMeshCandidates.call(scene);
-     if(!base||!Array.isArray(base.data)||!Number.isFinite(base.length)||scene.skipFrustumClipping||
-        !Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6)return base;
-     const startedAt=performance.now();
-     // The Babylon render id is constant for this candidate pass; cache it once
-     // rather than calling Scene.getRenderId for every actor mesh.
-     const currentRenderId=scene.getRenderId();
-     let dynamicCandidates=0,selected=0,culled=0,errors=0,writeIndex=0;
-     // Babylon 9.35 returns its reusable SelectionOctree candidate SmartArray here.
-     // Compact that frame-local result in place: no extra list, no scene mutation,
-     // and no allocation on the render path.
+     const octree=spatialSelectionOctree,fullDynamicContent=octree&&octree.dynamicContent;
+     // Keep Babylon's native path for uncommon states where every object must be
+     // returned (no camera, skipped clipping, or incomplete frustum planes).
+     if(!octree||!Array.isArray(fullDynamicContent)||scene.skipFrustumClipping||
+        !scene.activeCamera||!Array.isArray(scene.frustumPlanes)||scene.frustumPlanes.length<6){
+      return baseGetActiveMeshCandidates.call(scene);
+     }
+     const startedAt=performance.now(),currentRenderId=scene.getRenderId();
+     let base=null,providerError=false,dynamicProviderSuppressed=false;
+     // SelectionOctree.select appends the whole dynamicContent list. Temporarily
+     // point it at a shared empty array so only the static octree blocks are returned.
+     // The original list is restored synchronously before any entity update can run.
+     try{
+      octree.dynamicContent=spatialEmptyDynamicContent;
+      dynamicProviderSuppressed=octree.dynamicContent===spatialEmptyDynamicContent;
+      base=baseGetActiveMeshCandidates.call(scene);
+     }catch(_){providerError=true;}
+     finally{octree.dynamicContent=fullDynamicContent;}
+     if(providerError||!base||!Array.isArray(base.data)||!Number.isFinite(base.length)){
+      spatialSelectionStats.dynamicFilterFallbacks=(spatialSelectionStats.dynamicFilterFallbacks||0)+1;
+      return baseGetActiveMeshCandidates.call(scene);
+     }
+     let staticCandidates=0,dynamicCandidates=spatialDynamicMeshSet.size,selected=0,culled=0,errors=0,writeIndex=0,deduplicatedStaticDynamic=0;
+     let actorGroupsChecked=0,actorGroupsCulled=0,actorGroupErrors=0,ungroupedChecked=0;
+     // Dynamic actor meshes can still appear in an octree block when they were
+     // promoted after its first build. Remove them from the static result; each is
+     // reintroduced exactly once by its group or ungrouped fallback below.
      for(let index=0;index<base.length;index++){
       const mesh=base.data[index];
       if(!mesh)continue;
-      let keep=true;
-      const isDynamic=spatialDynamicMeshSet.has(mesh);
-      if(isDynamic){
-       dynamicCandidates++;
-       if(mesh.__elsnSpatialDynamicReason==='actor-or-vehicle'&&
-          !mesh.alwaysSelectAsActiveMesh&&
-          !(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
-          !mesh.skeleton&&!mesh.morphTargetManager&&!Number(mesh.billboardMode)&&
-          typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
-        try{
-         mesh.computeWorldMatrix();
-         if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;
-        }catch(_){
-         errors++;
-        }
-       }
-      }
-      if(keep){
-       base.data[writeIndex]=mesh;
-       writeIndex++;
-       if(isDynamic)selected++;
-      }else{
-       culled++;
-      }
+      if(spatialDynamicMeshSet.has(mesh)){deduplicatedStaticDynamic++;continue;}
+      base.data[writeIndex++]=mesh;staticCandidates++;
      }
      base.length=writeIndex;
+     const appendCandidate=mesh=>{
+      if(typeof base.push==='function')base.push(mesh);
+      else{base.data[base.length]=mesh;base.length++;}
+     };
+     // One conservative root sphere test replaces N per-mesh frustum tests.
+     for(const group of spatialActorBoundsGroups){
+      if(!group||!group.members||!group.members.length)continue;
+      let visible=group.visible!==false;
+      if(group.lastRenderId!==currentRenderId||group.lastCamera!==scene.activeCamera){
+       group.lastRenderId=currentRenderId;group.lastCamera=scene.activeCamera;actorGroupsChecked++;
+       try{
+        if(!group.root||group.root.isDisposed?.()){visible=true;actorGroupErrors++;}
+        else{
+         group.root.computeWorldMatrix();
+         const matrix=group.root.getWorldMatrix(),m=matrix.m;
+         const center=B.Vector3.TransformCoordinates(group.center,matrix);
+         const scale=Math.max(Math.hypot(m[0],m[1],m[2]),Math.hypot(m[4],m[5],m[6]),Math.hypot(m[8],m[9],m[10]));
+         const radius=group.radius*Math.max(.001,scale);
+         visible=true;
+         for(let planeIndex=0;planeIndex<6;planeIndex++){
+          const plane=scene.frustumPlanes[planeIndex];
+          const distance=plane.normal.x*center.x+plane.normal.y*center.y+plane.normal.z*center.z+plane.d;
+          if(distance < -radius){visible=false;break;}
+         }
+        }
+       }catch(_){visible=true;actorGroupErrors++;errors++;}
+       group.visible=visible;
+       if(!visible)actorGroupsCulled++;
+      }
+      if(!visible)continue;
+      for(const mesh of group.members){
+       if(!mesh||mesh.isDisposed?.())continue;
+       appendCandidate(mesh);selected++;
+      }
+     }
+     // Special rigs, billboards, particles, effects and post-build meshes retain
+     // individual Babylon frustum tests. This set is intentionally much smaller.
+     for(const mesh of spatialDynamicUngroupedMeshSet){
+      if(!mesh||mesh.isDisposed?.())continue;
+      ungroupedChecked++;
+      let keep=true;
+      if(!mesh.alwaysSelectAsActiveMesh&&!(mesh.__elsnSpatialFreshUntilRenderId>=currentRenderId)&&
+         typeof mesh.computeWorldMatrix==='function'&&typeof mesh.isInFrustum==='function'){
+       try{mesh.computeWorldMatrix();if(!mesh.isInFrustum(scene.frustumPlanes))keep=false;}
+       catch(_){errors++;}
+      }
+      if(keep){appendCandidate(mesh);selected++;}else culled++;
+     }
+     culled=Math.max(0,dynamicCandidates-selected);
      const duration=Math.max(0,performance.now()-startedAt);
+     spatialSelectionStats.dynamicProviderSuppressed=dynamicProviderSuppressed;
+     spatialSelectionStats.dynamicFilterLastStaticDynamicDuplicates=deduplicatedStaticDynamic;
      spatialSelectionStats.dynamicFilterEnabled=true;
+     spatialSelectionStats.dynamicFilterMode=dynamicProviderSuppressed?'static-octree-plus-actor-groups':'compatibility-static-dedup-plus-actor-groups';
      spatialSelectionStats.dynamicFilterPasses++;
      spatialSelectionStats.dynamicFilterLastCandidates=dynamicCandidates;
+     spatialSelectionStats.dynamicFilterLastStaticCandidates=staticCandidates;
      spatialSelectionStats.dynamicFilterLastSelected=selected;
      spatialSelectionStats.dynamicFilterLastCulled=culled;
+     spatialSelectionStats.dynamicFilterLastGroupChecks=actorGroupsChecked;
+     spatialSelectionStats.dynamicFilterLastUngroupedChecks=ungroupedChecked;
      spatialSelectionStats.dynamicFilterCulledPeak=Math.max(spatialSelectionStats.dynamicFilterCulledPeak,culled);
      spatialSelectionStats.dynamicFilterTotalCandidates+=dynamicCandidates;
      spatialSelectionStats.dynamicFilterTotalCulled+=culled;
@@ -3956,6 +4143,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
      spatialSelectionStats.dynamicFilterLastMs=Number(duration.toFixed(3));
      spatialSelectionStats.dynamicFilterMaxMs=Math.max(spatialSelectionStats.dynamicFilterMaxMs,duration);
      spatialSelectionStats.dynamicFilterErrors+=errors;
+     spatialSelectionStats.dynamicFilterLastStaticCandidates=staticCandidates;
+     spatialSelectionStats.dynamicFilterLastGroupChecks=actorGroupsChecked;
+     spatialSelectionStats.dynamicFilterLastUngroupedChecks=ungroupedChecked;
+     spatialSelectionStats.actorBoundsGroupsChecked=actorGroupsChecked;
+     spatialSelectionStats.actorBoundsGroupsCulled=actorGroupsCulled;
+     spatialSelectionStats.actorBoundsGroupCheckErrors+=actorGroupErrors;
+     spatialSelectionStats.dynamicUngroupedMeshCount=spatialDynamicUngroupedMeshSet.size;
      return base;
     };
     spatialSelectionStats.dynamicFilterEnabled=true;
@@ -4125,13 +4319,13 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
     # Keep the regular render loop free of audit function calls until a scenario
     # is explicitly selected in the diagnostic drawer.
     perf_render_loop_marker = "const perfGpuQuery=beginPerfGpuQuery();const renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);"
-    perf_render_loop_replacement = "const performanceAuditActive=perfAuditScenario!=='sin seleccionar',perfGpuQuery=performanceAuditActive?beginPerfGpuQuery():null,renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"
+    perf_render_loop_replacement = "const performanceAuditActive=perfAuditScenario!=='sin seleccionar',perfGpuQuery=performanceAuditActive?beginPerfGpuQuery():null,renderStarted=performance.now();scene.render();lastRenderCpuMs=performance.now()-renderStarted;adaptRenderQuality(dt,rawFrameMs);if(performanceAuditActive){endPerfGpuQuery(perfGpuQuery);recordPerformanceAuditFrame(rawFrameMs);}"
     if html.count(perf_render_loop_marker) != 1:
         raise SystemExit("No se encontró exactamente una llamada al perfilador GPU dentro del bucle de renderizado.")
     html = html.replace(perf_render_loop_marker, perf_render_loop_replacement, 1)
 
     runtime_diagnostics_marker = "webglVersion:graphicsVersion,constrainedMobileProfile:isConstrainedMobile,"
-    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs,meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
+    runtime_diagnostics_replacement = "webglVersion:graphicsVersion,babylonEngineVersion:String(B.Engine.Version||'unknown'),forestInstancing:typeof window.__ELSN_FOREST_INSTANCING_STATS__==='function'?window.__ELSN_FOREST_INSTANCING_STATS__():null,rockInstancing:typeof window.__ELSN_ROCK_INSTANCING__==='function'?window.__ELSN_ROCK_INSTANCING__():null,engineBackend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',webGpuApiAvailable:typeof navigator.gpu!=='undefined',profileDiagnosticsEnabled,meshSelectionOctreeEnabled:spatialSelectionStats.enabled,meshSelectionBabylonOctreeBuildMs:spatialSelectionStats.babylonOctreeBuildMs,meshSelectionDynamicClassificationMs:spatialSelectionStats.dynamicClassificationMs,meshSelectionSceneMeshCount:spatialSelectionStats.sceneMeshCount,meshSelectionDynamicMeshCount:spatialSelectionStats.dynamicMeshCount,meshSelectionStaticIndexedMeshCount:spatialSelectionStats.staticIndexedMeshCount,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeMs:spatialSelectionStats.staticWorldMatrixFreezeMs,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,meshSelectionDynamicContentRatio:spatialSelectionStats.dynamicContentRatio,meshSelectionInitialDynamicCount:spatialSelectionStats.babylonInitialDynamicCount,meshSelectionDynamicReasons:spatialSelectionStats.dynamicReasons,meshSelectionDynamicSamplesByReason:spatialSelectionStats.dynamicSampleNamesByReason,meshSelectionDynamicFrustumEnabled:spatialSelectionStats.dynamicFilterEnabled,meshSelectionDynamicFilterPasses:spatialSelectionStats.dynamicFilterPasses,meshSelectionDynamicFilterCandidates:spatialSelectionStats.dynamicFilterLastCandidates,meshSelectionDynamicFilterSelected:spatialSelectionStats.dynamicFilterLastSelected,meshSelectionDynamicFilterCulled:spatialSelectionStats.dynamicFilterLastCulled,meshSelectionDynamicFilterCulledPeak:spatialSelectionStats.dynamicFilterCulledPeak,meshSelectionDynamicFilterTotalCandidates:spatialSelectionStats.dynamicFilterTotalCandidates,meshSelectionDynamicFilterTotalCulled:spatialSelectionStats.dynamicFilterTotalCulled,meshSelectionDynamicFilterTotalMs:spatialSelectionStats.dynamicFilterTotalMs,meshSelectionDynamicFilterAverageMs:spatialSelectionStats.dynamicFilterPasses?Number((spatialSelectionStats.dynamicFilterTotalMs/spatialSelectionStats.dynamicFilterPasses).toFixed(3)):null,meshSelectionDynamicFilterCullRatio:spatialSelectionStats.dynamicFilterTotalCandidates?Number((spatialSelectionStats.dynamicFilterTotalCulled/spatialSelectionStats.dynamicFilterTotalCandidates).toFixed(4)):null,meshSelectionDynamicFilterLastMs:spatialSelectionStats.dynamicFilterLastMs,meshSelectionDynamicFilterMaxMs:spatialSelectionStats.dynamicFilterMaxMs,meshSelectionDynamicFilterErrors:spatialSelectionStats.dynamicFilterErrors,meshSelectionActorBoundsGroupCount:spatialSelectionStats.actorBoundsGroupCount,meshSelectionActorBoundsGroupedMeshCount:spatialSelectionStats.actorBoundsGroupedMeshCount,meshSelectionActorBoundsGroupBuildMs:spatialSelectionStats.actorBoundsGroupBuildMs,meshSelectionActorBoundsGroupBuildErrors:spatialSelectionStats.actorBoundsGroupBuildErrors,meshSelectionActorBoundsGroupsChecked:spatialSelectionStats.actorBoundsGroupsChecked,meshSelectionActorBoundsGroupsCulled:spatialSelectionStats.actorBoundsGroupsCulled,meshSelectionActorBoundsGroupCheckErrors:spatialSelectionStats.actorBoundsGroupCheckErrors,meshSelectionActorBoundsGroupingExcludedUnsafe:spatialSelectionStats.actorBoundsGroupingExcludedUnsafe||0,meshSelectionActorBoundsDirectGroupedMeshes:spatialSelectionStats.actorBoundsDirectGroupedMeshes||0,meshSelectionActorBoundsNestedGroupedMeshes:spatialSelectionStats.actorBoundsNestedGroupedMeshes||0,meshSelectionDynamicFilterMode:spatialSelectionStats.dynamicFilterMode||null,meshSelectionDynamicProviderSuppressed:!!spatialSelectionStats.dynamicProviderSuppressed,meshSelectionDynamicFilterStaticCandidates:spatialSelectionStats.dynamicFilterLastStaticCandidates||0,meshSelectionDynamicFilterStaticDynamicDuplicates:spatialSelectionStats.dynamicFilterLastStaticDynamicDuplicates||0,meshSelectionDynamicFilterGroupChecks:spatialSelectionStats.dynamicFilterLastGroupChecks||0,meshSelectionDynamicFilterUngroupedChecks:spatialSelectionStats.dynamicFilterLastUngroupedChecks||0,meshSelectionDynamicUngroupedMeshCount:spatialSelectionStats.dynamicUngroupedMeshCount||0,meshSelectionBuildMs:spatialSelectionStats.buildMs,meshSelectionStaticWorldMatricesFrozen:spatialSelectionStats.staticWorldMatricesFrozen,meshSelectionStaticWorldMatrixFreezeErrors:spatialSelectionStats.staticWorldMatrixFreezeErrors,meshSelectionStaticWorldMatrixFreezeSkipped:spatialSelectionStats.staticWorldMatrixFreezeSkipped,engineGpuFrameMs:gpuTimerQueryAutoEnabled?safePerfCounterValue(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter,1e6):null,gpuTimerQueryStatus:!profileDiagnosticsEnabled?'disabled':(!gpuTimerQueryExtensionName?'unsupported':(engineInstrumentation&&engineInstrumentation.gpuFrameTimeCounter?'supported':'extension-present-counter-unavailable')),gpuTimerQueryExtension:gpuTimerQueryExtensionName,gpuDeviceTelemetry,gpuContextLifecycle,renderPipelineDiagnostics:(()=>{try{const pipeline=renderPipeline||null;const map=shadowGen&&typeof shadowGen.getShadowMap==='function'?shadowGen.getShadowMap():null;const size=map&&typeof map.getSize==='function'?map.getSize():null;const image=scene&&scene.imageProcessingConfiguration||null;const resolution=window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null;return {backend:graphicsContext&&(typeof WebGL2RenderingContext!=='undefined'&&graphicsContext instanceof WebGL2RenderingContext)?'WebGL2':'WebGL',resolution,msaaSamples:pipeline&&Number.isFinite(Number(pipeline.samples))?Number(pipeline.samples):null,fxaaEnabled:pipeline?!!pipeline.fxaaEnabled:null,bloomEnabled:pipeline?!!pipeline.bloomEnabled:null,bloomWeight:pipeline&&Number.isFinite(Number(pipeline.bloomWeight))?Number(pipeline.bloomWeight):null,bloomKernel:pipeline&&Number.isFinite(Number(pipeline.bloomKernel))?Number(pipeline.bloomKernel):null,sharpenEnabled:pipeline?!!pipeline.sharpenEnabled:null,sharpenEdgeAmount:pipeline&&pipeline.sharpen&&Number.isFinite(Number(pipeline.sharpen.edgeAmount))?Number(pipeline.sharpen.edgeAmount):null,imageProcessingEnabled:pipeline?!!pipeline.imageProcessingEnabled:null,toneMappingEnabled:image?!!image.toneMappingEnabled:null,toneMappingType:image&&Number.isFinite(Number(image.toneMappingType))?Number(image.toneMappingType):null,exposure:image&&Number.isFinite(Number(image.exposure))?Number(image.exposure):null,contrast:image&&Number.isFinite(Number(image.contrast))?Number(image.contrast):null,shadowGeneratorEnabled:!!shadowGen,shadowMapWidth:size&&Number.isFinite(Number(size.width))?Number(size.width):null,shadowMapHeight:size&&Number.isFinite(Number(size.height))?Number(size.height):null,shadowMapRefreshRate:map&&Number.isFinite(Number(map.refreshRate))?Number(map.refreshRate):null,shadowCasterCount:map&&Array.isArray(map.renderList)?map.renderList.length:null,managedShadowCasterCount:Number.isFinite(Number(managedActiveWorldShadowCount))?managedActiveWorldShadowCount:null,meshCount:scene&&Array.isArray(scene.meshes)?scene.meshes.length:null,materialCount:scene&&Array.isArray(scene.materials)?scene.materials.length:null,lightCount:scene&&Array.isArray(scene.lights)?scene.lights.length:null,textureCount:scene&&Array.isArray(scene.textures)?scene.textures.length:null,customRenderTargetCount:scene&&Array.isArray(scene.customRenderTargets)?scene.customRenderTargets.length:null};}catch(error){return {error:String(error&&error.message||error).slice(0,180)};}})(),shaderCompilationMs:safePerfCounterValue(engineInstrumentation&&engineInstrumentation.shaderCompilationTimeCounter),sceneFrameMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.frameTimeCounter),sceneRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTimeCounter),activeMeshesEvaluationMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.activeMeshesEvaluationTimeCounter),renderTargetsMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.renderTargetsRenderTimeCounter),cameraRenderMs:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.cameraRenderTimeCounter),sceneDrawCalls:safePerfCounterValue(sceneInstrumentation&&sceneInstrumentation.drawCallsCounter),constrainedMobileProfile:isConstrainedMobile,"
     if html.count(runtime_diagnostics_marker) != 1:
         raise SystemExit("No se encontró exactamente un bloque runtime para el diagnóstico.")
     html = html.replace(runtime_diagnostics_marker,runtime_diagnostics_replacement,1)
@@ -4446,11 +4640,20 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   return {meshes:[r,cap],x,z,radius:Math.max(sx,sz)*.48,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
  }"""
     mineable_rock_replacement = """// Reuse shared materials and reject placements that intersect a tree trunk or another deposit.
-  const mineableGraniteMaterial=M.stoneLight;
+  const mineableGraniteMaterial=M.stone;
+  // One pair of immutable source geometries serves every mineable boulder.
+  // Per-rock CreateIcoSphere previously allocated duplicate vertex/index buffers.
+  const mineableRockGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockGeometryTemplate',{radius:1,subdivisions:2,flat:true},scene);
+  const mineableRockCapGeometryTemplate=B.MeshBuilder.CreateIcoSphere('MineableRockCapGeometryTemplate',{radius:1,subdivisions:1,flat:true},scene);
+  mineableRockGeometryTemplate.material=mineableGraniteMaterial;mineableRockCapGeometryTemplate.material=M.stoneLight;
+  // Instance visibility follows its source mesh; keep source visibility at 1 and park its geometry outside the world.
+  for(const source of [mineableRockGeometryTemplate,mineableRockCapGeometryTemplate]){source.isVisible=true;source.visibility=1;source.position.y=-100000;source.computeWorldMatrix(true);source.isPickable=false;source.receiveShadows=false;source.alwaysSelectAsActiveMesh=false;}
+  const mineableRockInstancingStats={instances:0,instanceMeshes:0,sourceGeometryMeshes:2,sharedGeometry:true,sourceVisibilityStrategy:'offscreen-source-geometry'};
+  window.__ELSN_ROCK_INSTANCING__=()=>({...mineableRockInstancingStats});
   const mineableRockPlacementStats={placed:0,relocated:0,skipped:0};
   window.__ELSN_ROCK_PLACEMENT__=()=>{let overlaps=0,minClearance=Infinity;for(const rock of rocks){if(!rock||!rock.alive)continue;for(const tree of trees){if(!tree||!tree.alive)continue;const clearance=Math.hypot(rock.x-tree.x,rock.z-tree.z)-(Number(rock.radius)||.5)-(Number(tree.radius)||.7)-.45;minClearance=Math.min(minClearance,clearance);if(clearance<-.05)overlaps++;}}return {...mineableRockPlacementStats,overlapPairs:overlaps,minTreeClearanceMeters:Number.isFinite(minClearance)?Number(minClearance.toFixed(3)):null};};
   function createRock(x,z){
-   const sx=rand(.72,1.02),sy=rand(.70,.94),sz=rand(.68,1.00),radius=Math.max(sx,sz)*.50;
+   const sx=rand(1.0,1.8),sy=rand(1.0,1.6),sz=rand(1.0,1.7),radius=Math.max(sx,sz)*.48;
    const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
    const acceptable=(px,pz)=>{
     if(!island||landIslandIndex(px,pz)!==islandIndex)return false;
@@ -4474,12 +4677,14 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
    if(Math.hypot(placement.x-x,placement.z-z)>.10)mineableRockPlacementStats.relocated++;
    x=placement.x;z=placement.z;mineableRockPlacementStats.placed++;
    const gy=renderedTerrainSurfaceAt(x,z);
-   const r=B.MeshBuilder.CreateIcoSphere('graniteBoulder',{radius:1,subdivisions:2,flat:true},scene);
-   r.position=v(x,gy+sy*.40,z);r.scaling=v(sx,sy,sz);r.material=mineableGraniteMaterial;r.isPickable=true;r.receiveShadows=true;
+   const serial=(mineableRockInstancingStats.instances+1);
+   const r=mineableRockGeometryTemplate.createInstance('graniteBoulder_'+serial);
+   r.position=v(x,gy+sy*.49,z);r.scaling=v(sx,sy,sz);r.isVisible=true;r.isPickable=true;r.receiveShadows=true;
    r.rotation.set(rand(-.10,.10),rand(0,Math.PI*2),rand(-.12,.12));
-   const cap=B.MeshBuilder.CreateIcoSphere('rockFacet',{radius:1,subdivisions:1,flat:true},scene);
-   cap.position=v(x-sx*.14,gy+sy*.65,z-sz*.11);cap.scaling=v(sx*.52,sy*.30,sz*.48);cap.material=M.stone;cap.isPickable=true;cap.receiveShadows=true;
+   const cap=mineableRockCapGeometryTemplate.createInstance('rockFacet_'+serial);
+   cap.position=v(x-.18,gy+sy*.72,z-.10);cap.scaling=v(sx*.62,sy*.36,sz*.62);cap.isVisible=true;cap.isPickable=true;cap.receiveShadows=true;
    cap.rotation.set(rand(-.12,.12),r.rotation.y+.42,rand(-.10,.10));
+   mineableRockInstancingStats.instances++;mineableRockInstancingStats.instanceMeshes+=2;
    return {meshes:[r,cap],x,z,radius,alive:true,hp:3,hitFlash:0,basePositions:[r.position.clone(),cap.position.clone()],baseScales:[r.scaling.clone(),cap.scaling.clone()]};
   }"""
     mineable_rock_pattern = r"(?m)^[ \t]*function createRock\(x,z\)\{\n.*?\n[ \t]*\}"
@@ -4621,19 +4826,79 @@ continueUnnamedButton.addEventListener('pointerup',startUnnamedIdentity,{once:tr
   if(fps<24)console.info('Diagnóstico de rendimiento (calidad bloqueada; sin reducción automática)',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats});
  }"""
     quality_adaptive_code = r"""let fpsSample=0,qualityDprCurrent=qualityDpr,renderedFps=0;
- // Quality keeps the full native render scale selected at startup. Runtime pressure is
- // measured and reported, never hidden by reducing resolution or scene fidelity.
  let lastWorldUpdateMs=0,lastRenderCpuMs=0;
- const targetFrameRate=120;
- let lastQualityWarningAt=0;
- function adaptRenderQuality(dt){
-  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<2.0)return;fpsSample=0;
-  const fps=renderedFps||engine.getFps(),now=performance.now();
-  if(fps<24&&now-lastQualityWarningAt>=4000){
-   lastQualityWarningAt=now;
-   console.warn('EL SIN NOMBRE: FPS bajo; la escala de Calidad permanece fija salvo que el laboratorio adaptativo esté activado. Se requiere optimización de CPU/GPU.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,qualityScaleFixed:!qualityLabAdaptiveActive,qualityScaleAdaptive:qualityLabAdaptiveActive,renderResolution:window.__ELSN_RENDER_RESOLUTION?window.__ELSN_RENDER_RESOLUTION():null,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+ const targetFrameRate=isPerformanceMode?30:60;
+ const qualityRuntimeAdaptiveActive=false;
+ const qualityDprAdaptiveFloor=qualityDpr;
+ const qualityFrameWindow=new Float32Array(120),qualityCpuWindow=new Float32Array(120);
+ let qualityWindowCursor=0,qualityWindowCount=0,lastQualityScaleChangeAt=0,lastQualityWarningAt=0;
+ const qualityAdaptiveState={enabled:qualityRuntimeAdaptiveActive,reason:'native-quality',gpuBoundInferred:false,frameP95Ms:null,cpuP95Ms:null,minimumRenderDpr:qualityDprAdaptiveFloor,lastChangeAt:0,scaleChanges:0,longFrameCount:0};
+ const qualityPercentile=(buffer,count,ratio)=>{
+  const values=[];
+  for(let i=0;i<count;i++){const value=buffer[i];if(Number.isFinite(value)&&value>0)values.push(value);}
+  if(!values.length)return null;
+  values.sort((a,b)=>a-b);
+  return Number(values[Math.min(values.length-1,Math.floor((values.length-1)*ratio))].toFixed(2));
+ };
+ const setAdaptiveQualityDpr=(next,reason,now)=>{
+  const bounded=Math.max(qualityDprAdaptiveFloor,Math.min(qualityDpr,Number(next)||qualityDpr));
+  if(Math.abs(bounded-qualityDprCurrent)<.015)return false;
+  engine.setHardwareScalingLevel(1/bounded);
+  qualityDprCurrent=Number(bounded.toFixed(3));
+  lastQualityScaleChangeAt=now;
+  qualityAdaptiveState.reason=reason;
+  qualityAdaptiveState.lastChangeAt=now;
+  qualityAdaptiveState.scaleChanges++;
+  return true;
+ };
+ function adaptRenderQuality(dt,rawFrameMs){
+  const frameMs=Number(rawFrameMs)||0;
+  const cpuMs=Math.max(0,lastPreWorldMaintenanceMs+lastWorldUpdateMs+lastRenderCpuMs);
+  if(document.visibilityState==='visible'&&frameMs>0){
+   if(frameMs>160)qualityAdaptiveState.longFrameCount++;
+   // Long main-thread stalls are recorded but excluded from resolution decisions:
+   // changing DPR cannot repair a blocked CPU task, timer, or asset decode.
+   if(frameMs<=160){
+    qualityFrameWindow[qualityWindowCursor]=frameMs;
+    qualityCpuWindow[qualityWindowCursor]=cpuMs;
+    qualityWindowCursor=(qualityWindowCursor+1)%qualityFrameWindow.length;
+    qualityWindowCount=Math.min(qualityFrameWindow.length,qualityWindowCount+1);
+   }
   }
- }"""
+  fpsSample+=Math.max(0,Math.min(.10,dt||0));if(fpsSample<1.5)return;fpsSample=0;
+  if(qualityWindowCount<45)return;
+  const frameP95=qualityPercentile(qualityFrameWindow,qualityWindowCount,.95);
+  const cpuP95=qualityPercentile(qualityCpuWindow,qualityWindowCount,.95);
+  qualityAdaptiveState.frameP95Ms=frameP95;
+  qualityAdaptiveState.cpuP95Ms=cpuP95;
+  // GPU pressure is inferred conservatively from frame time vs measured JS/render cost.
+  // Real GPU timer queries remain an explicit Inspector feature, not an always-on tax.
+  const gpuBound=frameP95!==null&&cpuP95!==null&&frameP95>18.5&&cpuP95<Math.max(12,frameP95*.68);
+  qualityAdaptiveState.gpuBoundInferred=!!gpuBound;
+  const now=performance.now(),adaptiveEnabled=qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive;
+  if(!adaptiveEnabled&&gpuBound)qualityAdaptiveState.reason='gpu-pressure-native-resolution-preserved';
+  else if(!adaptiveEnabled&&frameP95>18.5&&cpuP95!==null&&cpuP95>=Math.max(12,frameP95*.68))qualityAdaptiveState.reason='cpu-bound-native-resolution-preserved';
+  else if(!adaptiveEnabled)qualityAdaptiveState.reason='native-quality';
+  if(adaptiveEnabled&&document.visibilityState==='visible'&&!isPerformanceMode){
+   if(gpuBound&&qualityDprCurrent>qualityDprAdaptiveFloor+.01&&now-lastQualityScaleChangeAt>=1400){
+    setAdaptiveQualityDpr(qualityDprCurrent-.12,'gpu-pressure-inferred',now);
+   }else if(frameP95>18.5&&cpuP95!==null&&cpuP95>=Math.max(12,frameP95*.68)){
+    qualityAdaptiveState.reason='cpu-bound-native-resolution-preserved';
+   }else if(frameP95<14.2&&qualityDprCurrent<qualityDpr-.01&&now-lastQualityScaleChangeAt>=3200){
+    setAdaptiveQualityDpr(qualityDprCurrent+.06,'headroom-recovery',now);
+   }else if(gpuBound&&qualityDprCurrent<=qualityDprAdaptiveFloor+.01){
+    qualityAdaptiveState.reason='gpu-pressure-native-resolution-preserved';
+   }else if(!gpuBound&&frameP95<=18.5&&qualityDprCurrent>=qualityDpr-.01){
+    qualityAdaptiveState.reason='native-quality';
+   }
+  }
+  const fps=renderedFps||engine.getFps();
+  if(fps<45&&now-lastQualityWarningAt>=5000){
+   lastQualityWarningAt=now;
+   console.warn('EL SIN NOMBRE: estabilidad por debajo del objetivo de 60 FPS.',{fps:Math.round(fps),targetFrameRate,renderDpr:qualityDprCurrent,minimumRenderDpr:qualityDprAdaptiveFloor,reason:qualityAdaptiveState.reason,frameP95Ms:frameP95,cpuP95Ms:cpuP95,gpuBoundInferred:!!gpuBound,geometryAndEffectsPreserved:true,shadowMap:currentShadowSize,meshes:scene.meshes.length,vegetationMerge:staticMergeStats,cpu:{preWorldMaintenanceMs:lastPreWorldMaintenanceMs,worldUpdateMs:lastWorldUpdateMs,renderSubmissionMs:lastRenderCpuMs}});
+  }
+ }
+ window.__ELSN_ADAPTIVE_RESOLUTION__=()=>({...qualityAdaptiveState,currentRenderDpr:qualityDprCurrent,baseRenderDpr:qualityDpr,minimumRenderDpr:qualityDprAdaptiveFloor,enabled:qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive,targetFrameRate});"""
     if html.count(quality_adaptive_marker) != 1:
         raise SystemExit("No se encontró exactamente la función original de supervisión de resolución.")
     html = html.replace(quality_adaptive_marker, quality_adaptive_code, 1)
@@ -4685,13 +4950,13 @@ function getFrameMaintenanceTimingSnapshot(){
     html = html.replace(fps_hud_marker, fps_hud_replacement, 1)
 
     fps_colour_marker = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
-    fps_colour_replacement = "meter.style.color=measured>=116?'#94d8a0':measured>=90?'#e6c27f':'#ff9a83';"
+    fps_colour_replacement = "meter.style.color=measured>=58?'#94d8a0':measured>=45?'#e6c27f':'#ff9a83';"
     if html.count(fps_colour_marker) != 1:
         raise SystemExit("No se encontró el esquema único de color del HUD para pantallas de alta frecuencia.")
     html = html.replace(fps_colour_marker, fps_colour_replacement, 1)
 
     fps_title_marker = "meter.title='Objetivo: 120 FPS. Tiempo de fotograma P95: '+p95.toFixed(1)+' ms (120 FPS requiere ≤8,3 ms). DPR de renderizado: '+qualityDprCurrent.toFixed(2)+'.';"
-    fps_title_replacement = fps_title_marker
+    fps_title_replacement = "meter.title='Objetivo de Calidad: 60 FPS estables. Presupuesto P95: 16,7 ms; el percentil 99 debe mantenerse por debajo de 25 ms. DPR actual: '+qualityDprCurrent.toFixed(2)+'.';"
     if html.count(fps_title_marker) != 1:
         raise SystemExit("No se encontró el texto único del objetivo de FPS del HUD.")
     html = html.replace(fps_title_marker, fps_title_replacement, 1)
@@ -5039,43 +5304,151 @@ function getFrameMaintenanceTimingSnapshot(){
     # 0.6.352 release gate: render-loop changes require a fresh build and real-gameplay acceptance.
     # Browser OS dependencies are installed on the isolated startup/fauna runners, not in this cache-warming build job.
     world_snapshot_code = r"""
- // Flight is advanced by the game's actual Engine.runRenderLoop callback on every frame.
+ // A single controller owns the coastal route, flight attitude and full GLB hierarchy.
  const gullFlightRenderState=window.__ELSN_GULL_FLIGHT_RENDER__={active:true,frameTicks:0,updatedBirds:0,updateErrors:0,worldMatrixRecoveries:0,stalledBirds:0,lastTimestamp:null,lastError:null};
+ Object.assign(gullFlightRenderState,{parentRepairs:0,ancestorMatrixRecoveries:0,visibilityRecoveries:0,stalledVisualBirds:0,movingBirds:0,frameDeltaSeconds:0});
+ let gullFlightPreviousFrameSeconds=null;
+ const clampGullFlight=(value,min,max)=>Math.max(min,Math.min(max,value));
+ function evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ){
+  const major=Math.max(18,Number(radius)||18),minor=Math.max(12,major*.68),harmonic=phase*.19;
+  return {
+   x:centerX+major*Math.cos(angle)+major*.075*Math.cos(angle*2+harmonic),
+   y:altitude+Math.sin(angle*2+phase)*.84+Math.sin(angle*.43+phase*.3)*.27+Math.sin(angle*3.1+phase*.2)*.12,
+   z:centerZ+minor*Math.sin(angle)+minor*.09*Math.sin(angle*2+phase*.17)
+  };
+ }
+ function recoverGullWorldHierarchy(bird){
+  const root=bird&&bird.root,rig=bird&&bird.flightRig;
+  if(!root||!rig||root.isDisposed?.())return null;
+  if(root.parent){
+   root.computeWorldMatrix(true);
+   const worldMatrix=root.getWorldMatrix().clone(),worldScale=B.Vector3.One(),worldRotation=B.Quaternion.Identity(),worldPosition=B.Vector3.Zero();
+   if(worldMatrix.decompose(worldScale,worldRotation,worldPosition)){
+    root.parent=null;root.scaling.copyFrom(worldScale);root.rotationQuaternion=worldRotation.clone();root.position.copyFrom(worldPosition);
+    gullFlightRenderState.parentRepairs++;
+   }else{
+    root.parent=null;gullFlightRenderState.parentRepairs++;
+   }
+  }
+  const visualRoot=rig.visualRoot;
+  if(visualRoot&&!visualRoot.isDisposed?.()&&visualRoot.parent!==root){
+   visualRoot.parent=root;gullFlightRenderState.parentRepairs++;
+  }
+  for(const importedRoot of rig.importedRoots||[]){
+   if(!importedRoot||importedRoot.isDisposed?.()||!visualRoot)continue;
+   if(importedRoot.parent!==visualRoot){importedRoot.parent=visualRoot;gullFlightRenderState.parentRepairs++;}
+  }
+  const hierarchyNodes=rig.hierarchyNodes||[];
+  for(const node of [root,visualRoot,...hierarchyNodes]){
+   if(!node||node.isDisposed?.())continue;
+   if(node._isWorldMatrixFrozen&&typeof node.unfreezeWorldMatrix==='function'){
+    node.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;
+    if(node===root)gullFlightRenderState.worldMatrixRecoveries++;
+   }
+   if(typeof node.setEnabled==='function'&&!node.isEnabled())node.setEnabled(true);
+   if(typeof node.markAsDirty==='function')node.markAsDirty('position');
+   try{node.computeWorldMatrix(true);}catch(_){}
+  }
+  const meshes=rig.meshes||[];
+  for(const mesh of meshes){
+   if(!mesh||mesh.isDisposed?.())continue;
+   if(mesh._isWorldMatrixFrozen&&typeof mesh.unfreezeWorldMatrix==='function'){
+    mesh.unfreezeWorldMatrix();gullFlightRenderState.ancestorMatrixRecoveries++;
+   }
+   if(typeof mesh.setEnabled==='function'&&!mesh.isEnabled())mesh.setEnabled(true);
+   if(mesh.isVisible===false||Number(mesh.visibility??1)<=.01){
+    mesh.isVisible=true;mesh.visibility=1;gullFlightRenderState.visibilityRecoveries++;
+   }
+   if(typeof mesh.markAsDirty==='function')mesh.markAsDirty('position');
+   try{mesh.computeWorldMatrix(true);}catch(_){}
+  }
+  try{root.computeWorldMatrix(true);visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+  return {root,visualRoot,meshes};
+ }
  function updateAmbientGullFlight(nowSeconds){
   const birds=ambientBirds;
   if(!Number.isFinite(nowSeconds)||!Array.isArray(birds)||!birds.length)return;
   gullFlightRenderState.frameTicks++;
   gullFlightRenderState.lastTimestamp=nowSeconds;
-  let updated=0;
+  const frameDelta=gullFlightPreviousFrameSeconds===null?1/60:clampGullFlight(nowSeconds-gullFlightPreviousFrameSeconds,0,.20);
+  gullFlightPreviousFrameSeconds=nowSeconds;
+  gullFlightRenderState.frameDeltaSeconds=frameDelta;
+  let updated=0,moving=0;
   for(const b of birds){
    try{
     if(!b||!b.root||b.root.isDisposed?.()||!b.root.position)continue;
-    if(typeof b.root.isEnabled==='function'&&!b.root.isEnabled())b.root.setEnabled(true);if(b.root._isWorldMatrixFrozen&&typeof b.root.unfreezeWorldMatrix==='function'){b.root.unfreezeWorldMatrix();gullFlightRenderState.worldMatrixRecoveries++;}
+    const hierarchy=recoverGullWorldHierarchy(b);
+    if(!hierarchy)continue;
+    const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
+    const radius=Number.isFinite(Number(b.radius))?Math.max(18,Number(b.radius)):18;
+    const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
+    const baseAngularSpeed=clampGullFlight(Number(b.speed)||.18,.12,.28);
     if(!Number.isFinite(b.flightClockOrigin))b.flightClockOrigin=nowSeconds;
     const flightElapsed=Math.max(0,nowSeconds-b.flightClockOrigin);
-    const phase=Number.isFinite(Number(b.phase))?Number(b.phase):0;
-    const radius=Number.isFinite(Number(b.radius))?Math.max(1,Number(b.radius)):18;
-    const altitude=Number.isFinite(Number(b.alt))?Number(b.alt):10;
-    const speed=Number.isFinite(Number(b.speed))?Math.max(.18,Number(b.speed)):.18;
-    const a=flightElapsed*speed+phase,bank=Math.sin(a*1.2)*.12;
-    b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
     b.flightElapsed=flightElapsed;
-    b.root.position.set(Math.cos(a)*radius-36,altitude+Math.sin(a*2+phase)*.72+Math.sin(flightElapsed*.41+phase)*.12,Math.sin(a)*radius-18);
-    b.root.rotationQuaternion=null;b.root.rotation.set(0,-a+Math.PI/2,bank);
+    const gustPhase=flightElapsed*.19+phase*1.4;
+    const angle=phase+flightElapsed*baseAngularSpeed+.08*Math.sin(flightElapsed*.47+phase*.37)+.025*Math.sin(gustPhase);
+    const angularRate=baseAngularSpeed+.08*.47*Math.cos(flightElapsed*.47+phase*.37)+.025*.19*Math.cos(gustPhase);
+    const homeCenterX=Number.isFinite(Number(b.flightCenterX))?Number(b.flightCenterX):-36;
+    const homeCenterZ=Number.isFinite(Number(b.flightCenterZ))?Number(b.flightCenterZ):-18;
+    const centerX=homeCenterX+8*Math.sin(flightElapsed*.035+phase*.8);
+    const centerZ=homeCenterZ+6*Math.sin(flightElapsed*.027+phase*1.3);
+    const epsilon=.012;
+    const currentPoint=evaluateCoastalGullFlightPoint(angle,phase,radius,altitude,centerX,centerZ);
+    const previousPoint=evaluateCoastalGullFlightPoint(angle-epsilon,phase,radius,altitude,centerX,centerZ);
+    const nextPoint=evaluateCoastalGullFlightPoint(angle+epsilon,phase,radius,altitude,centerX,centerZ);
+    const vxAngle=(nextPoint.x-previousPoint.x)/(2*epsilon),vzAngle=(nextPoint.z-previousPoint.z)/(2*epsilon);
+    const vyAngle=(nextPoint.y-previousPoint.y)/(2*epsilon);
+    const axAngle=(nextPoint.x-2*currentPoint.x+previousPoint.x)/(epsilon*epsilon);
+    const azAngle=(nextPoint.z-2*currentPoint.z+previousPoint.z)/(epsilon*epsilon);
+    const horizontalDerivative=Math.max(.001,Math.hypot(vxAngle,vzAngle));
+    const horizontalSpeed=horizontalDerivative*Math.abs(angularRate);
+    const verticalSpeed=vyAngle*angularRate;
+    const heading=Math.atan2(vxAngle,vzAngle);
+    const pitch=-Math.atan2(verticalSpeed,Math.max(.001,horizontalSpeed));
+    const curvature=(vxAngle*azAngle-vzAngle*axAngle)/Math.max(.001,Math.pow(horizontalDerivative,3));
+    const bank=clampGullFlight(-Math.atan((horizontalSpeed*horizontalSpeed*curvature)/9.81),-.30,.30);
+    const glideCycle=(flightElapsed+phase*2.6)%18;
+    const gliding=glideCycle>11.5&&glideCycle<15.8;
+    b.flightMode=gliding?'glide':'flap';
+    b.flightSpeedMetersPerSecond=horizontalSpeed;
+    b.flightHeadingRadians=heading;b.flightPitchRadians=pitch;b.flightBankRadians=bank;
+    b.flightUpdateTicks=(Number(b.flightUpdateTicks)||0)+1;
+    const actorPrevious=b.flightLastPosition;
+    b.root.position.set(currentPoint.x,currentPoint.y,currentPoint.z);
+    b.root.rotationQuaternion=null;b.root.rotation.set(pitch,heading,bank);
     if(typeof b.root.markAsDirty==='function')b.root.markAsDirty('position');
     b.root.computeWorldMatrix(true);
-    const previous=b.flightLastPosition;
-    if(previous){const dx=b.root.position.x-previous.x,dy=b.root.position.y-previous.y,dz=b.root.position.z-previous.z;b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);if(b.flightLastStepMeters<.0001)gullFlightRenderState.stalledBirds++;}
-    b.flightLastPosition={x:b.root.position.x,y:b.root.position.y,z:b.root.position.z};
-    if(b.procedural&&b.left&&b.right){
-     b.left.rotation.z=-.10-Math.sin(flightElapsed*10.5+phase)*.38;
-     b.right.rotation.z=.10+Math.sin(flightElapsed*10.5+phase)*.38;
-    }else{
-     const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;
-     if(flight){
-      if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);
-      flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);
+    const actorPosition=b.root.getAbsolutePosition?.()||b.root.position;
+    if(actorPrevious){
+     const dx=actorPosition.x-actorPrevious.x,dy=actorPosition.y-actorPrevious.y,dz=actorPosition.z-actorPrevious.z;
+     b.flightLastStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
+     if(b.flightLastStepMeters<.0001){gullFlightRenderState.stalledBirds++;b.flightStallSeconds=(Number(b.flightStallSeconds)||0)+frameDelta;}
+     else{moving++;b.flightDistanceMeters=(Number(b.flightDistanceMeters)||0)+b.flightLastStepMeters;b.flightStallSeconds=0;}
+    }
+    b.flightLastPosition={x:actorPosition.x,y:actorPosition.y,z:actorPosition.z};
+    const visualRoot=hierarchy.visualRoot;
+    try{visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+    const flightMesh=b.flightRig.firstFlightMesh||hierarchy.meshes.find(mesh=>mesh&&!mesh.isDisposed?.()&&mesh.isVisible!==false)||null;
+    let renderedPosition=null;
+    if(flightMesh){
+     try{flightMesh.computeWorldMatrix(true);const meshPosition=flightMesh.getAbsolutePosition?.();if(meshPosition)renderedPosition={x:meshPosition.x,y:meshPosition.y,z:meshPosition.z};}catch(_){}
+    }
+    if(renderedPosition){
+     const lastVisual=b.flightLastVisualPosition;
+     if(lastVisual){
+      const dx=renderedPosition.x-lastVisual.x,dy=renderedPosition.y-lastVisual.y,dz=renderedPosition.z-lastVisual.z;
+      b.flightLastVisualStepMeters=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(b.flightLastVisualStepMeters<.0001){gullFlightRenderState.stalledVisualBirds++;b.flightVisualStallSeconds=(Number(b.flightVisualStallSeconds)||0)+frameDelta;}
+      else b.flightVisualStallSeconds=0;
      }
+     b.flightLastVisualPosition=renderedPosition;
+    }
+    const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null;
+    if(flight){
+     if(!flight.isPlaying)flight.start(true,1,flight.from,flight.to);
+     if(gliding)flight.speedRatio=.48;
+     else flight.speedRatio=.96+.08*Math.sin(flightElapsed*.7+phase);
     }
     updated++;
    }catch(error){
@@ -5084,6 +5457,7 @@ function getFrameMaintenanceTimingSnapshot(){
    }
   }
   gullFlightRenderState.updatedBirds=updated;
+  gullFlightRenderState.movingBirds=moving;
  }
  const gullWingBindPose=new WeakMap();
  const gullWingFlapObserver=scene.onBeforeRenderObservable.add(()=>{
@@ -5203,8 +5577,35 @@ function getFrameMaintenanceTimingSnapshot(){
    return {name:String(parts.name||''),rootEnabled:enabled(parts.root),realHuman:!!real,meshCount:meshes.length,visibleMeshCount:meshes.filter(visible).length,bodyEnabled:enabled(real&&real.visualBody),modelRootEnabled:enabled(real&&real.modelRoot)};
   });
   const wingPose=node=>{if(!node||node.isDisposed?.())return null;const q=node.rotationQuaternion,r=node.rotation;return q?{kind:'q',x:q.x,y:q.y,z:q.z,w:q.w}:{kind:'e',x:r?.x||0,y:r?.y||0,z:r?.z||0};};
-  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;try{rig?.visualRoot?.computeWorldMatrix?.(true);}catch(_){}const visual=rig?.visualRoot?.getAbsolutePosition?.()||null;return {name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),position:p?{x:p.x,y:p.y,z:p.z}:null,visualPosition:visual?{x:visual.x,y:visual.y,z:visual.z}:null,phase:Number(b.phase)||0,radius:Number(b.radius)||0,flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)};});
-  const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
+  const gulls=(ambientBirds||[]).filter(b=>b&&b.real).map(b=>{
+   const flight=b.flightRig&&b.flightRig.animationGroup||b.animation||null,p=b.root&&b.root.position,rig=b.flightRig;
+   const vectorPoint=value=>value?{x:Number(value.x)||0,y:Number(value.y)||0,z:Number(value.z)||0}:null;
+   try{b.root?.computeWorldMatrix?.(true);rig?.visualRoot?.computeWorldMatrix?.(true);}catch(_){}
+   const actorWorld=vectorPoint(b.root?.getAbsolutePosition?.()||p);
+   const visualRootWorld=vectorPoint(rig?.visualRoot?.getAbsolutePosition?.());
+   const meshes=rig?.meshes||[],visibleMeshes=meshes.filter(visible);
+   const sampleMesh=rig?.firstFlightMesh||visibleMeshes[0]||null;
+   try{sampleMesh?.computeWorldMatrix?.(true);}catch(_){}
+   const renderedMeshWorld=vectorPoint(sampleMesh?.getAbsolutePosition?.());
+   const visual=renderedMeshWorld||visualRootWorld;
+   return {
+    name:String(b.root&&b.root.name||''),rootEnabled:enabled(b.root),
+    position:p?{x:p.x,y:p.y,z:p.z}:null,actorWorldPosition:actorWorld,
+    visualRootPosition:visualRootWorld,renderedMeshPosition:renderedMeshWorld,
+    visualPosition:visual,phase:Number(b.phase)||0,radius:Number(b.radius)||0,
+    flightElapsed:Number(b.flightElapsed)||0,flightUpdateTicks:Number(b.flightUpdateTicks)||0,
+    flightLastStepMeters:Number(b.flightLastStepMeters)||0,flightLastVisualStepMeters:Number(b.flightLastVisualStepMeters)||0,
+    flightSpeedMetersPerSecond:Number(b.flightSpeedMetersPerSecond)||0,flightMode:String(b.flightMode||'unknown'),
+    flightHeadingRadians:Number(b.flightHeadingRadians)||0,flightPitchRadians:Number(b.flightPitchRadians)||0,flightBankRadians:Number(b.flightBankRadians)||0,
+    actorParentName:b.root?.parent?.name||null,visualParentIsActor:!!(rig?.visualRoot&&rig.visualRoot.parent===b.root),
+    meshCount:meshes.length,visibleMeshCount:visibleMeshes.length,
+    flightName:flight&&String(flight.name||''),flightPlaying:!!(flight&&flight.isPlaying),hasFlightRig:!!rig,
+    leftWingPose:wingPose(rig&&rig.leftWing&&rig.leftWing.node),rightWingPose:wingPose(rig&&rig.rightWing&&rig.rightWing.node),
+    leftWingFallback:!!(rig&&rig.leftWing&&gullWingBindPose.get(rig.leftWing.node)?.fallback),
+    rightWingFallback:!!(rig&&rig.rightWing&&gullWingBindPose.get(rig.rightWing.node)?.fallback)
+   };
+  });
+   const hostiles=(enemies||[]).filter(e=>e&&e.parts&&e.alive!==false&&e.parts.faction!=='player'&&e.faction!=='player'&&!e.recruited&&!e.surrendered).map(e=>{const p=e.parts,root=p.root,real=p.realHuman,body=real?.visualBody||p.body,meshes=real?.meshes||(body&&body.getChildMeshes?body.getChildMeshes(false):[]),fallback=p.proceduralFallbackBody,fallbackMeshes=fallback&&fallback.getChildMeshes?fallback.getChildMeshes(false):[],visibleMeshCount=(meshes||[]).filter(visible).length+((fallback&&enabled(fallback))?fallbackMeshes.filter(visible).length:0);return {name:String(p.name||''),position:root&&root.position?{x:root.position.x,y:root.position.y,z:root.position.z}:null,rootEnabled:enabled(root),bodyEnabled:enabled(body)||enabled(fallback),visibleMeshCount,meshCount:(meshes||[]).length+((fallback&&enabled(fallback))?fallbackMeshes.length:0),hasRealHuman:!!real,proceduralFallbackVisible:!!(fallback&&enabled(fallback))};});
   return {playerClub:{equipped:String(equippedWeapon||''),holderExists:!!realWeaponHolder,holderEnabled:enabled(realWeaponHolder),groupEnabled:enabled(realWeaponGroups&&realWeaponGroups.club),meshCount:clubMeshes.length,visibleMeshCount:clubMeshes.filter(visible).length,anchor:String(realWeaponAnchorType||''),calibrated:String(realWeaponAnchorType||'')==='club-local-player-anchor',holderParentIsModelPivot:!!(realWeaponHolder&&realWeaponHolder.parent===realPlayerModelPivot),holderHandDistance:clubHolderHandDistance,holderPosition:clubHolderPosition?{x:clubHolderPosition.x,y:clubHolderPosition.y,z:clubHolderPosition.z}:null,handPosition:clubHandPosition?{x:clubHandPosition.x,y:clubHandPosition.y,z:clubHandPosition.z}:null},homeWarriors,gulls,hostiles,playerPosition:player.root&&player.root.position?{x:player.root.position.x,y:player.root.position.y,z:player.root.position.z}:null};
  };
 """
@@ -5286,7 +5687,7 @@ function getWorldPhaseTimingSnapshot(){
         html = html.replace(old_phase_code, new_phase_code, 1)
 
     performance_report_marker = "waterVertices:waterPositions.length/3}};"
-    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),preWorldMaintenance:getFrameMaintenanceTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
+    performance_report_replacement = "waterVertices:waterPositions.length/3},subsystems:{worldPhases:getWorldPhaseTimingSnapshot(),forestInstancing:typeof window.__ELSN_FOREST_INSTANCING_STATS__==='function'?window.__ELSN_FOREST_INSTANCING_STATS__():null,rockInstancing:typeof window.__ELSN_ROCK_INSTANCING__==='function'?window.__ELSN_ROCK_INSTANCING__():null,preWorldMaintenance:getFrameMaintenanceTimingSnapshot(),atmosphere:window.__ELSN_ATMOSPHERE&&typeof window.__ELSN_ATMOSPHERE.getPerformanceSnapshot==='function'?window.__ELSN_ATMOSPHERE.getPerformanceSnapshot():null,npcDialogue:window.__ELSN_NPC_DIALOGUES__&&typeof window.__ELSN_NPC_DIALOGUES__.getSnapshot==='function'?window.__ELSN_NPC_DIALOGUES__.getSnapshot():null,wildlife:window.__ELSN_WILDLIFE_DIAGNOSTICS__&&typeof window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot==='function'?window.__ELSN_WILDLIFE_DIAGNOSTICS__.getSnapshot():{requested:wildlifeSpawnSpecs.length,loaded:ambientFauna.length}}};"
     if html.count(performance_report_marker) != 1:
         raise SystemExit("No se encontró el objeto único del informe de rendimiento para añadir métricas por subsistema.")
     html = html.replace(performance_report_marker, performance_report_replacement, 1)
