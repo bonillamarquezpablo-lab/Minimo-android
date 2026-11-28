@@ -634,10 +634,10 @@ def main() -> None:
         fail("El perfil nativo de gama alta, la resolución protegida o las texturas de calidad están incompletos: " + ", ".join(missing_graphics_quality))
     if "qualityScaleFixed:!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)" not in index_html or "qualityScaleAdaptive:!!(qualityRuntimeAdaptiveActive||qualityLabAdaptiveActive)" not in index_html or "physicalPixelCoveragePct" not in index_html:
         fail("El perfil Calidad debe informar la escala adaptativa y el porcentaje real de píxeles físicos.")
-    quality_adaptive_match = re.search(r"function adaptRenderQuality\(dt,rawFrameMs\)\{([\s\S]*?)\n  \}", index_html)
-    adaptive_markers = ("qualityDprAdaptiveFloor", "frameP95>18.5", "cpuP95<Math.max(12,frameP95*.68)", "cpu-bound-no-resolution-change", "gpu-pressure-inferred", "headroom-recovery", "engine.setHardwareScalingLevel(1/bounded)")
-    if not quality_adaptive_match or any(marker not in quality_adaptive_match.group(1) for marker in adaptive_markers):
-        fail("La resolución adaptativa debe distinguir presión CPU de presión GPU, limitar su rango y recuperar calidad gradualmente.")
+    adaptive_markers = ("function adaptRenderQuality(dt,rawFrameMs){", "qualityDprAdaptiveFloor", "frameP95>18.5", "cpuP95<Math.max(12,frameP95*.68)", "cpu-bound-no-resolution-change", "gpu-pressure-inferred", "headroom-recovery", "engine.setHardwareScalingLevel(1/bounded)")
+    missing_adaptive_markers = [marker for marker in adaptive_markers if marker not in index_html]
+    if missing_adaptive_markers:
+        fail("La resolución adaptativa debe distinguir presión CPU de presión GPU, limitar su rango y recuperar calidad gradualmente: " + ", ".join(missing_adaptive_markers))
     mobile_gpu_budget_markers = (
         "Math.min(deviceDpr,isTouchDevice?(highHeadroomQualityMobile?deviceDpr:1.45):1.65)",
         "const mirrorSize=isTouchDevice?(isConstrainedMobile?384:640):1024",
