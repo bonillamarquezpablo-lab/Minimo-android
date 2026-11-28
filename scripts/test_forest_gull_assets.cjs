@@ -7,7 +7,10 @@ const dist=path.join(process.cwd(),'dist');
 const html=fs.readFileSync(path.join(dist,'index.html'),'utf8');
 const buildSource=fs.readFileSync(path.join(process.cwd(),'scripts','build_site.py'),'utf8');
 assert.match(html,/forestTreeAssetSpecs/);
-assert.match(html,/instantiateModelsToScene\(name=>name\+'_Forest_'/);
+assert.match(html,/container\.addAllToScene\(\)/,'Each forest species must be loaded once as a shared template.');
+assert.match(html,/sourceMesh\.createInstance\(/,'Placed trees must share template geometry through Babylon InstancedMesh.');
+assert.match(html,/window\.__ELSN_FOREST_INSTANCING_STATS__/,'Forest instancing must expose template/instance counts.');
+assert.doesNotMatch(html,/spec\.container\.instantiateModelsToScene\(name=>name\+'_Forest_'+serial/,'Tree placement must not clone and re-merge the complete GLB per tree.');
 assert.match(html,/await loadForestTreeTemplates\(\)/);
 assert.match(html,/targetGullMaxExtentMeters=\.55/);
 assert.match(html,/fittedMaxExtent>\.57/);
@@ -84,7 +87,7 @@ const models=[
  inspectGlb('assets/models/forest/oak-textured.glb',1500000,true)
 ];
 assert.ok(models[2].meshes<=8,'Oak source mesh count is not compact enough for a mobile forest');
-assert.match(html,/mergeStaticDecorByMaterial/,'Each static GLB tree must be merged by PBR material before rendering');
+assert.match(html,/mergeStaticDecorByMaterial\(templateRoot,'NorseForestTemplate_'/,'Each species template must be merged once by PBR material before instances are created');
 const gull=path.join(dist,'assets/models/Seagull.glb');
 assert.ok(fs.existsSync(gull),'Falta GLB de gaviota');
 const gullData=fs.readFileSync(gull);
