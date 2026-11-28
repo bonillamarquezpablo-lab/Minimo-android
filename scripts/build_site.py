@@ -1354,12 +1354,12 @@ def main() -> None:
    }
    templateMeshes.forEach(mesh=>{mesh.isVisible=false;mesh.visibility=0;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
    recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,sourceMeshes:templateSourceMeshes.length,templateMeshes:templateMeshes.length,source:'Innerscene CC0 shared-instancing'});
-   return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,textureCount,materialCount};
+   return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,sourceMeshCount:templateSourceMeshes.length,textureCount,materialCount};
   }));
   loaded.forEach(item=>{
    forestTreeTemplates.set(item.spec.kind,item);
    forestInstancingStats.templates++;
-   forestInstancingStats.sourceMeshes+=item.container.meshes.filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0).length;
+   forestInstancingStats.sourceMeshes+=Number(item.sourceMeshCount)||0;
    forestInstancingStats.templateMeshes+=item.templateMeshes.length;
   });
   forestInstancingStats.templateBuildMs=Number((performance.now()-started).toFixed(2));
