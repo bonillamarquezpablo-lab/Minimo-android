@@ -839,7 +839,7 @@ async function main() {
       return {
         forest,rocks,
         visibleTreeInstances:meshes.filter(mesh=>/^NorseForestTree_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length,
-        hiddenForestTemplateSources:meshes.filter(mesh=>mesh?.__elsnForestTemplateSource&&mesh.isVisible===false&&Number(mesh.visibility)===0).length,
+        hiddenForestTemplateSources:meshes.filter(mesh=>mesh?.__elsnForestTemplateSource&&mesh.isVisible===true&&Number(mesh.visibility)===0).length,
         visibleRockInstances:meshes.filter(mesh=>/^(?:graniteBoulder|rockFacet)_/.test(String(mesh?.name||''))&&mesh.isVisible!==false&&Number(mesh.visibility??1)>.01).length
       };
     });
@@ -847,7 +847,7 @@ async function main() {
     assert.ok(instancingDiagnostics.forest&&instancingDiagnostics.forest.templates===3&&instancingDiagnostics.forest.treeInstances>0&&instancingDiagnostics.forest.instanceMeshes>0&&instancingDiagnostics.forest.sourceMeshes>0&&instancingDiagnostics.forest.templateMeshes>0&&instancingDiagnostics.forest.perTreeGlbClones===0,
       'El bosque debe usar tres plantillas compartidas y árboles instanciados, sin clonar GLB por árbol: '+JSON.stringify(instancingDiagnostics));
     assert.ok(instancingDiagnostics.hiddenForestTemplateSources===instancingDiagnostics.forest.templateMeshes&&instancingDiagnostics.visibleTreeInstances===instancingDiagnostics.forest.instanceMeshes,
-      'Las fuentes de geometría forestal deben permanecer ocultas y todas las instancias colocadas deben estar visibles: '+JSON.stringify(instancingDiagnostics));
+      'Las fuentes deben conservar el batch activo con visibilidad propia cero y todas las instancias deben estar visibles: '+JSON.stringify(instancingDiagnostics));
     assert.ok(instancingDiagnostics.rocks&&instancingDiagnostics.rocks.instances>0&&instancingDiagnostics.rocks.instanceMeshes===instancingDiagnostics.rocks.instances*2&&instancingDiagnostics.rocks.sourceGeometryMeshes===2&&instancingDiagnostics.visibleRockInstances===instancingDiagnostics.rocks.instanceMeshes,
       'Las rocas minables deben compartir dos geometrías fuente y conservar visibles sus dos instancias por depósito: '+JSON.stringify(instancingDiagnostics));
     const visualActorsBefore=await page.evaluate(()=>window.getGameVisualActorDiagnostics?.()||null);
