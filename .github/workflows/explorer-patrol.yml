@@ -17,6 +17,7 @@ on:
   push:
     branches:
       - level1/explorer-patrol
+      - fix/coast-startup-timeout-0.6.364
 
 permissions:
   contents: write
