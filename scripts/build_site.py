@@ -1274,6 +1274,8 @@ def main() -> None:
   {kind:'oak',label:'Roble PBR 2K',url:'./assets/models/forest/oak-textured.glb',targetHeight:5.6,requiresTexture:true}
  ];
  const forestTreeTemplates=new Map();
+ const forestInstancingStats={templates:0,treeInstances:0,instanceMeshes:0,sourceMeshes:0,templateMeshes:0,templateBuildMs:0,perTreeGlbClones:0,sharedGeometry:true};
+ window.__ELSN_FOREST_INSTANCING_STATS__=()=>({...forestInstancingStats});
   const forestTreeSpacingStats={placed:0,relocated:0,skipped:0,minGapMeters:6.5};
   function findForestTreePlacement(x,z,canopyRadius){
    const islandIndex=landIslandIndex(x,z),island=land[islandIndex];
@@ -1331,14 +1333,36 @@ def main() -> None:
    const sourceMeshes=container&&(container.meshes||[]).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0)||[];
    const textureCount=container&&(container.textures||[]).filter(Boolean).length||0;
    const materialCount=container&&(container.materials||[]).filter(Boolean).length||0;
-   if(!container||typeof container.instantiateModelsToScene!=='function'||!sourceMeshes.length||!materialCount){
+   if(!container||typeof container.addAllToScene!=='function'||!sourceMeshes.length||!materialCount){
     throw new Error('El GLB forestal no contiene mallas y materiales instanciables: '+spec.label);
    }
    if(spec.requiresTexture&&textureCount<1)throw new Error('El modelo forestal '+spec.label+' llegó sin mapas de textura.');
-   recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,source:'Innerscene CC0'});
-   return {spec,container,textureCount,materialCount};
+   // Build one immutable, material-merged source per species. Every placed tree
+   // becomes an InstancedMesh sharing the same vertex/index buffers and PBR materials.
+   // The old path cloned the complete GLB and re-merged all geometry for every tree.
+   container.addAllToScene();
+   const templateRoot=new B.TransformNode('NorseForestTemplate_'+spec.kind,scene);
+   const importedRoots=container.rootNodes||[];
+   if(!importedRoots.length)throw new Error('El GLB forestal no produjo raíces: '+spec.label);
+   importedRoots.forEach(node=>{node.parent=templateRoot;node.setEnabled(true);});
+   const templateSourceMeshes=getRootMeshes(importedRoots);
+   const bounds=boundsForMeshes(templateSourceMeshes),sourceHeight=Math.max(.001,bounds.height);
+   mergeStaticDecorByMaterial(templateRoot,'NorseForestTemplate_'+spec.kind);
+   const templateMeshes=templateRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
+   if(!templateMeshes.length||templateMeshes.length>Math.max(4,templateSourceMeshes.length)){
+    throw new Error('La plantilla forestal no pudo compactarse por material: '+spec.label);
+   }
+   templateMeshes.forEach(mesh=>{mesh.isVisible=false;mesh.visibility=0;mesh.isPickable=false;mesh.receiveShadows=false;mesh.alwaysSelectAsActiveMesh=false;mesh.__elsnForestTemplateSource=true;});
+   recordStartupTask('Modelo forestal · '+spec.label,modelStarted,performance.now(),'ready',{bytes:blob.size,materials:materialCount,textures:textureCount,sourceMeshes:templateSourceMeshes.length,templateMeshes:templateMeshes.length,source:'Innerscene CC0 shared-instancing'});
+   return {spec,container,templateRoot,templateMeshes,bounds,sourceHeight,textureCount,materialCount};
   }));
-  loaded.forEach(item=>forestTreeTemplates.set(item.spec.kind,item));
+  loaded.forEach(item=>{
+   forestTreeTemplates.set(item.spec.kind,item);
+   forestInstancingStats.templates++;
+   forestInstancingStats.sourceMeshes+=item.container.meshes.filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0).length;
+   forestInstancingStats.templateMeshes+=item.templateMeshes.length;
+  });
+  forestInstancingStats.templateBuildMs=Number((performance.now()-started).toFixed(2));
   window.__ELSN_FOREST_TREES__={ready:forestTreeTemplates.size===3,species:Array.from(forestTreeTemplates.keys()),loaded:forestTreeTemplates.size,assets:loaded.map(item=>({kind:item.spec.kind,materials:item.materialCount,textures:item.textureCount}))};
   recordStartupTask('Modelos completos del bosque',started,performance.now(),'ready',{species:Array.from(forestTreeTemplates.keys()),loaded:forestTreeTemplates.size,source:'Innerscene CC0'});
   if(forestTreeTemplates.size!==3)throw new Error('No se cargaron los tres modelos forestales obligatorios.');
@@ -1351,19 +1375,19 @@ def main() -> None:
   const canopy=new B.TransformNode('TreeCanopyWindPivot_'+kind,scene);canopy.parent=root;
   const visualRoot=new B.TransformNode('TreeGLBVisual_'+kind,scene);visualRoot.parent=canopy;
   const serial=(window.__ELSN_FOREST_INSTANCE_ID=(window.__ELSN_FOREST_INSTANCE_ID||0)+1);
-  const inst=spec.container.instantiateModelsToScene(name=>name+'_Forest_'+serial,false);
-  const importedRoots=inst.rootNodes||[];
-  if(!importedRoots.length)throw new Error('El modelo forestal no produjo nodos raíz: '+spec.spec.label);
-  importedRoots.forEach(node=>{node.parent=visualRoot;node.setEnabled(true);});
-  const sourceMeshes=getRootMeshes(importedRoots);
-  if(!sourceMeshes.length)throw new Error('El modelo forestal no produjo geometría: '+spec.spec.label);
-  const bounds=boundsForMeshes(sourceMeshes),sourceHeight=Math.max(.001,bounds.height);
+  const bounds=spec.bounds,sourceHeight=spec.sourceHeight;
+  if(!Array.isArray(spec.templateMeshes)||!spec.templateMeshes.length)throw new Error('La plantilla forestal compartida no tiene geometría: '+spec.spec.label);
   const placedScale=(spec.spec.targetHeight/sourceHeight)*scale,pivotY=sourceHeight*.58;
-  // Merge while the visual root is still at identity so the imported world transforms are baked only once.
-  mergeStaticDecorByMaterial(visualRoot,'NorseForestGLB_'+kind+'_'+serial);
-  const meshes=visualRoot.getChildMeshes(false).filter(mesh=>mesh&&mesh.getTotalVertices&&mesh.getTotalVertices()>0);
-  if(!meshes.length)throw new Error('El modelo forestal no pudo fusionarse en mallas renderizables: '+spec.spec.label);
-  if(meshes.length>Math.max(4,sourceMeshes.length))throw new Error('La optimización del árbol aumentó el número de mallas: '+spec.spec.label);
+  const meshes=spec.templateMeshes.map((sourceMesh,index)=>{
+   if(!sourceMesh||sourceMesh.isDisposed?.()||typeof sourceMesh.createInstance!=='function')throw new Error('No se pudo crear la instancia forestal '+spec.spec.label+' #'+index);
+   const instance=sourceMesh.createInstance('NorseForestTree_'+kind+'_'+serial+'_'+index);
+   instance.parent=visualRoot;instance.setEnabled(true);instance.isVisible=true;instance.visibility=1;
+   instance.isPickable=false;instance.receiveShadows=true;instance.alwaysSelectAsActiveMesh=false;
+   return instance;
+  });
+  if(!meshes.length)throw new Error('El modelo forestal no produjo instancias renderizables: '+spec.spec.label);
+  window.__ELSN_FOREST_INSTANCING_STATS__.treeInstances++;
+  window.__ELSN_FOREST_INSTANCING_STATS__.instanceMeshes+=meshes.length;
   visualRoot.position.set(-(bounds.min.x+bounds.max.x)*.5,-bounds.min.y-pivotY,-(bounds.min.z+bounds.max.z)*.5);
   canopy.position.y=pivotY;
   root.scaling.setAll(placedScale);
