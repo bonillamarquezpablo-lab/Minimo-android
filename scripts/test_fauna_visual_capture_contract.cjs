@@ -51,6 +51,14 @@ assert.ok(capture.includes("window.__ELSN_FORCE_CPU_SKINNING__=mode==='cpu'") &&
   'The visual inspector must force exactly one requested skinning path before game scripts execute.');
 assert.ok(capture.indexOf('window.__ELSN_FORCE_GPU_SKINNING__=mode===\'gpu\'')<capture.indexOf("await page.goto(BASE_URL+'?test=1&fauna-inspector=1'"),
   'Both skinning overrides must be set before the game loads.');
+assert.ok(capture.includes('computeBonesUsingShaders:mesh.computeBonesUsingShaders===true') &&
+  capture.includes("const expectedCpuSkinning=SKINNING_MODE==='cpu'") &&
+  capture.includes("code:'gull-skinning-mode-mismatch'") &&
+  capture.includes('materialState:mesh.materialState'),
+  'The CPU/GPU acceptance mode must be applied to real gull meshes and recorded per material/mesh, not only to land fauna.');
+assert.ok(capture.includes("animal.id+'-'+angle.id+(view.imageIntegrity?.valid===true?'':'-rejected')+'.png'") &&
+  capture.includes("code:'fauna-raster-silhouette-invalid'"),
+  'A rejected animal frame must still be preserved as raw evidence for diagnosis.');
 assert.ok(capture.includes('WildlifeActor_'));
 assert.ok(capture.includes('RealSeagullActor_'), 'Visual capture must include real gull actors, not only terrestrial animals.');
 assert.ok(capture.includes('flightRig'), 'Gull reports must include articulated flight rig evidence.');
